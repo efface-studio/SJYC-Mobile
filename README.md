@@ -30,6 +30,7 @@ npm run sync:core
 
 기본은 개발용 mock(웹과 같은 샘플 데이터, 앱 메모리에만 저장). 홈·상세 화면에 "개발용 데모" 표시가 나온다.
 실서버: `EXPO_PUBLIC_API_MODE=http`, `EXPO_PUBLIC_API_BASE_URL=...` (eas.json 의 production 프로필 참고 — URL 은 자리표시자).
+샘플 데이터로 운영하는 시연 서버에 붙일 때는 `EXPO_PUBLIC_DEMO_DATA=1` 을 함께 주면 http 모드에서도 데모 표시·샘플 안내·데모 계정 입력이 나온다.
 세션은 서버 HttpOnly 쿠키(React Native 네이티브 쿠키 저장소)를 전제로 한다. 앱 전용 토큰 방식이 필요하면 서버 설계 때 결정하고 `src/api/http.ts` 어댑터만 바꾼다.
 
 ## 검증
