@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { mockDev } from '@/api/mock/client';
 import { IS_MOCK } from '@/config/env';
-import { Button, Gutter, IconCircle, Screen, Txt, space } from '~/ds';
+import { Button, Gutter, Screen, Txt, space } from '~/ds';
 import { notify } from '~/shared/dialogs';
 import { Callout } from '~/user-kit';
 
@@ -34,9 +34,8 @@ export default function VerifyEmailScreen() {
   return (
     <Screen>
       <Gutter style={styles.hero}>
-        <IconCircle ios="envelope.fill" android="mail" />
         <Txt variant="title1" accessibilityRole="header" style={styles.center}>
-          인증 메일을 보냈어요
+          인증 메일을 보냈습니다
         </Txt>
         <Txt variant="bodyStrong" color="action" style={styles.center}>
           {email ?? '가입한 이메일'}

@@ -6,9 +6,11 @@ import { router, type Href } from 'expo-router';
 import { Children, Fragment, type ReactNode } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { api } from '@/api';
-import type { Tone } from '@/domain/labels';
+import { RECRUIT_STATUS, type Tone } from '@/domain/labels';
+import { remainingSeats } from '@/domain/program';
+import type { Program } from '@/domain/types';
 import { useSession } from '@/features/auth/session';
-import { formatDate } from '@/lib/format';
+import { daysUntil, formatDate, formatShortDate } from '@/lib/format';
 import { Icon } from '~/shared/icon';
 import {
   Button,
@@ -56,6 +58,72 @@ export function Rows({ children, inset = GUTTER }: { children: ReactNode; inset?
   );
 }
 
+/** "10.22 (수)" → "10.22" */
+const monthDay = (iso: string) => formatShortDate(iso).split(' ')[0] ?? '';
+
+/** 왼쪽 일정 열: 모집 중이면 D-day, 예정이면 접수 시작일, 그 외 상태 */
+function DateColumn({ p }: { p: Program }) {
+  const t = useTheme();
+  if (p.recruitStatus === 'open') {
+    const d = daysUntil(p.recruitEndsAt);
+    return (
+      <View style={styles.dateCol}>
+        <Txt variant="title2" color="action">
+          {d <= 0 ? 'D-Day' : `D-${d}`}
+        </Txt>
+        <Txt variant="small" color="textTertiary">
+          {monthDay(p.recruitEndsAt)} 마감
+        </Txt>
+      </View>
+    );
+  }
+  if (p.recruitStatus === 'upcoming') {
+    return (
+      <View style={styles.dateCol}>
+        <Txt variant="title3" color={t.tone.info.fg}>
+          {monthDay(p.recruitStartsAt)}
+        </Txt>
+        <Txt variant="small" color="textTertiary">
+          접수 시작
+        </Txt>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.dateCol}>
+      <Txt variant="captionStrong" color="textTertiary">
+        {RECRUIT_STATUS[p.recruitStatus].text}
+      </Txt>
+    </View>
+  );
+}
+
+/** 프로그램 목록 행 — 왼쪽 D-day 열 + 제목·분류·잔여석 (웹 ProgramRow 와 같은 구성) */
+export function ProgramRow({ p, category }: { p: Program; category: string }) {
+  const left = remainingSeats(p);
+  const muted = p.recruitStatus === 'closed' || p.recruitStatus === 'full';
+  return (
+    <Tap
+      onPress={() => router.push(`/programs/${p.id}`)}
+      accessibilityLabel={`${p.title}, ${RECRUIT_STATUS[p.recruitStatus].text}`}
+      style={styles.programRow}
+    >
+      <DateColumn p={p} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <Txt variant="bodyStrong" numberOfLines={2} color={muted ? 'textSecondary' : 'text'}>
+          {p.title}
+        </Txt>
+        <Txt variant="caption" color="textTertiary" numberOfLines={1}>
+          {[category, p.target].filter(Boolean).join(' · ')}
+        </Txt>
+        <Txt variant="caption" color="textSecondary">
+          {muted ? `정원 ${p.capacity}명` : `잔여 ${left}석 · 정원 ${p.capacity}명`}
+        </Txt>
+      </View>
+    </Tap>
+  );
+}
+
 /** 상세 화면 상단 제목 영역 */
 export function Hero({
   eyebrow,
@@ -69,7 +137,7 @@ export function Hero({
   return (
     <Gutter style={styles.hero}>
       {eyebrow ? (
-        <Txt variant="captionStrong" color="action">
+        <Txt variant="caption" color="textTertiary">
           {eyebrow}
         </Txt>
       ) : null}
@@ -235,6 +303,14 @@ export function useHeaderOptions(largeTitle = false) {
 
 const styles = StyleSheet.create({
   hero: { paddingTop: space.xl, paddingBottom: space.xxl, gap: space.sm },
+  programRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.lg,
+    paddingHorizontal: GUTTER,
+    paddingVertical: 18,
+  },
+  dateCol: { width: 64, alignItems: 'center', gap: 2 },
   callout: { borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, gap: 2 },
   article: { lineHeight: 27 },
   promptAction: { alignSelf: 'stretch', marginTop: space.lg },

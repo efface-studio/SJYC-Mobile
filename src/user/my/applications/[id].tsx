@@ -8,7 +8,6 @@ import { formatDateTime } from '@/lib/format';
 import {
   Badge,
   Button,
-  Divider,
   Gutter,
   InfoRow,
   Screen,
@@ -114,18 +113,16 @@ export default function MyApplicationScreen() {
                 style={{ alignSelf: 'flex-start', paddingVertical: 8 }}
               >
                 <Txt variant="captionStrong" color="action">
-                  프로그램 상세 보기 ›
+                  프로그램 상세 보기
                 </Txt>
               </Tap>
             </Hero>
-            <Divider thick />
             <SectionHeader title="신청 정보" />
             <Gutter>
               <InfoRow label="신청자" value={a.applicantName} />
               <InfoRow label="연락처" value={a.phone} />
               <InfoRow label="요청 사항" value={a.note || '없음'} />
             </Gutter>
-            <Divider thick />
             <SectionHeader title="처리 이력" />
             <History items={a.history} />
             {!a.cancellable && (

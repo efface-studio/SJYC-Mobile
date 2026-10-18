@@ -42,7 +42,7 @@ export default function ProgramEdit() {
 function ProgramSummary({ program }: { program: Program }) {
   return (
     <Gutter style={{ paddingTop: space.lg }}>
-      <Card tone="subtle" style={{ gap: space.md }}>
+      <Card style={{ gap: space.md }}>
         <View style={styles.badges}>
           <Badge {...RECRUIT_STATUS[program.recruitStatus]} />
           <Badge {...PUBLISH_STATUS[program.status]} />
@@ -66,7 +66,7 @@ function ProgramSummary({ program }: { program: Program }) {
           style={{ alignSelf: 'flex-start', paddingVertical: space.xs }}
         >
           <Txt variant="label" color="action">
-            이 프로그램 신청자 보기 ›
+            이 프로그램 신청자 보기
           </Txt>
         </Tap>
       </Card>

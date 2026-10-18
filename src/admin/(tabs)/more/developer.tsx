@@ -115,7 +115,6 @@ function SessionAndPermissions() {
           <Txt color="textSecondary">세션 정보가 없습니다.</Txt>
         )}
       </Gutter>
-      <Divider thick />
       <SectionHeader title="역할별 권한" />
       <Rows
         items={PERMISSIONS}

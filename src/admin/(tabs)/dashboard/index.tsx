@@ -1,8 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { router, Stack, type Href } from 'expo-router';
-import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
 import { useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { APPLICATION_STATUS, PUBLISH_STATUS } from '@/domain/labels';
 import { primaryRole, ROLE_LABEL, type Permission } from '@/domain/permissions';
 import type { DashboardSummary } from '@/domain/types';
@@ -12,19 +11,18 @@ import { Rows, StatusBadge, useCan } from '~/admin-kit/components';
 import { dashboardQuery } from '~/admin-kit/queries';
 import {
   Badge,
-  Card,
   Chips,
-  Divider,
   EmptyState,
   GUTTER,
   Gutter,
-  IconCircle,
   ListRow,
   QueryBoundary,
   Screen,
   SectionHeader,
+  Tap,
   Txt,
   space,
+  useTheme,
 } from '~/ds';
 
 type CountKey = {
@@ -37,12 +35,10 @@ interface Link {
 }
 
 /** 처리 대기 — 승인·답변이 필요한 일. 탭하면 해당 상태로 걸러진 목록이 열린다 */
-const PENDING: { key: CountKey; title: string; ios: SFSymbol; android: AndroidSymbol; link: Link }[] = [
+const PENDING: { key: CountKey; title: string; link: Link }[] = [
   {
     key: 'applicationsSubmitted',
     title: '프로그램 신청 승인',
-    ios: 'checkmark.circle',
-    android: 'fact_check',
     link: {
       href: { pathname: '/applications', params: { status: 'submitted' } },
       permission: 'application.decide',
@@ -51,15 +47,11 @@ const PENDING: { key: CountKey; title: string; ios: SFSymbol; android: AndroidSy
   {
     key: 'reservationsPending',
     title: '공간 예약 확정',
-    ios: 'calendar',
-    android: 'event',
     link: { href: { pathname: '/reservations', params: { status: 'pending' } }, permission: 'space.manage' },
   },
   {
     key: 'clubApplicationsPending',
     title: '동아리 가입 검토',
-    ios: 'person.3.fill',
-    android: 'groups',
     link: {
       href: { pathname: '/more/club-applications', params: { status: 'pending' } },
       permission: 'club.manage',
@@ -68,8 +60,6 @@ const PENDING: { key: CountKey; title: string; ios: SFSymbol; android: AndroidSy
   {
     key: 'inquiriesOpen',
     title: '문의 답변',
-    ios: 'bubble.left.and.text.bubble.right',
-    android: 'forum',
     link: { href: { pathname: '/inquiries', params: { status: 'open' } }, permission: 'inquiry.answer' },
   },
 ];
@@ -85,30 +75,12 @@ const KPIS: { key: CountKey; label: (days: number) => string; unit: string; link
     },
   },
   {
-    key: 'applicationsSubmitted',
-    label: () => '승인 대기 신청',
-    unit: '건',
-    link: {
-      href: { pathname: '/applications', params: { status: 'submitted' } },
-      permission: 'application.decide',
-    },
-  },
-  {
     key: 'programsOpen',
     label: () => '모집 중 프로그램',
     unit: '개',
     link: {
       href: { pathname: '/more/programs', params: { status: 'published' } },
       permission: 'program.write',
-    },
-  },
-  {
-    key: 'noticesPublished',
-    label: () => '게시 중 공지',
-    unit: '건',
-    link: {
-      href: { pathname: '/more/notices', params: { status: 'published' } },
-      permission: 'notice.write',
     },
   },
 ];
@@ -118,7 +90,8 @@ const PERIODS = [
   { value: '30', label: '최근 30일' },
 ];
 
-function Greeting() {
+/** 역할 · 오늘 날짜 */
+function Context() {
   const user = useSession().data?.user;
   const today = new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',
@@ -128,8 +101,7 @@ function Greeting() {
   }).format(new Date());
   if (!user) return null;
   return (
-    <Gutter style={styles.greeting}>
-      <Txt variant="title3">{user.name}님, 안녕하세요</Txt>
+    <Gutter style={styles.context}>
       <Txt variant="caption" color="textTertiary">
         {ROLE_LABEL[primaryRole(user)]} · {today}
       </Txt>
@@ -138,14 +110,11 @@ function Greeting() {
 }
 
 export default function Dashboard() {
+  const t = useTheme();
   const allowed = useCan();
-  const { width } = useWindowDimensions();
   const [days, setDays] = useState(7);
   const query = useQuery({ ...dashboardQuery(days), placeholderData: keepPreviousData });
 
-  // 휴대폰 2열, 태블릿 4열
-  const columns = width >= 700 ? 4 : 2;
-  const cardWidth = (width - GUTTER * 2 - space.md * (columns - 1)) / columns;
   const open = (link: Link) => (allowed(link.permission) ? () => router.navigate(link.href) : undefined);
   const pending = PENDING.filter((p) => allowed(p.link.permission));
 
@@ -153,20 +122,21 @@ export default function Dashboard() {
     <>
       <Stack.Screen options={{ title: '대시보드' }} />
       <Screen onRefresh={() => query.refetch()}>
-        <Greeting />
+        <Context />
         <Chips options={PERIODS} value={String(days)} onChange={(v) => setDays(Number(v))} />
         <QueryBoundary query={query}>
           {(d) => (
             <>
-              <View style={styles.grid}>
+              {/* 웹과 같은 얇은 선 격자 — 칸 사이를 선으로만 나눈다 */}
+              <View style={[styles.grid, { borderColor: t.line }]}>
                 {KPIS.map((k) => (
-                  <Card
+                  <Tap
                     key={k.key}
-                    tone="subtle"
                     onPress={open(k.link)}
-                    style={{ width: cardWidth, gap: space.xs }}
+                    accessibilityLabel={`${k.label(days)} ${d[k.key].toLocaleString('ko-KR')}${k.unit}`}
+                    style={[styles.kpi, { borderColor: t.line }]}
                   >
-                    <Txt variant="caption" color="textSecondary" numberOfLines={1}>
+                    <Txt variant="caption" color="textTertiary" numberOfLines={1}>
                       {k.label(days)}
                     </Txt>
                     <View style={styles.kpiValue}>
@@ -175,13 +145,12 @@ export default function Dashboard() {
                         {k.unit}
                       </Txt>
                     </View>
-                  </Card>
+                  </Tap>
                 ))}
               </View>
 
               {pending.length > 0 && (
                 <>
-                  <Divider thick />
                   <SectionHeader title="처리 대기" />
                   <Rows
                     items={pending}
@@ -190,20 +159,8 @@ export default function Dashboard() {
                       const n = d[p.key];
                       return (
                         <ListRow
-                          leading={
-                            <IconCircle ios={p.ios} android={p.android} tone={n > 0 ? 'brand' : 'neutral'} />
-                          }
                           title={p.title}
-                          subtitle={
-                            n > 0
-                              ? `${n.toLocaleString('ko-KR')}건이 기다리고 있어요`
-                              : '대기 중인 건이 없습니다'
-                          }
-                          trailing={
-                            n > 0 ? (
-                              <StatusBadge text={n > 99 ? '99+' : String(n)} tone="danger" />
-                            ) : undefined
-                          }
+                          subtitle={n > 0 ? `대기 ${n.toLocaleString('ko-KR')}건` : '대기 없음'}
                           onPress={() => router.navigate(p.link.href)}
                         />
                       );
@@ -212,7 +169,6 @@ export default function Dashboard() {
                 </>
               )}
 
-              <Divider thick />
               <SectionHeader
                 title="최근 신청"
                 action={allowed('application.decide') ? '전체 보기' : undefined}
@@ -283,14 +239,21 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  greeting: { paddingTop: space.sm, paddingBottom: space.xs, gap: 2 },
+  context: { paddingTop: space.sm, paddingBottom: space.xs },
   grid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.md,
-    paddingHorizontal: GUTTER,
-    paddingTop: space.sm,
-    paddingBottom: space.xxl,
+    marginHorizontal: GUTTER,
+    marginTop: space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+  },
+  kpi: {
+    flex: 1,
+    gap: space.xs,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   kpiValue: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   updated: { alignItems: 'center', gap: space.sm, paddingTop: space.xxxl },

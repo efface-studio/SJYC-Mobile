@@ -89,7 +89,7 @@ export function OptionSheetHost() {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1 },
-  panel: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingTop: 8 },
+  panel: { borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingTop: 8 },
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 8 },
   title: { paddingHorizontal: GUTTER, paddingVertical: 12 },
   option: { paddingHorizontal: GUTTER, paddingVertical: 16 },

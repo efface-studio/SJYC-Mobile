@@ -15,7 +15,6 @@ import {
 import {
   Button,
   Card,
-  Divider,
   Gutter,
   InfoRow,
   ListRow,
@@ -51,12 +50,11 @@ function Table({ rows }: { rows: HoursRow[] }) {
 }
 
 export default function AboutScreen() {
-  const t = useTheme();
   return (
     <Screen>
       <Gutter style={{ paddingTop: space.lg }}>
-        <Card tone="brand" style={{ gap: space.sm }}>
-          <Txt variant="captionStrong" color="action">
+        <Card style={{ gap: space.sm }}>
+          <Txt variant="caption" color="textTertiary">
             {CENTER.formalName}
           </Txt>
           <Txt variant="title2">{CENTER.slogan}</Txt>
@@ -81,7 +79,6 @@ export default function AboutScreen() {
         ))}
       </Rows>
 
-      <Divider thick />
       <SectionHeader title="운영시간" />
       <Gutter style={{ gap: space.lg }}>
         <Table rows={OPERATING_HOURS} />
@@ -94,7 +91,6 @@ export default function AboutScreen() {
         </Txt>
       </Gutter>
 
-      <Divider thick />
       <SectionHeader title="오시는 길" />
       <Gutter style={{ gap: space.md }}>
         <View style={{ gap: 2 }}>
@@ -106,15 +102,12 @@ export default function AboutScreen() {
         <Table rows={DIRECTIONS} />
       </Gutter>
 
-      <Divider thick />
       <SectionHeader title="층별 안내" />
       <Rows>
         {FLOORS.map((f) => (
           <View key={f.floor} style={styles.floorRow}>
-            <View style={[styles.floor, { backgroundColor: t.brandSoft }]}>
-              <Txt variant="captionStrong" color="action">
-                {f.floor}
-              </Txt>
+            <View style={styles.floor}>
+              <Txt variant="captionStrong">{f.floor}</Txt>
             </View>
             <Txt variant="label" color="textSecondary" style={{ flex: 1 }}>
               {f.spaces.join(' · ')}
@@ -123,11 +116,10 @@ export default function AboutScreen() {
         ))}
       </Rows>
 
-      <Divider thick />
       <SectionHeader title="공식 채널" />
       <Rows>
         <ListRow
-          title="센터 소식 · 갤러리"
+          title="센터 소식·갤러리"
           subtitle="공식 채널의 사진과 영상 모아 보기"
           onPress={() => router.push('/gallery')}
         />
@@ -136,7 +128,6 @@ export default function AboutScreen() {
         ))}
       </Rows>
 
-      <Divider thick />
       <SectionHeader title="기관 정보" />
       <Gutter>
         <InfoRow label="상호명" value={CENTER.name} />
@@ -165,5 +156,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  floor: { width: 40, alignItems: 'center', borderRadius: radius.sm, paddingVertical: 3 },
+  floor: { width: 40, paddingVertical: 3 },
 });

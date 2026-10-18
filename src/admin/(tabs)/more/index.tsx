@@ -1,13 +1,11 @@
 import Constants from 'expo-constants';
 import { router, Stack, type Href } from 'expo-router';
-import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
 import { StyleSheet, View } from 'react-native';
-import type { Tone } from '@/domain/labels';
 import { can, canManageAttendance, managesAnyClub, ROLE_LABEL, type Permission } from '@/domain/permissions';
 import type { User } from '@/domain/types';
 import { useLogout, useSession } from '@/features/auth/session';
 import { Rows } from '~/admin-kit/components';
-import { Badge, Button, Divider, EmptyState, Gutter, IconCircle, ListRow, Screen, Txt, space } from '~/ds';
+import { Badge, Button, Divider, EmptyState, Gutter, ListRow, Screen, Txt, space } from '~/ds';
 import { confirm } from '~/shared/dialogs';
 
 interface Menu {
@@ -16,141 +14,109 @@ interface Menu {
   href: Href;
   /** 권한 이름 또는 조건 (동아리 담당자처럼 역할만으로 정해지지 않는 메뉴) */
   permission: Permission | ((user: User | undefined) => boolean);
-  ios: SFSymbol;
-  android: AndroidSymbol;
 }
 
 /** 웹 관리자 사이드바와 같은 묶음. 대시보드·프로그램 신청·공간 예약·문의는 하단 탭에 있다 */
-const GROUPS: { group: string; tone: Tone; items: Menu[] }[] = [
+const GROUPS: { group: string; items: Menu[] }[] = [
   {
     group: '콘텐츠',
-    tone: 'brand',
     items: [
       {
         title: '공지',
         subtitle: '작성 · 게시 상태 · 상단 고정',
         href: '/more/notices',
         permission: 'notice.write',
-        ios: 'megaphone',
-        android: 'campaign',
       },
       {
         title: '프로그램',
         subtitle: '등록 · 모집 일정 · 정원',
         href: '/more/programs',
         permission: 'program.write',
-        ios: 'calendar',
-        android: 'event',
       },
     ],
   },
   {
     group: '신청·예약',
-    tone: 'info',
     items: [
       {
         title: '공간 설정',
         subtitle: '예약 접수 · 수용 인원',
         href: '/more/spaces',
         permission: 'space.manage',
-        ios: 'door.left.hand.open',
-        android: 'meeting_room',
       },
     ],
   },
   {
     group: '커뮤니티',
-    tone: 'success',
     items: [
       {
         title: '동아리 운영',
         subtitle: '담당 동아리 회원 · 가입 신청 · 소식 · 소개',
         href: '/more/my-clubs',
         permission: managesAnyClub,
-        ios: 'person.3.sequence',
-        android: 'diversity_3',
       },
       {
         title: '동아리',
         subtitle: '등록 · 운영 상태 · 모집',
         href: '/more/clubs',
         permission: 'club.manage',
-        ios: 'person.3.fill',
-        android: 'groups',
       },
       {
         title: '동아리 가입 신청',
         subtitle: '가입 승인 · 반려',
         href: '/more/club-applications',
         permission: 'club.manage',
-        ios: 'person.badge.plus',
-        android: 'person_add',
       },
       {
         title: '출석',
         subtitle: '출석부 · 출석 코드 · 회원별 출석률',
         href: '/more/attendance',
         permission: canManageAttendance,
-        ios: 'checkmark.circle',
-        android: 'how_to_reg',
       },
       {
         title: 'FAQ',
         subtitle: '자주 묻는 질문 관리',
         href: '/more/faqs',
         permission: 'inquiry.answer',
-        ios: 'questionmark.circle',
-        android: 'help',
       },
     ],
   },
   {
     group: '회원',
-    tone: 'warning',
     items: [
       {
         title: '회원',
         subtitle: '역할 · 이용 정지',
         href: '/more/members',
         permission: 'member.read',
-        ios: 'person.2',
-        android: 'group',
       },
     ],
   },
   {
     group: '설정',
-    tone: 'neutral',
     items: [
       {
         title: '정책 문서',
         subtitle: '약관 · 개인정보 처리방침 개정',
         href: '/more/policies',
         permission: 'policy.manage',
-        ios: 'doc.text',
-        android: 'description',
       },
       {
         title: '감사 로그',
         subtitle: '관리 작업 기록',
         href: '/more/audit',
         permission: 'audit.read',
-        ios: 'list.bullet.clipboard',
-        android: 'history',
       },
     ],
   },
   {
     group: '개발',
-    tone: 'neutral',
     items: [
       {
         title: '개발자 도구',
         subtitle: '환경 · 권한 · API 요청 · 캐시 · 데모 데이터',
         href: '/more/developer',
         permission: 'developer.access',
-        ios: 'hammer',
-        android: 'build',
       },
     ],
   },
@@ -177,7 +143,6 @@ export default function More() {
       <Screen>
         {user && (
           <View style={styles.profile}>
-            <IconCircle ios="person.crop.circle.fill" android="account_circle" tone="brand" />
             <View style={{ flex: 1, gap: 2 }}>
               <Txt variant="title3" numberOfLines={1}>
                 {user.name}
@@ -197,16 +162,15 @@ export default function More() {
             </View>
           </View>
         )}
-        <Divider thick />
+        <Divider />
         {groups.length === 0 ? (
           <EmptyState
             title="사용할 수 있는 메뉴가 없습니다"
             description="권한이 필요하면 최고 관리자에게 문의해 주세요."
           />
         ) : (
-          groups.map((g, i) => (
+          groups.map((g) => (
             <View key={g.group}>
-              {i > 0 && <Divider thick />}
               <Gutter style={styles.groupLabel}>
                 <Txt variant="captionStrong" color="textTertiary" accessibilityRole="header">
                   {g.group}
@@ -216,18 +180,13 @@ export default function More() {
                 items={g.items}
                 rowKey={(m) => m.title}
                 render={(m) => (
-                  <ListRow
-                    leading={<IconCircle ios={m.ios} android={m.android} tone={g.tone} />}
-                    title={m.title}
-                    subtitle={m.subtitle}
-                    onPress={() => router.push(m.href)}
-                  />
+                  <ListRow title={m.title} subtitle={m.subtitle} onPress={() => router.push(m.href)} />
                 )}
               />
             </View>
           ))
         )}
-        <Divider thick />
+        <Divider />
         <Gutter style={styles.footer}>
           <Button
             label="로그아웃"
@@ -253,6 +212,6 @@ const styles = StyleSheet.create({
     paddingVertical: space.lg,
   },
   roles: { gap: space.xs, alignItems: 'flex-end' },
-  groupLabel: { paddingTop: space.lg, paddingBottom: space.xs },
+  groupLabel: { paddingTop: space.xxl, paddingBottom: space.xs },
   footer: { gap: space.md, paddingTop: space.xxl },
 });

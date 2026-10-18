@@ -73,7 +73,9 @@ export default function Login() {
               contentFit="contain"
             />
           )}
-          <Badge text="관리자" tone="brand" />
+          <View style={{ alignSelf: 'center' }}>
+            <Badge text="관리자" tone="brand" />
+          </View>
           <Txt variant="label" color="textSecondary" style={{ textAlign: 'center' }}>
             센터 직원 계정으로 로그인해 주세요
           </Txt>

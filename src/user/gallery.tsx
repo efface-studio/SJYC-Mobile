@@ -3,7 +3,6 @@ import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import type { MediaItem } from '@/domain/types';
 import {
-  Divider,
   Gutter,
   ListRow,
   Photo,
@@ -71,7 +70,6 @@ export default function GalleryScreen() {
               )}
               {videos.length > 0 && (
                 <>
-                  {photos.length > 0 && <Divider thick />}
                   <SectionHeader title={`영상 ${videos.length}`} />
                   <Rows>
                     {videos.map((m, i) => (

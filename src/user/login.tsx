@@ -147,7 +147,7 @@ export default function LoginScreen() {
 
   return (
     <Screen>
-      <Header title="반가워요!" description="이메일 계정으로 로그인해 주세요." />
+      <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
       <Gutter style={styles.form}>
         <TextField
           label="이메일"
@@ -208,10 +208,10 @@ export default function LoginScreen() {
             ).map((a) => (
               <Tap
                 key={a.email}
-                rounded={radius.pill}
+                rounded={radius.md}
                 accessibilityLabel={`${a.label} 데모 계정으로 로그인`}
                 onPress={() => login.mutate({ email: a.email, password: DEMO_PASSWORD })}
-                style={[styles.demoChip, { backgroundColor: t.tone.warning.bg }]}
+                style={[styles.demoChip, { borderColor: t.tone.warning.fg }]}
               >
                 <Txt variant="label" color={t.tone.warning.fg}>
                   {a.label}
@@ -244,5 +244,5 @@ const styles = StyleSheet.create({
   socialTag: { position: 'absolute', right: space.lg, opacity: 0.8 },
   demo: { paddingTop: space.xxl, gap: space.sm },
   demoChips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  demoChip: { height: 40, paddingHorizontal: 14, justifyContent: 'center' },
+  demoChip: { height: 44, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1 },
 });

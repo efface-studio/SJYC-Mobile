@@ -74,7 +74,7 @@ function InquiryView({ inquiry: x }: { inquiry: Inquiry }) {
       <Gutter>
         <TextBlock>{x.body}</TextBlock>
       </Gutter>
-      <Divider thick />
+      <Divider />
       <FormSection title={x.answer ? '답변 수정' : '답변 작성'}>
         {x.answer && (
           <Txt variant="caption" color="textTertiary" style={{ marginTop: -space.sm }}>

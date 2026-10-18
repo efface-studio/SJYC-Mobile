@@ -211,7 +211,6 @@ function ReservationForm({ space: sp, session }: { space: Space; session: Sessio
       }
     >
       <SpaceHero s={sp} />
-      <Divider thick />
 
       <SectionHeader title="날짜 선택" />
       <DateStrip
@@ -252,7 +251,7 @@ function ReservationForm({ space: sp, session }: { space: Space; session: Sessio
         ) : null}
       </Gutter>
 
-      <Divider thick />
+      <Divider />
       <FormSection title="예약 정보">
         <TextField
           label="이용 인원"

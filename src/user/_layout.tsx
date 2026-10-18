@@ -24,7 +24,7 @@ export default function UserRootLayout() {
         <Stack.Screen name="clubs/[id]" options={{ title: '동아리' }} />
         <Stack.Screen name="notices/index" options={{ title: '공지사항' }} />
         <Stack.Screen name="notices/[id]" options={{ title: '공지' }} />
-        <Stack.Screen name="qna/index" options={{ title: '질문 · 문의' }} />
+        <Stack.Screen name="qna/index" options={{ title: '질문·문의' }} />
         <Stack.Screen name="qna/new" options={{ presentation: 'modal', title: '문의하기' }} />
         <Stack.Screen name="qna/[id]" options={{ title: '1:1 문의' }} />
         <Stack.Screen name="about" options={{ title: '센터 안내' }} />

@@ -29,7 +29,7 @@ function PolicyLink({ label, href }: { label: string; href: '/policies/terms' | 
   return (
     <Tap onPress={() => router.push(href)} accessibilityLabel={label} style={styles.policyLink}>
       <Txt variant="caption" color="action">
-        {label} ›
+        {label}
       </Txt>
     </Tap>
   );
@@ -142,7 +142,7 @@ export default function SignupScreen() {
       </FormSection>
 
       <FormSection title="약관 동의">
-        <Card tone="subtle" style={{ paddingVertical: space.xs }}>
+        <Card style={{ paddingVertical: space.xs }}>
           <SwitchRow
             label="전체 동의"
             description="필수 및 선택 항목에 모두 동의합니다."

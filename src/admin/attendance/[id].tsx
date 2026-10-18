@@ -192,7 +192,6 @@ function SessionView({ session }: { session: AttendanceSession }) {
         </Txt>
       </Gutter>
       <CheckIn session={session} onChange={update} />
-      <Divider thick />
       <SectionHeader title={`명단 ${session.records.length}명`} />
       <Gutter style={{ paddingBottom: space.md }}>
         <Button
@@ -222,7 +221,7 @@ function SessionView({ session }: { session: AttendanceSession }) {
           </Gutter>
         </View>
       ))}
-      <Divider thick />
+      <Divider />
       <Gutter style={{ paddingVertical: space.lg }}>
         <DangerTextButton
           label="출석부 삭제"

@@ -89,7 +89,7 @@ function SpaceForm({ space }: { space: Space }) {
         title={space.name}
         status={reservable ? { text: '예약 받음', tone: 'success' } : { text: '예약 중지', tone: 'warning' }}
       />
-      <Divider thick />
+      <Divider />
       <FormSection title="예약">
         <SwitchRow
           label="예약 접수"

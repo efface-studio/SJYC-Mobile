@@ -1,6 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import type { SFSymbol, AndroidSymbol } from 'expo-symbols';
 import { type ReactNode, useState } from 'react';
 import {
   ActivityIndicator,
@@ -102,14 +101,15 @@ export function SectionHeader({
   action?: string;
   onAction?: () => void;
 }) {
+  const t = useTheme();
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, { borderTopColor: t.text }]}>
       <Txt variant="title2" accessibilityRole="header">
         {title}
       </Txt>
       {action && onAction && (
         <Tap onPress={onAction} accessibilityLabel={`${title} ${action}`} style={styles.sectionAction}>
-          <Txt variant="label" color="textTertiary">
+          <Txt variant="label" color="textSecondary">
             {action}
           </Txt>
         </Tap>
@@ -118,13 +118,9 @@ export function SectionHeader({
   );
 }
 
-export function Divider({ inset = 0, thick = false }: { inset?: number; thick?: boolean }) {
+export function Divider({ inset = 0 }: { inset?: number }) {
   const t = useTheme();
-  return thick ? (
-    <View style={{ height: 10, backgroundColor: t.bgSubtle }} />
-  ) : (
-    <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.line, marginLeft: inset }} />
-  );
+  return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.line, marginLeft: inset }} />;
 }
 
 /* ---------- 터치 ---------- */
@@ -226,18 +222,25 @@ export function InfoRow({ label, value }: { label: string; value: string }) {
 
 /* ---------- 표시 ---------- */
 
+/** 상태 표시 — 웹과 같은 색 띠 + 굵은 글자 (색만으로 구분하지 않도록 항상 글자와 함께) */
 export function Badge({ text, tone = 'neutral' }: { text: string; tone?: Tone }) {
   const t = useTheme();
-  const c = t.tone[tone];
+  const fg = tone === 'neutral' ? t.textTertiary : t.tone[tone].fg;
+  const mark = tone === 'neutral' ? t.lineStrong : tone === 'brand' ? t.brand : t.tone[tone].fg;
   return (
-    <View style={[styles.badge, { backgroundColor: c.bg }]}>
-      <Txt variant="small" color={c.fg}>
+    <View style={styles.badge}>
+      <View style={[styles.badgeMark, { backgroundColor: mark }]} />
+      <Txt variant="captionStrong" color={fg} numberOfLines={1}>
         {text}
       </Txt>
     </View>
   );
 }
 
+/**
+ * 묶음 블록 — 기본은 채움·반경 없이 위아래 얇은 선으로만 구획한다.
+ * tone 은 출석 코드·답변 대기 같은 상태 안내에만 쓴다.
+ */
 export function Card({
   children,
   onPress,
@@ -250,9 +253,11 @@ export function Card({
   tone?: 'brand' | 'subtle';
 }) {
   const t = useTheme();
-  const bg = tone === 'brand' ? t.brandSoft : tone === 'subtle' ? t.bgSubtle : t.card;
+  const box = tone
+    ? [styles.callout, { backgroundColor: tone === 'brand' ? t.brandSoft : t.bgSubtle }]
+    : [styles.block, { borderColor: t.line }];
   return (
-    <Tap onPress={onPress} rounded={radius.lg} style={[styles.card, { backgroundColor: bg }, style]}>
+    <Tap onPress={onPress} rounded={tone ? radius.md : undefined} style={[box, style]}>
       {children}
     </Tap>
   );
@@ -340,7 +345,7 @@ export function Button({
   );
 }
 
-/** 가로 스크롤 필터 칩 (선택 1개) */
+/** 가로 스크롤 밑줄 탭 (선택 1개) — 웹 목록 상단 탭과 같은 모양 */
 export function Chips<T extends string>({
   options,
   value,
@@ -352,41 +357,28 @@ export function Chips<T extends string>({
 }) {
   const t = useTheme();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={[styles.tabs, { borderBottomColor: t.line }]}
+      contentContainerStyle={styles.tabsContent}
+    >
       {options.map((o) => {
         const active = o.value === value;
         return (
           <Tap
             key={o.value}
             onPress={() => onChange(o.value)}
-            rounded={radius.pill}
             accessibilityLabel={`${o.label}${active ? ', 선택됨' : ''}`}
-            style={[styles.chip, { backgroundColor: active ? t.text : t.bgSubtle }]}
+            style={[styles.tab, { borderBottomColor: active ? t.text : 'transparent' }]}
           >
-            <Txt variant="label" color={active ? t.bg : t.textSecondary}>
+            <Txt variant="label" color={active ? 'text' : 'textTertiary'}>
               {o.label}
             </Txt>
           </Tap>
         );
       })}
     </ScrollView>
-  );
-}
-
-export function IconCircle({
-  ios,
-  android,
-  tone = 'brand',
-}: {
-  ios: SFSymbol;
-  android: AndroidSymbol;
-  tone?: Tone;
-}) {
-  const t = useTheme();
-  return (
-    <View style={[styles.iconCircle, { backgroundColor: t.tone[tone].bg }]}>
-      <Icon ios={ios} android={android} color={t.tone[tone].fg} size={20} />
-    </View>
   );
 }
 
@@ -467,11 +459,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: GUTTER,
-    paddingTop: space.xxl,
+    marginHorizontal: GUTTER,
+    marginTop: space.xxxl,
+    borderTopWidth: 2,
+    paddingTop: space.md,
     paddingBottom: space.sm,
   },
-  sectionAction: { paddingVertical: 8, paddingLeft: 12 },
+  sectionAction: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -481,12 +475,18 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   infoRow: { flexDirection: 'row', gap: space.md, paddingVertical: 10 },
-  badge: { alignSelf: 'flex-start', borderRadius: radius.sm - 2, paddingHorizontal: 8, paddingVertical: 3 },
-  card: { padding: space.lg },
+  badge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6 },
+  badgeMark: { width: 3, height: 12 },
+  block: {
+    paddingVertical: space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  callout: { padding: space.lg },
   button: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg },
-  chips: { gap: space.sm, paddingHorizontal: GUTTER, paddingVertical: space.sm },
-  chip: { paddingHorizontal: 14, height: 36, justifyContent: 'center' },
-  iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  tabs: { flexGrow: 0, borderBottomWidth: StyleSheet.hairlineWidth },
+  tabsContent: { paddingHorizontal: GUTTER - space.md },
+  tab: { height: 44, justifyContent: 'center', paddingHorizontal: space.md, borderBottomWidth: 2 },
   state: {
     alignItems: 'center',
     justifyContent: 'center',

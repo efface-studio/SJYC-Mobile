@@ -71,8 +71,8 @@ function ApplyForm({ program, session }: { program: Program; session: Session })
       }
     >
       <Gutter style={{ paddingTop: space.lg }}>
-        <Card tone="subtle" style={{ gap: space.xs }}>
-          <Txt variant="captionStrong" color="action">
+        <Card style={{ gap: space.xs }}>
+          <Txt variant="caption" color="textTertiary">
             신청 프로그램
           </Txt>
           <Txt variant="title3">{program.title}</Txt>
@@ -107,7 +107,7 @@ function ApplyForm({ program, session }: { program: Program; session: Session })
       </FormSection>
 
       <FormSection title="개인정보 수집·이용 동의">
-        <Card tone="subtle" style={{ gap: space.xs }}>
+        <Card style={{ gap: space.xs }}>
           <InfoRow label="수집 항목" value="이름, 연락처, 요청 사항" />
           <InfoRow label="이용 목적" value="프로그램 신청 접수, 참여 안내 및 연락" />
           <InfoRow label="보유 기간" value="센터 개인정보처리방침에 따름" />
@@ -117,7 +117,7 @@ function ApplyForm({ program, session }: { program: Program; session: Session })
             style={{ alignSelf: 'flex-start', paddingVertical: 10 }}
           >
             <Txt variant="captionStrong" color="action">
-              개인정보처리방침 보기 ›
+              개인정보처리방침 보기
             </Txt>
           </Tap>
         </Card>
