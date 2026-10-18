@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { api, errorMessage } from '@/api';
 import { attendanceTargetKey, sessionCounts } from '@/domain/attendance';
@@ -135,7 +135,8 @@ function TargetPanel({ target }: { target: AttendanceTargetSummary }) {
 export default function AttendanceScreen() {
   const user = useSession().data?.user;
   const allowed = canManageAttendance(user);
-  const [key, setKey] = useState('');
+  const { target } = useLocalSearchParams<{ target?: string }>();
+  const [key, setKey] = useState(target ?? '');
   const targets = useQuery({
     queryKey: ['attendance', 'targets'],
     queryFn: () => api.attendance.targets(),

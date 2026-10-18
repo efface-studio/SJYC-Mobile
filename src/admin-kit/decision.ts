@@ -7,10 +7,13 @@ import type { BulkResult, Page, ProgramApplication } from '@/domain/types';
 import { confirm, notify, promptText } from '~/shared/dialogs';
 import { useInvalidateAdmin } from './queries';
 
-/** 승인/반려 대상: 프로그램 신청(일괄 가능) · 공간 예약 · 동아리 가입 신청 */
-export type DecisionKind = 'application' | 'reservation' | 'club';
+/**
+ * 승인/반려 대상: 프로그램 신청(일괄 가능) · 공간 예약 · 동아리 가입 신청(직원) ·
+ * 담당 동아리 가입 신청(담당자 — id 는 `동아리ID:신청ID`)
+ */
+export type DecisionKind = 'application' | 'reservation' | 'club' | 'managed';
 
-const KINDS: readonly DecisionKind[] = ['application', 'reservation', 'club'];
+const KINDS: readonly DecisionKind[] = ['application', 'reservation', 'club', 'managed'];
 
 export function isDecisionKind(value: unknown): value is DecisionKind {
   return typeof value === 'string' && (KINDS as readonly string[]).includes(value);
@@ -20,6 +23,7 @@ export const APPROVE_LABEL: Record<DecisionKind, string> = {
   application: '승인',
   reservation: '확정',
   club: '승인',
+  managed: '승인',
 };
 
 /** 프로그램 신청은 일괄 API, 나머지는 단건 API — 결과는 모두 BulkResult 로 맞춘다 */
@@ -32,7 +36,10 @@ export async function submitDecision(
   if (kind === 'application') return api.admin.applications.decide(ids, decision, reason);
   for (const id of ids) {
     if (kind === 'reservation') await api.admin.spaces.decideReservation(id, decision, reason);
-    else await api.admin.clubs.decideApplication(id, decision, reason);
+    else if (kind === 'managed') {
+      const [clubId = '', applicationId = ''] = id.split(':');
+      await api.manage.decideApplication(clubId, applicationId, decision, reason);
+    } else await api.admin.clubs.decideApplication(id, decision, reason);
   }
   return { succeeded: ids, failed: [] };
 }

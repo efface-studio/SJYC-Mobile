@@ -3,7 +3,7 @@ import { router, Stack, type Href } from 'expo-router';
 import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
 import { StyleSheet, View } from 'react-native';
 import type { Tone } from '@/domain/labels';
-import { can, canManageAttendance, ROLE_LABEL, type Permission } from '@/domain/permissions';
+import { can, canManageAttendance, managesAnyClub, ROLE_LABEL, type Permission } from '@/domain/permissions';
 import type { User } from '@/domain/types';
 import { useLogout, useSession } from '@/features/auth/session';
 import { Rows } from '~/admin-kit/components';
@@ -62,6 +62,14 @@ const GROUPS: { group: string; tone: Tone; items: Menu[] }[] = [
     group: '커뮤니티',
     tone: 'success',
     items: [
+      {
+        title: '동아리 운영',
+        subtitle: '담당 동아리 회원 · 가입 신청 · 소식 · 소개',
+        href: '/more/my-clubs',
+        permission: managesAnyClub,
+        ios: 'person.3.sequence',
+        android: 'diversity_3',
+      },
       {
         title: '동아리',
         subtitle: '등록 · 운영 상태 · 모집',
