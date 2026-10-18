@@ -52,6 +52,7 @@ function Gate() {
         <Stack.Screen name="applications/[id]" options={{ title: '신청 상세' }} />
         <Stack.Screen name="reservations/[id]" options={{ title: '예약 상세' }} />
         <Stack.Screen name="inquiries/[id]" options={{ title: '문의 상세' }} />
+        <Stack.Screen name="attendance/[id]" options={{ title: '출석부' }} />
         <Stack.Screen name="decision/[kind]/[ids]" options={{ title: '반려 사유', presentation: 'modal' }} />
         <Stack.Screen name="notice-preview" options={{ title: '미리보기', presentation: 'modal' }} />
       </Stack.Protected>
