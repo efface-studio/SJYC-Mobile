@@ -4,7 +4,8 @@
  * 웹 전용 API(DOM 등)에 의존하지 않아 모바일 앱에서도 재사용할 수 있다.
  */
 
-export type Role = 'member' | 'staff' | 'admin';
+/** 높은 순: developer(개발자, 최상위) > admin(최고 관리자) > staff(센터 직원) > member(회원) */
+export type Role = 'member' | 'staff' | 'admin' | 'developer';
 export type OAuthProvider = 'kakao' | 'naver' | 'apple' | 'google';
 export type UserStatus = 'active' | 'suspended' | 'withdrawn';
 
@@ -27,6 +28,8 @@ export interface User {
   providers: OAuthProvider[];
   consents: ConsentRecord[];
   createdAt: string;
+  /** 담당자로 지정된 동아리 ID — 서버가 계산해 내려준다 (센터 직원 이상은 모든 동아리를 관리하므로 비어 있어도 된다) */
+  managedClubIds: string[];
 }
 
 export interface Session {
@@ -166,6 +169,27 @@ export interface ClubMember {
   joinedAt: string;
 }
 
+/** 동아리별 담당자 — 센터 직원이 회원을 지정하며, 그 동아리의 운영(회원·가입·출석·소식·소개)을 맡는다 */
+export interface ClubManager {
+  clubId: string;
+  userId: string;
+  name: string;
+  email: string;
+  assignedAt: string;
+}
+
+/** 담당자·직원이 보는 동아리 회원 명단 (연락처 포함 — 운영 목적 외 사용 금지) */
+export interface ClubRosterEntry {
+  userId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: ClubRole;
+  joinedAt: string;
+  /** 0–100, 출석 기록이 없으면 null */
+  attendanceRate: number | null;
+}
+
 export interface ClubPost {
   id: string;
   kind: 'notice' | 'schedule' | 'activity';
@@ -191,6 +215,82 @@ export interface ClubApplication {
 export interface MyClub {
   club: Club;
   role: ClubRole;
+}
+
+/* ---------- 출석 ---------- */
+
+export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused';
+export type AttendanceTargetType = 'club' | 'program';
+
+/** 출석을 관리하는 대상 — 동아리 또는 프로그램 */
+export interface AttendanceTarget {
+  type: AttendanceTargetType;
+  id: string;
+}
+
+export interface AttendanceTargetSummary extends AttendanceTarget {
+  name: string;
+  /** 출석부 명단 인원 (동아리원 / 승인된 신청자) */
+  rosterCount: number;
+  sessionCount: number;
+}
+
+export interface AttendanceRecord {
+  userId: string;
+  name: string;
+  /** 아직 체크하지 않았으면 null */
+  status: AttendanceStatus | null;
+  checkedAt: string | null;
+  /** self: 본인이 출석 코드로 체크, manager: 담당자가 체크 */
+  method: 'self' | 'manager' | null;
+  note: string | null;
+}
+
+/** 출석부 한 회차 */
+export interface AttendanceSession {
+  id: string;
+  targetType: AttendanceTargetType;
+  targetId: string;
+  targetName: string;
+  /** YYYY-MM-DD (KST) */
+  date: string;
+  title: string;
+  /** 본인 출석 체크가 열려 있으면 서버가 발급한 4자리 코드, 아니면 null (담당자에게만 내려온다) */
+  checkInCode: string | null;
+  checkInClosesAt: string | null;
+  createdAt: string;
+  createdBy: string;
+  records: AttendanceRecord[];
+}
+
+export interface AttendanceMark {
+  userId: string;
+  status: AttendanceStatus | null;
+  note?: string | null;
+}
+
+/** 회원별 누적 출석 (출석률 = (출석 + 지각) / 체크된 회차, 공결은 분모에서 뺀다) */
+export interface AttendanceMemberStat {
+  userId: string;
+  name: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  /** 0–100, 체크된 회차가 없으면 null */
+  rate: number | null;
+}
+
+/** 내 출석 기록 한 줄 */
+export interface MyAttendance {
+  sessionId: string;
+  targetType: AttendanceTargetType;
+  targetId: string;
+  targetName: string;
+  date: string;
+  title: string;
+  status: AttendanceStatus | null;
+  checkedAt: string | null;
 }
 
 /* ---------- 공간 예약 ---------- */
@@ -259,7 +359,8 @@ export interface Faq {
 
 /* ---------- 알림 ---------- */
 
-export type NotificationKind = 'application' | 'reservation' | 'club_application' | 'inquiry' | 'notice';
+export type NotificationKind =
+  'application' | 'reservation' | 'club_application' | 'club_manager' | 'inquiry' | 'notice';
 
 /** 서버가 처리 결과(승인·반려·답변 등)를 본인에게 알리는 항목. 읽지 않은 수는 readAt === null 로 센다. */
 export interface Notification {
@@ -323,7 +424,8 @@ export interface AuditEvent {
     | 'reservation'
     | 'inquiry'
     | 'faq'
-    | 'policy';
+    | 'policy'
+    | 'attendance';
   targetId: string;
   summary: string;
 }

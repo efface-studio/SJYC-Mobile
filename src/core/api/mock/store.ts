@@ -4,7 +4,7 @@ import { createSeed, type MockDb } from './seed';
  * mock 저장소 — 브라우저 sessionStorage 에만 저장되는 개발용 상태.
  * 탭을 닫으면 사라지며, 실제 저장·인증이 아니다.
  */
-const DB_KEY = 'sjyc.mock.db.v5';
+const DB_KEY = 'sjyc.mock.db.v8';
 const SESSION_KEY = 'sjyc.mock.session.v1';
 const SCENARIO_KEY = 'sjyc.mock.scenario.v1';
 
@@ -46,7 +46,7 @@ export function loadDb(): MockDb {
   if (raw) {
     try {
       const parsed = JSON.parse(raw) as MockDb;
-      if (parsed.version === 5) return (memoryDb = parsed);
+      if (parsed.version === 8) return (memoryDb = parsed);
     } catch {
       // 손상된 값은 버리고 시드로 다시 시작
     }
@@ -59,6 +59,26 @@ export function loadDb(): MockDb {
 export function saveDb(db: MockDb): void {
   memoryDb = db;
   storage()?.setItem(DB_KEY, JSON.stringify(db));
+}
+
+/** 개발자 도구: 현재 mock 데이터를 JSON 으로 내보낸다 */
+export function exportDb(): string {
+  return JSON.stringify(loadDb(), null, 2);
+}
+
+/** 개발자 도구: 내보낸 JSON 을 불러온다. 버전·구조가 다르면 거부하고 기존 데이터를 유지한다. */
+export function importDb(json: string): void {
+  const parsed: unknown = JSON.parse(json);
+  const fresh = createSeed();
+  const ok =
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    (parsed as { version?: unknown }).version === fresh.version &&
+    Object.entries(fresh).every(
+      ([k, v]) => Array.isArray(v) === Array.isArray((parsed as Record<string, unknown>)[k]),
+    );
+  if (!ok) throw new Error(`mock 데이터 형식이 맞지 않습니다 (버전 ${fresh.version} 이 필요합니다).`);
+  saveDb(parsed as MockDb);
 }
 
 export function resetDb(): void {
