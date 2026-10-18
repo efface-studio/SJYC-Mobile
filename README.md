@@ -1,0 +1,50 @@
+# SJYC Mobile — 중구청소년센터 네이티브 앱 (iOS · Android)
+
+한 코드베이스에서 **사용자 앱**과 **관리자 앱** 두 개를 만든다 (Expo SDK 57, expo-router, React Native 0.86).
+
+| 앱     | 실행                                                                  | 번들 ID                    | 라우트      |
+| ------ | --------------------------------------------------------------------- | -------------------------- | ----------- |
+| 사용자 | `npm run start` / `npm run ios` / `npm run android`                   | `studio.efface.sjyc`       | `src/user`  |
+| 관리자 | `npm run start:admin` / `npm run ios:admin` / `npm run android:admin` | `studio.efface.sjyc.admin` | `src/admin` |
+
+`APP_FLAVOR=admin` 이 라우트 폴더·앱 이름·번들 ID 를 바꾼다(`app.config.ts`). 두 앱을 한 기기에 함께 설치할 수 있다.
+
+## UI 구성
+
+- **OS 기본**: 하단 탭 바(`expo-router/unstable-native-tabs` — iOS 26+ Liquid Glass, Android Material 3), 네이티브 스택 헤더·큰 제목·검색창, `Alert`·iOS 액션 시트·`Alert.prompt`, `Switch`, 날짜 선택기(UIDatePicker / Material 다이얼로그), 당겨서 새로고침, SF Symbols / Material Symbols
+- **화면 본문**: 디자인 시스템 `src/ds` — Pretendard, 토큰(라이트/다크, AA 대비), `Screen`·`ListRow`·`Card`·`Badge`·`Button`·`Chips`·`Photo`(expo-image)·`TextField`·`SelectField`(iOS 액션 시트 / Android 바텀 시트)·`DateField`·`SwitchRow`·`StickyFooter`
+- 사용자 앱 보조 컴포넌트 `src/user-kit`, 관리자 앱 보조 컴포넌트 `src/admin-kit`
+
+## 코드 공유
+
+`@/*` 는 `src/core/*` 를 가리킨다. `src/core` 는 웹 저장소 [efface-studio/SJYC-Client](https://github.com/efface-studio/SJYC-Client)의 도메인 타입·API 계약(`api`)·검증 스키마·mock adapter 복사본이다.
+
+```bash
+# SJYC-Client 를 이 저장소 옆(../SJYC-Client)에 두거나 SJYC_CLIENT_DIR 로 지정
+npm run sync:core
+```
+
+원본은 웹 저장소이므로 `src/core` 를 직접 고치지 않는다. UI 코드는 공유하지 않는다.
+
+## 데이터 모드
+
+기본은 개발용 mock(웹과 같은 샘플 데이터, 앱 메모리에만 저장). 홈·상세 화면에 "개발용 데모" 표시가 나온다.
+실서버: `EXPO_PUBLIC_API_MODE=http`, `EXPO_PUBLIC_API_BASE_URL=...` (eas.json 의 production 프로필 참고 — URL 은 자리표시자).
+세션은 서버 HttpOnly 쿠키(React Native 네이티브 쿠키 저장소)를 전제로 한다. 앱 전용 토큰 방식이 필요하면 서버 설계 때 결정하고 `src/api/http.ts` 어댑터만 바꾼다.
+
+## 검증
+
+```bash
+npm run typecheck
+npm run doctor
+npm run export:user
+npm run export:admin
+```
+
+- iOS 빌드는 Xcode 26 이 있는 macOS 또는 EAS Build(`eas build -p ios --profile development`) 가 필요하다. Liquid Glass 탭 바는 iOS 26 SDK 로 빌드해야 나타난다.
+- Android: `npm run android` (에뮬레이터 또는 기기 필요), 빌드만 확인하려면 `npx expo prebuild -p android` 후 `cd android && ./gradlew assembleDebug`.
+
+## 범위 메모
+
+- 관리자 앱: 대시보드, 프로그램 신청·공간 예약·동아리 가입 승인/반려, 문의 답변, 공지 작성·수정·삭제, 회원 조회·역할/상태 변경, 감사 로그. 프로그램·FAQ·정책 문서·공간 설정 편집은 웹 관리자에서 한다.
+- Android 에는 OS 기본 텍스트 입력 다이얼로그가 없어 반려 사유는 별도 입력 화면으로 받는다.
