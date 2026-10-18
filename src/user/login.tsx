@@ -6,7 +6,7 @@ import { StyleSheet, View, useColorScheme } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { CENTER } from '@/config/center';
-import { IS_MOCK } from '@/config/env';
+import { DEMO_DATA } from '@/config/env';
 import { providerStates, type ProviderState } from '@/config/oauth';
 import type { OAuthProvider } from '@/domain/types';
 import { forgotPasswordSchema, loginSchema, parseValues, type FieldErrors } from '@/domain/schemas';
@@ -197,7 +197,7 @@ export default function LoginScreen() {
         ))}
       </Gutter>
 
-      {IS_MOCK && (
+      {DEMO_DATA && (
         <Gutter style={styles.demo}>
           <Txt variant="captionStrong" color="textTertiary">
             개발용 데모 계정으로 바로 로그인

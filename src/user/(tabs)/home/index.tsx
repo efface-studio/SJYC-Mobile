@@ -5,7 +5,8 @@ import { Linking, ScrollView, StyleSheet, View, useColorScheme } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/api';
 import { CENTER, DESK_HOURS, hoursOn } from '@/config/center';
-import { IS_MOCK } from '@/config/env';
+import { REFERENCE_COLLECTED_AT } from '@/api/mock/research';
+import { DEMO_DATA, IS_MOCK } from '@/config/env';
 import { NOTICE_CATEGORY_LABEL } from '@/domain/labels';
 import { formatDate } from '@/lib/format';
 import {
@@ -93,11 +94,13 @@ export default function HomeScreen() {
         <BellButton />
       </Gutter>
 
-      {IS_MOCK && (
+      {DEMO_DATA && (
         <Gutter>
           <View style={[styles.demo, { backgroundColor: t.tone.warning.bg }]}>
             <Txt variant="caption" color={t.tone.warning.fg}>
-              개발용 데모 데이터로 동작 중입니다
+              {IS_MOCK
+                ? '개발용 데모 데이터로 동작 중입니다'
+                : `시연 서버 · 프로그램·공지·신청·회원은 샘플, 동아리 소개·갤러리는 공식 채널 참고 정보(${REFERENCE_COLLECTED_AT} 수집)`}
             </Txt>
           </View>
         </Gutter>
