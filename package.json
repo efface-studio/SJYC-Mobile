@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "export:user": "expo export --platform ios --platform android --output-dir dist/user",
     "export:admin": "cross-env APP_FLAVOR=admin expo export --platform ios --platform android --output-dir dist/admin",
-    "doctor": "expo-doctor",
+    "doctor": "npx --yes expo-doctor",
     "sync:core": "node scripts/sync-core.mjs"
   },
   "dependencies": {
