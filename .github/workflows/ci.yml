@@ -29,3 +29,6 @@ jobs:
 
       - name: Expo doctor
         run: npm run doctor
+
+      - name: Bundle user app (iOS · Android)
+        run: npm run export:user
