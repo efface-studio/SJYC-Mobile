@@ -397,6 +397,17 @@ export default function MyScreen() {
         </>
       )}
 
+      <Divider thick />
+      <SectionHeader title="활동" />
+      <Rows>
+        <LinkRow
+          title="출석 체크 · 내 출석 기록"
+          ios="checkmark.circle"
+          android="how_to_reg"
+          onPress={() => router.push('/my/attendance')}
+        />
+      </Rows>
+
       <InfoSections />
 
       <Divider thick />

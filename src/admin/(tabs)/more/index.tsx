@@ -3,7 +3,8 @@ import { router, Stack, type Href } from 'expo-router';
 import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
 import { StyleSheet, View } from 'react-native';
 import type { Tone } from '@/domain/labels';
-import { can, ROLE_LABEL, type Permission } from '@/domain/permissions';
+import { can, canManageAttendance, ROLE_LABEL, type Permission } from '@/domain/permissions';
+import type { User } from '@/domain/types';
 import { useLogout, useSession } from '@/features/auth/session';
 import { Rows } from '~/admin-kit/components';
 import { Badge, Button, Divider, EmptyState, Gutter, IconCircle, ListRow, Screen, Txt, space } from '~/ds';
@@ -13,7 +14,8 @@ interface Menu {
   title: string;
   subtitle: string;
   href: Href;
-  permission: Permission;
+  /** 권한 이름 또는 조건 (동아리 담당자처럼 역할만으로 정해지지 않는 메뉴) */
+  permission: Permission | ((user: User | undefined) => boolean);
   ios: SFSymbol;
   android: AndroidSymbol;
 }
@@ -75,6 +77,14 @@ const GROUPS: { group: string; tone: Tone; items: Menu[] }[] = [
         permission: 'club.manage',
         ios: 'person.badge.plus',
         android: 'person_add',
+      },
+      {
+        title: '출석',
+        subtitle: '출석부 · 출석 코드 · 회원별 출석률',
+        href: '/more/attendance',
+        permission: canManageAttendance,
+        ios: 'checkmark.circle',
+        android: 'how_to_reg',
       },
       {
         title: 'FAQ',
@@ -141,7 +151,9 @@ const GROUPS: { group: string; tone: Tone; items: Menu[] }[] = [
 export default function More() {
   const user = useSession().data?.user;
   const logout = useLogout();
-  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((m) => can(user, m.permission)) })).filter(
+  const allowed = (m: Menu) =>
+    typeof m.permission === 'function' ? m.permission(user) : can(user, m.permission);
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(allowed) })).filter(
     (g) => g.items.length > 0,
   );
 
