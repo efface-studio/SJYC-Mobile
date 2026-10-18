@@ -154,7 +154,11 @@ export default function More() {
             </View>
             <View style={styles.roles}>
               {user.roles.map((r) => (
-                <Badge key={r} text={ROLE_LABEL[r]} tone={r === 'admin' ? 'brand' : 'neutral'} />
+                <Badge
+                  key={r}
+                  text={ROLE_LABEL[r]}
+                  tone={r === 'admin' || r === 'developer' ? 'brand' : 'neutral'}
+                />
               ))}
             </View>
           </View>

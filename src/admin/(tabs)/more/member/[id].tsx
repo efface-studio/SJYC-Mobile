@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { api, errorMessage } from '@/api';
 import { USER_STATUS } from '@/domain/labels';
-import { ROLE_LABEL } from '@/domain/permissions';
+import { assignableRoles, canManageUser, primaryRole, ROLE_LABEL } from '@/domain/permissions';
 import type { Role, User, UserStatus } from '@/domain/types';
 import { useSession } from '@/features/auth/session';
 import { formatDate } from '@/lib/format';
@@ -21,20 +21,11 @@ import {
 } from '~/ds';
 import { confirm, notify } from '~/shared/dialogs';
 
-const ROLE_OPTIONS: { value: Role; label: string }[] = [
-  { value: 'member', label: ROLE_LABEL.member },
-  { value: 'staff', label: ROLE_LABEL.staff },
-  { value: 'admin', label: ROLE_LABEL.admin },
-];
 /** 탈퇴는 회원 본인 절차로만 — 관리자는 정상/이용 정지만 바꾼다 */
 const STATUS_OPTIONS: { value: UserStatus; label: string }[] = [
   { value: 'active', label: USER_STATUS.active.text },
   { value: 'suspended', label: USER_STATUS.suspended.text },
 ];
-
-/** 역할은 상위 역할이 하위 권한을 포함하므로 가장 높은 역할 하나로 다룬다 */
-const topRole = (roles: Role[]): Role =>
-  roles.includes('admin') ? 'admin' : roles.includes('staff') ? 'staff' : 'member';
 
 export default function MemberDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -67,7 +58,10 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
     onSuccess: () => invalidate(),
     onError: (e) => notify('변경하지 못했습니다', errorMessage(e)),
   });
-  const role = topRole(u.roles);
+  // 역할은 상위 역할이 하위 권한을 포함하므로 가장 높은 역할 하나로 다룬다
+  const role = primaryRole(u);
+  // 개발자 역할은 개발자만 부여하고, 개발자 계정은 개발자만 바꾼다 (서버도 거부)
+  const roleOptions = assignableRoles(me).map((r) => ({ value: r, label: ROLE_LABEL[r] }));
 
   const changeRole = async (next: Role) => {
     if (next === role || update.isPending) return;
@@ -75,7 +69,7 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
       title: '역할을 변경할까요?',
       message: `${u.name}: ${ROLE_LABEL[role]} → ${ROLE_LABEL[next]}`,
       confirmLabel: '변경',
-      destructive: next === 'admin',
+      destructive: next === 'admin' || next === 'developer',
     });
     if (ok) update.mutate({ roles: [next] });
   };
@@ -92,7 +86,8 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
   };
 
   const isMe = me?.id === u.id;
-  const editable = canManage && !isMe && u.status !== 'withdrawn';
+  const protectedAccount = canManage && !canManageUser(me, u);
+  const editable = canManage && !isMe && !protectedAccount && u.status !== 'withdrawn';
 
   return (
     <Screen>
@@ -111,12 +106,7 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
       </Gutter>
       {editable ? (
         <FormSection title="권한 · 상태">
-          <SelectField
-            label="역할"
-            value={role}
-            options={ROLE_OPTIONS}
-            onChange={(r) => void changeRole(r)}
-          />
+          <SelectField label="역할" value={role} options={roleOptions} onChange={(r) => void changeRole(r)} />
           <SelectField
             label="상태"
             value={u.status}
@@ -136,6 +126,11 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
             {canManage && isMe && (
               <Txt variant="caption" color="textTertiary">
                 자기 자신의 권한·상태는 변경할 수 없습니다.
+              </Txt>
+            )}
+            {protectedAccount && !isMe && (
+              <Txt variant="caption" color="textTertiary">
+                개발자 계정의 역할·상태는 개발자만 변경할 수 있습니다.
               </Txt>
             )}
           </Gutter>
