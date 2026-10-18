@@ -13,8 +13,8 @@ import { Badge, Button, Chips, GUTTER, TextField, Txt, radius, space, useTheme }
 import { notify } from '~/shared/dialogs';
 
 /** 데모(mock) 모드에서만 노출하는 직원·관리자 계정 */
-const STAFF_DEMOS = DEMO_ACCOUNTS.filter(
-  (a) => a.email === 'staff@demo.test' || a.email === 'admin@demo.test',
+const STAFF_DEMOS = DEMO_ACCOUNTS.filter((a) =>
+  ['staff@demo.test', 'admin@demo.test', 'developer@demo.test'].includes(a.email),
 );
 const DEMO_OPTIONS = STAFF_DEMOS.map((a) => ({ value: a.email as string, label: a.label as string }));
 
