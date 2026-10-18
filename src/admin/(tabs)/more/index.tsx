@@ -122,6 +122,20 @@ const GROUPS: { group: string; tone: Tone; items: Menu[] }[] = [
       },
     ],
   },
+  {
+    group: '개발',
+    tone: 'neutral',
+    items: [
+      {
+        title: '개발자 도구',
+        subtitle: '환경 · 권한 · API 요청 · 캐시 · 데모 데이터',
+        href: '/more/developer',
+        permission: 'developer.access',
+        ios: 'hammer',
+        android: 'build',
+      },
+    ],
+  },
 ];
 
 export default function More() {
