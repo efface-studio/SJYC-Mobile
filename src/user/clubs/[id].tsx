@@ -130,10 +130,8 @@ function Timeline({ items }: { items: ClubActivity[] }) {
 function MemberSections({ clubId }: { clubId: string }) {
   const posts = useQuery({ queryKey: ['club-posts', clubId], queryFn: () => api.clubs.posts(clubId) });
   const members = useQuery({ queryKey: ['club-members', clubId], queryFn: () => api.clubs.members(clubId) });
-  const t = useTheme();
   return (
     <>
-      <Divider thick />
       <SectionHeader title="소식 · 일정" />
       <QueryBoundary
         query={posts}
@@ -163,7 +161,6 @@ function MemberSections({ clubId }: { clubId: string }) {
         )}
       </QueryBoundary>
 
-      <Divider thick />
       <SectionHeader title="동아리원" />
       <Gutter style={{ paddingBottom: space.sm }}>
         <Txt variant="caption" color="textTertiary">
@@ -175,11 +172,6 @@ function MemberSections({ clubId }: { clubId: string }) {
           <Rows>
             {data.map((m, i) => (
               <View key={i} style={styles.member}>
-                <View style={[styles.avatar, { backgroundColor: t.bgSubtle }]}>
-                  <Txt variant="captionStrong" color="textSecondary">
-                    {[...m.displayName][0] ?? ''}
-                  </Txt>
-                </View>
                 <View style={{ flex: 1 }}>
                   <Txt variant="label">{m.displayName}</Txt>
                   <Txt variant="small" color="textTertiary">
@@ -267,7 +259,6 @@ function ClubDetail({ club: c }: { club: Club }) {
         <InfoRow label="인원" value={`${c.memberCount}명`} />
       </Gutter>
 
-      <Divider thick />
       <SectionHeader title="소개" />
       <Gutter>
         <Article>{c.description}</Article>
@@ -275,7 +266,6 @@ function ClubDetail({ club: c }: { club: Club }) {
 
       {c.activities.length > 0 && (
         <>
-          <Divider thick />
           <SectionHeader title="최근 활동" />
           <Gutter>
             <Timeline items={c.activities} />
@@ -313,7 +303,7 @@ function ClubDetail({ club: c }: { club: Club }) {
         </Gutter>
       ) : canApply ? (
         <>
-          <Divider thick />
+          <Divider />
           <FormSection title="가입 신청">
             <TextField
               label="가입 동기 (10~500자)"
@@ -350,7 +340,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     bottom: 12,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 4,
     backgroundColor: 'rgba(0,0,0,0.55)',
@@ -371,5 +361,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 });

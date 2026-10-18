@@ -91,7 +91,7 @@ function ProfileForm({ session }: { session: Session }) {
           )}
         </View>
       </Gutter>
-      <Divider thick />
+      <Divider />
 
       <FormSection title="기본 정보">
         <TextField
@@ -119,7 +119,6 @@ function ProfileForm({ session }: { session: Session }) {
         />
       </FormSection>
 
-      <Divider thick />
       <SectionHeader title="동의 내역" />
       <Rows>
         {user.consents.map((c) => (
@@ -134,7 +133,6 @@ function ProfileForm({ session }: { session: Session }) {
         ))}
       </Rows>
 
-      <Divider thick />
       <SectionHeader title="소셜 계정 연결" />
       <Rows>
         {OAUTH_PROVIDERS.map((p) => (

@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import { RECRUIT_STATUS } from '@/domain/labels';
-import { remainingSeats } from '@/domain/program';
-import type { Program, RecruitStatus } from '@/domain/types';
-import { daysUntil, formatShortDate } from '@/lib/format';
+import type { RecruitStatus } from '@/domain/types';
 import { Chips, Gutter, QueryBoundary, Screen, Tap, Txt, pickOption, radius, space, useTheme } from '~/ds';
 import { Icon } from '~/shared/icon';
-import { Rows } from '~/user-kit';
+import { ProgramRow, Rows } from '~/user-kit';
 
 type StatusFilter = '' | RecruitStatus;
 
@@ -20,71 +18,6 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
     label: RECRUIT_STATUS[s].text,
   })),
 ];
-
-/** "10.22 (수)" → "10.22" */
-const monthDay = (iso: string) => formatShortDate(iso).split(' ')[0] ?? '';
-
-/** 왼쪽 일정 열: 모집 중이면 D-day, 예정이면 접수 시작일, 그 외 상태 */
-function DateColumn({ p }: { p: Program }) {
-  const t = useTheme();
-  if (p.recruitStatus === 'open') {
-    const d = daysUntil(p.recruitEndsAt);
-    return (
-      <View style={styles.dateCol}>
-        <Txt variant="title2" color="action">
-          {d <= 0 ? 'D-Day' : `D-${d}`}
-        </Txt>
-        <Txt variant="small" color="textTertiary">
-          {monthDay(p.recruitEndsAt)} 마감
-        </Txt>
-      </View>
-    );
-  }
-  if (p.recruitStatus === 'upcoming') {
-    return (
-      <View style={styles.dateCol}>
-        <Txt variant="title3" color={t.tone.info.fg}>
-          {monthDay(p.recruitStartsAt)}
-        </Txt>
-        <Txt variant="small" color="textTertiary">
-          접수 시작
-        </Txt>
-      </View>
-    );
-  }
-  return (
-    <View style={styles.dateCol}>
-      <Txt variant="captionStrong" color="textTertiary">
-        {RECRUIT_STATUS[p.recruitStatus].text}
-      </Txt>
-    </View>
-  );
-}
-
-function ProgramRow({ p, category }: { p: Program; category: string }) {
-  const left = remainingSeats(p);
-  const muted = p.recruitStatus === 'closed' || p.recruitStatus === 'full';
-  return (
-    <Tap
-      onPress={() => router.push(`/programs/${p.id}`)}
-      accessibilityLabel={`${p.title}, ${RECRUIT_STATUS[p.recruitStatus].text}`}
-      style={styles.row}
-    >
-      <DateColumn p={p} />
-      <View style={{ flex: 1, gap: 4 }}>
-        <Txt variant="bodyStrong" numberOfLines={2} color={muted ? 'textSecondary' : 'text'}>
-          {p.title}
-        </Txt>
-        <Txt variant="caption" color="textTertiary" numberOfLines={1}>
-          {[category, p.target].filter(Boolean).join(' · ')}
-        </Txt>
-        <Txt variant="caption" color="textSecondary">
-          {muted ? `정원 ${p.capacity}명` : `잔여 ${left}석 · 정원 ${p.capacity}명`}
-        </Txt>
-      </View>
-    </Tap>
-  );
-}
 
 export default function ProgramsScreen() {
   const t = useTheme();
@@ -141,7 +74,7 @@ export default function ProgramsScreen() {
         <Gutter style={styles.toolbar}>
           <Tap
             onPress={() => void pickCategory()}
-            rounded={radius.pill}
+            rounded={radius.md}
             accessibilityLabel={`분류 ${currentCategory?.name ?? '전체'}, 변경`}
             style={[styles.select, { borderColor: categoryId ? t.action : t.lineStrong }]}
           >
@@ -196,12 +129,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderWidth: 1,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.lg,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-  },
-  dateCol: { width: 64, alignItems: 'center', gap: 2 },
 });

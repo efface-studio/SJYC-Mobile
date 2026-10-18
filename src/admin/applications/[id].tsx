@@ -9,7 +9,6 @@ import { ButtonPair, DetailHeader, NoPermission, TextBlock, useCan } from '~/adm
 import { useDecision } from '~/admin-kit/decision';
 import {
   Button,
-  Divider,
   Gutter,
   InfoRow,
   QueryBoundary,
@@ -74,7 +73,6 @@ function ApplicationView({ a }: { a: ProgramApplication }) {
         caption={a.programTitle}
         status={APPLICATION_STATUS[a.status]}
       />
-      <Divider thick />
       <SectionHeader title="신청 정보" />
       <Gutter>
         <InfoRow label="프로그램" value={a.programTitle} />

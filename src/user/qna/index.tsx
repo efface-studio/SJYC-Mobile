@@ -11,10 +11,8 @@ import { formatDate } from '@/lib/format';
 import {
   Badge,
   Button,
-  Card,
   Divider,
   Gutter,
-  IconCircle,
   ListRow,
   QueryBoundary,
   Screen,
@@ -91,7 +89,6 @@ export default function QnaScreen() {
         )}
       </QueryBoundary>
 
-      <Divider thick />
       <SectionHeader title="1:1 문의" />
       {session ? (
         <QueryBoundary
@@ -134,17 +131,15 @@ export default function QnaScreen() {
         />
       </Gutter>
 
-      <Gutter style={{ paddingTop: space.xxl }}>
-        <Card tone="subtle" onPress={() => void Linking.openURL(`tel:${CENTER.tel}`)} style={styles.call}>
-          <IconCircle ios="phone.fill" android="call" />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Txt variant="caption" color="textTertiary">
-              급한 문의는 전화로
-            </Txt>
-            <Txt variant="bodyStrong">대표번호 {CENTER.telDisplay}</Txt>
-          </View>
-        </Card>
-      </Gutter>
+      <View style={{ marginTop: space.xxl }}>
+        <Divider />
+        <ListRow
+          meta="급한 문의는 전화로"
+          title={`대표번호 ${CENTER.telDisplay}`}
+          onPress={() => void Linking.openURL(`tel:${CENTER.tel}`)}
+        />
+        <Divider />
+      </View>
     </Screen>
   );
 }
@@ -159,5 +154,4 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   a: { flexDirection: 'row', gap: space.md, paddingHorizontal: 20, paddingVertical: 16 },
-  call: { flexDirection: 'row', alignItems: 'center', gap: space.md },
 });

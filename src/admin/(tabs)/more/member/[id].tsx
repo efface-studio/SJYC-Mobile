@@ -8,17 +8,7 @@ import { useSession } from '@/features/auth/session';
 import { formatDate } from '@/lib/format';
 import { DetailHeader, NoPermission, useCan } from '~/admin-kit/components';
 import { useInvalidateAdmin } from '~/admin-kit/queries';
-import {
-  Divider,
-  FormSection,
-  Gutter,
-  InfoRow,
-  QueryBoundary,
-  Screen,
-  SectionHeader,
-  SelectField,
-  Txt,
-} from '~/ds';
+import { FormSection, Gutter, InfoRow, QueryBoundary, Screen, SectionHeader, SelectField, Txt } from '~/ds';
 import { confirm, notify } from '~/shared/dialogs';
 
 /** 탈퇴는 회원 본인 절차로만 — 관리자는 정상/이용 정지만 바꾼다 */
@@ -97,7 +87,6 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
         caption={u.email}
         status={USER_STATUS[u.status]}
       />
-      <Divider thick />
       <SectionHeader title="기본 정보" />
       <Gutter>
         <InfoRow label="연락처" value={u.phone ?? '-'} />

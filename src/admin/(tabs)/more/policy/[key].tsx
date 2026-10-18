@@ -95,7 +95,7 @@ function PolicyEditor({ doc }: { doc: PolicyDoc }) {
           doc.confirmed ? { text: '확정', tone: 'success' } : { text: '확정본 미등록', tone: 'warning' }
         }
       />
-      <Divider thick />
+      <Divider />
       <FormSection title="개정본">
         <DateField label="시행일" value={effectiveAt} onChange={setEffectiveAt} error={errors.effectiveAt} />
         <TextField

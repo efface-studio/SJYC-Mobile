@@ -92,7 +92,7 @@ export default function MyAttendanceScreen() {
           />
           <Button label="출석하기" loading={checkIn.isPending} onPress={submit} />
         </FormSection>
-        <Divider thick />
+        <Divider />
         <QueryBoundary query={list}>
           {(items) =>
             items.length === 0 ? (

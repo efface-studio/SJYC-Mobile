@@ -11,7 +11,6 @@ import { daysUntil, formatDate, formatDateTime, formatPeriod, formatShortDate } 
 import {
   Badge,
   Button,
-  Divider,
   Gutter,
   InfoRow,
   Screen,
@@ -110,7 +109,6 @@ function ProgramDetail({ p, category }: { p: Program; category?: string }) {
         <SeatsBar p={p} />
       </Hero>
 
-      <Divider thick />
       <SectionHeader title="모집 정보" />
       <Gutter>
         <InfoRow label="대상" value={p.target} />
@@ -123,7 +121,6 @@ function ProgramDetail({ p, category }: { p: Program; category?: string }) {
         <InfoRow label="취소 기한" value={`${formatDate(p.cancelDeadline)}까지 MY에서 취소`} />
       </Gutter>
 
-      <Divider thick />
       <SectionHeader title="프로그램 안내" />
       <Gutter style={{ gap: space.lg }}>
         <Article>{p.description}</Article>
@@ -152,6 +149,6 @@ export default function ProgramDetailScreen() {
 const styles = StyleSheet.create({
   statusLine: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   seatsText: { flexDirection: 'row', justifyContent: 'space-between' },
-  track: { height: 6, borderRadius: radius.pill, overflow: 'hidden' },
-  fill: { height: 6, borderRadius: radius.pill },
+  track: { height: 6, borderRadius: radius.sm, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: radius.sm },
 });

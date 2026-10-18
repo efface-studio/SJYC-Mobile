@@ -30,12 +30,12 @@ export default function InquiryScreen() {
             <Gutter style={{ paddingBottom: space.xxl }}>
               <Article>{q.body}</Article>
             </Gutter>
-            <Divider thick />
+            <Divider />
             <Gutter style={{ paddingTop: space.xxl }}>
               {q.answer ? (
-                <Card tone="brand" style={{ gap: space.sm }}>
+                <View style={{ gap: space.sm }}>
                   <View style={styles.answerHead}>
-                    <Txt variant="captionStrong" color="action">
+                    <Txt variant="title3" accessibilityRole="header">
                       센터 답변
                     </Txt>
                     <Txt variant="small" color="textTertiary">
@@ -43,10 +43,10 @@ export default function InquiryScreen() {
                     </Txt>
                   </View>
                   <Article>{q.answer.body}</Article>
-                </Card>
+                </View>
               ) : (
                 <Card tone="subtle" style={{ gap: 4 }}>
-                  <Txt variant="bodyStrong">답변을 준비하고 있어요</Txt>
+                  <Txt variant="bodyStrong">답변 대기 중입니다</Txt>
                   <Txt variant="caption" color="textTertiary">
                     담당자가 확인 후 답변을 등록하면 이곳에 표시됩니다.
                   </Txt>

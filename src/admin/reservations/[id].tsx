@@ -6,7 +6,7 @@ import type { SpaceReservation } from '@/domain/types';
 import { formatDateTime } from '@/lib/format';
 import { ButtonPair, DetailHeader, NoPermission, TextBlock, useCan } from '~/admin-kit/components';
 import { useDecision } from '~/admin-kit/decision';
-import { Button, Divider, Gutter, InfoRow, QueryBoundary, Screen, SectionHeader, StickyFooter } from '~/ds';
+import { Button, Gutter, InfoRow, QueryBoundary, Screen, SectionHeader, StickyFooter } from '~/ds';
 
 /** ponytail: 예약 단건 조회 API 가 없어 목록에서 찾는다 — admin.spaces.reservation(id) 가 생기면 교체 */
 async function findReservation(id: string) {
@@ -69,7 +69,6 @@ function ReservationView({ r }: { r: SpaceReservation }) {
         caption={when}
         status={RESERVATION_STATUS[r.status]}
       />
-      <Divider thick />
       <SectionHeader title="예약 정보" />
       <Gutter>
         <InfoRow label="이용 일시" value={when} />

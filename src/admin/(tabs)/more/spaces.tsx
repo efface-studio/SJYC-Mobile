@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { api } from '@/api';
 import { NoPermission, Rows, StatusBadge, useCan } from '~/admin-kit/components';
-import { IconCircle, ListRow, QueryBoundary, Screen } from '~/ds';
+import { ListRow, QueryBoundary, Screen } from '~/ds';
 
 /** 공간 설정 목록 (웹 공간 예약 › 공간 설정) — 행을 누르면 공간별 설정 화면 */
 export default function Spaces() {
@@ -29,13 +29,6 @@ export default function Spaces() {
                 rowKey={(s) => s.id}
                 render={(s) => (
                   <ListRow
-                    leading={
-                      <IconCircle
-                        ios="door.left.hand.open"
-                        android="meeting_room"
-                        tone={s.reservable ? 'info' : 'neutral'}
-                      />
-                    }
                     meta={s.floor}
                     title={s.name}
                     subtitle={`수용 ${s.capacity}명`}

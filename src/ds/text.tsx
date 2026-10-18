@@ -22,10 +22,13 @@ export function useAppFonts(): boolean {
   return loaded || !!error;
 }
 
+/** 큰 숫자(운영시간·D-day·건수)가 자리에 맞춰 정렬되도록 */
+const TABULAR: TextStyle['fontVariant'] = ['tabular-nums'];
+
 const VARIANT = {
-  display: { fontFamily: FONT.bold, fontSize: 28, lineHeight: 36, letterSpacing: -0.6 },
-  title1: { fontFamily: FONT.bold, fontSize: 22, lineHeight: 30, letterSpacing: -0.5 },
-  title2: { fontFamily: FONT.bold, fontSize: 19, lineHeight: 26, letterSpacing: -0.4 },
+  display: { fontFamily: FONT.bold, fontSize: 28, lineHeight: 36, letterSpacing: -0.6, fontVariant: TABULAR },
+  title1: { fontFamily: FONT.bold, fontSize: 22, lineHeight: 30, letterSpacing: -0.5, fontVariant: TABULAR },
+  title2: { fontFamily: FONT.bold, fontSize: 19, lineHeight: 26, letterSpacing: -0.4, fontVariant: TABULAR },
   title3: { fontFamily: FONT.semibold, fontSize: 17, lineHeight: 24, letterSpacing: -0.3 },
   body: { fontFamily: FONT.regular, fontSize: 16, lineHeight: 24, letterSpacing: -0.2 },
   bodyStrong: { fontFamily: FONT.semibold, fontSize: 16, lineHeight: 24, letterSpacing: -0.2 },

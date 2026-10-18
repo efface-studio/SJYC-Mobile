@@ -14,7 +14,6 @@ import {
   Badge,
   Button,
   DateField,
-  Divider,
   EmptyState,
   FormSection,
   ListRow,
@@ -86,7 +85,6 @@ function TargetPanel({ target }: { target: AttendanceTargetSummary }) {
       {(list) => (
         <>
           <CreateSession target={target} count={list.length} />
-          <Divider thick />
           <SectionHeader title={`출석부 ${list.length}개 · 명단 ${target.rosterCount}명`} />
           {list.length === 0 ? (
             <EmptyState title="아직 출석부가 없습니다" />
@@ -105,7 +103,6 @@ function TargetPanel({ target }: { target: AttendanceTargetSummary }) {
               )}
             />
           )}
-          <Divider thick />
           <SectionHeader title="회원별 출석" />
           <QueryBoundary query={stats}>
             {(rows) =>

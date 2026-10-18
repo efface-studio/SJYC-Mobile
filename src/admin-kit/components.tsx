@@ -97,7 +97,7 @@ export function StatusBadge({ text, tone }: { text: string; tone: Tone }) {
   );
 }
 
-/** 드롭다운 필터 칩 — 누르면 iOS 액션 시트 / Android 바텀 시트. 첫 선택지가 기본값 */
+/** 드롭다운 필터 (4px 테두리 컨트롤) — 누르면 iOS 액션 시트 / Android 바텀 시트. 첫 선택지가 기본값 */
 export function FilterChip<V extends string>({
   title,
   value,
@@ -118,7 +118,7 @@ export function FilterChip<V extends string>({
   const text = display ?? options[index]?.label ?? title;
   return (
     <Tap
-      rounded={radius.pill}
+      rounded={radius.md}
       accessibilityLabel={`${title}: ${text}`}
       onPress={async () => {
         const i = await pickOption(
@@ -129,20 +129,17 @@ export function FilterChip<V extends string>({
         const picked = i === null ? undefined : options[i];
         if (picked) onChange(picked.value);
       }}
-      style={[
-        styles.filterChip,
-        { backgroundColor: active ? t.brandSoft : t.bg, borderColor: active ? t.brandSoft : t.line },
-      ]}
+      style={[styles.filterChip, { borderColor: active ? t.text : t.lineStrong }]}
     >
       <Txt
         variant="captionStrong"
-        color={active ? 'action' : 'textSecondary'}
+        color={active ? 'text' : 'textSecondary'}
         numberOfLines={1}
         style={{ flexShrink: 1 }}
       >
         {text}
       </Txt>
-      <Icon ios="chevron.down" android="expand_more" color={active ? t.action : t.textTertiary} size={11} />
+      <Icon ios="chevron.down" android="expand_more" color={active ? t.text : t.textTertiary} size={11} />
     </Tap>
   );
 }
@@ -436,10 +433,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    height: 32,
+    height: 36,
     maxWidth: 240,
     paddingHorizontal: 12,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
   },
   toolbar: { flexDirection: 'row', alignItems: 'center', paddingLeft: GUTTER, minHeight: 48 },
   toolbarChips: {

@@ -161,7 +161,7 @@ export default function ProgramCalendarScreen() {
         </View>
       </Gutter>
 
-      <Divider thick />
+      <Divider />
       <Gutter style={{ paddingTop: space.xl }}>
         <Txt variant="captionStrong" color="action">
           {formatShortDate(`${selected}T12:00:00+09:00`)}

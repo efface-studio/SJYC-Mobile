@@ -12,10 +12,10 @@ import { formatDate, formatShortDate } from '@/lib/format';
 import {
   Badge,
   Button,
+  Chips,
   Divider,
   EmptyState,
   Gutter,
-  IconCircle,
   ListRow,
   LoadingState,
   QueryBoundary,
@@ -23,7 +23,6 @@ import {
   SectionHeader,
   Tap,
   Txt,
-  radius,
   space,
   useTheme,
 } from '~/ds';
@@ -59,11 +58,10 @@ function LinkRow({
 function InfoSections() {
   return (
     <>
-      <Divider thick />
       <SectionHeader title="고객 지원" />
       <Rows>
         <LinkRow
-          title="질문 · 문의"
+          title="질문·문의"
           ios="bubble.left.and.bubble.right"
           android="forum"
           onPress={() => router.push('/qna')}
@@ -75,13 +73,13 @@ function InfoSections() {
           onPress={() => router.push('/notices')}
         />
         <LinkRow
-          title="센터 소식 · 갤러리"
+          title="센터 소식·갤러리"
           ios="photo.on.rectangle"
           android="photo_library"
           onPress={() => router.push('/gallery')}
         />
         <LinkRow
-          title="센터 안내 · 오시는 길"
+          title="센터 안내·오시는 길"
           ios="info.circle"
           android="info"
           onPress={() => router.push('/about')}
@@ -95,7 +93,6 @@ function InfoSections() {
           />
         ) : null}
       </Rows>
-      <Divider thick />
       <SectionHeader title="약관 및 정책" />
       <Rows>
         {POLICY_NAV.map((p) => (
@@ -134,28 +131,29 @@ function SignedOut() {
 }
 
 function ProfileHeader({ user }: { user: User }) {
-  const t = useTheme();
   return (
     <Tap onPress={() => router.push('/my/profile')} accessibilityLabel="내 정보 수정" style={styles.profile}>
-      <View style={[styles.avatar, { backgroundColor: t.brandSoft }]}>
-        <Txt variant="title2" color="action">
-          {[...user.name][0] ?? ''}
-        </Txt>
-      </View>
       <View style={{ flex: 1, gap: 2 }}>
         <Txt variant="title2">{user.name}님</Txt>
         <Txt variant="caption" color="textTertiary" numberOfLines={1}>
           {user.email}
         </Txt>
       </View>
-      <Txt variant="captionStrong" color="textSecondary">
-        내 정보 수정 ›
+      <Txt variant="captionStrong" color="action">
+        내 정보 수정
       </Txt>
     </Tap>
   );
 }
 
-function Stats({
+const SEGMENTS: { key: Segment; label: string }[] = [
+  { key: 'applications', label: '프로그램 신청' },
+  { key: 'reservations', label: '공간 예약' },
+  { key: 'clubs', label: '동아리' },
+];
+
+/** 내역 전환 — 밑줄 탭에 건수를 함께 표시 ("프로그램 신청 3") */
+function Segments({
   value,
   onChange,
   counts,
@@ -164,37 +162,11 @@ function Stats({
   onChange: (s: Segment) => void;
   counts: Record<Segment, number | undefined>;
 }) {
-  const t = useTheme();
-  const items: { key: Segment; label: string }[] = [
-    { key: 'applications', label: '프로그램 신청' },
-    { key: 'reservations', label: '공간 예약' },
-    { key: 'clubs', label: '동아리' },
-  ];
-  return (
-    <Gutter>
-      <View style={[styles.stats, { backgroundColor: t.bgSubtle }]}>
-        {items.map((it) => {
-          const active = it.key === value;
-          return (
-            <Tap
-              key={it.key}
-              onPress={() => onChange(it.key)}
-              rounded={radius.md}
-              accessibilityLabel={`${it.label} ${counts[it.key] ?? 0}건${active ? ', 선택됨' : ''}`}
-              style={[styles.stat, active && { backgroundColor: t.card }]}
-            >
-              <Txt variant="title2" color={active ? 'action' : 'text'}>
-                {counts[it.key] ?? '–'}
-              </Txt>
-              <Txt variant={active ? 'captionStrong' : 'caption'} color={active ? 'text' : 'textTertiary'}>
-                {it.label}
-              </Txt>
-            </Tap>
-          );
-        })}
-      </View>
-    </Gutter>
-  );
+  const options = SEGMENTS.map((it) => ({
+    value: it.key,
+    label: counts[it.key] === undefined ? it.label : `${it.label} ${counts[it.key]}`,
+  }));
+  return <Chips options={options} value={value} onChange={onChange} />;
 }
 
 function ReservationRow({ r, onCancel }: { r: SpaceReservation; onCancel: () => void }) {
@@ -283,7 +255,7 @@ export default function MyScreen() {
       }
     >
       <ProfileHeader user={session.user} />
-      <Stats
+      <Segments
         value={segment}
         onChange={setSegment}
         counts={{
@@ -373,7 +345,6 @@ export default function MyScreen() {
                     key={club.id}
                     title={club.name}
                     subtitle={club.meetingInfo}
-                    leading={<IconCircle ios="person.3.fill" android="groups" />}
                     trailing={role === 'leader' ? <Badge text="대표" tone="brand" /> : undefined}
                     onPress={() => router.push(`/clubs/${club.id}`)}
                   />
@@ -397,7 +368,6 @@ export default function MyScreen() {
         </>
       )}
 
-      <Divider thick />
       <SectionHeader title="활동" />
       <Rows>
         <LinkRow
@@ -418,7 +388,7 @@ export default function MyScreen() {
 
       <InfoSections />
 
-      <Divider thick />
+      <Divider />
       <Gutter style={{ paddingTop: space.lg }}>
         <Button
           label="로그아웃"
@@ -447,9 +417,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: space.lg,
   },
-  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  stats: { flexDirection: 'row', borderRadius: radius.lg, padding: 4 },
-  stat: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: space.md },
   resRow: { flexDirection: 'row', gap: space.md, paddingHorizontal: 20, paddingVertical: 14 },
   cancel: { paddingTop: 12, paddingBottom: 8, paddingLeft: 12 },
 });

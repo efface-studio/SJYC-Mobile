@@ -5,7 +5,7 @@ import { mockDev } from '@/api/mock/client';
 import { DEMO_ACCOUNTS } from '@/api/mock/seed';
 import type { Scenario } from '@/api/mock/store';
 import { IS_MOCK } from '@/config/env';
-import { Button, Divider, EmptyState, FormSection, ListRow, Screen, SectionHeader, SelectField } from '~/ds';
+import { Button, EmptyState, FormSection, ListRow, Screen, SectionHeader, SelectField } from '~/ds';
 import { confirm } from '~/shared/dialogs';
 import { Rows } from '~/user-kit';
 
@@ -68,7 +68,6 @@ export default function DevToolsScreen() {
           }}
         />
       </FormSection>
-      <Divider thick />
       <SectionHeader title="데모 계정" />
       <Rows>
         {DEMO_ACCOUNTS.map((a) => (
