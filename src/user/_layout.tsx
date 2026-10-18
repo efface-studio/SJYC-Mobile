@@ -31,6 +31,7 @@ export default function UserRootLayout() {
         <Stack.Screen name="policies/[key]" options={{ title: '정책 문서' }} />
         <Stack.Screen name="my/applications/[id]" options={{ title: '신청 내역' }} />
         <Stack.Screen name="my/profile" options={{ title: '내 정보' }} />
+        <Stack.Screen name="my/attendance" options={{ title: '출석' }} />
         <Stack.Screen name="my/withdraw" options={{ title: '회원 탈퇴' }} />
         <Stack.Screen name="verify-email" options={{ title: '이메일 인증' }} />
         <Stack.Screen name="password/reset" options={{ title: '비밀번호 재설정' }} />
