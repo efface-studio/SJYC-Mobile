@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { View } from 'react-native';
 import { errorMessage } from '@/api';
-import { can } from '@/domain/permissions';
+import { canEnterConsole } from '@/domain/permissions';
 import { useSession } from '@/features/auth/session';
 import { Button, EmptyState, LoadingState, useTheme } from '~/ds';
 import { AppProviders } from '~/shared/providers';
@@ -15,7 +15,8 @@ export default function RootLayout() {
 }
 
 /**
- * 관리자 화면은 서버 세션이 admin.access 권한을 가질 때만 열린다.
+ * 관리자 화면은 서버 세션이 admin.access 권한을 갖거나 동아리 담당자로 지정되어 있을 때만 열린다
+ * (담당자에게는 더보기의 동아리 운영·출석만 보인다).
  * 권한 판단의 근거는 항상 서버 응답(useSession)이며, 모든 API 는 서버가 다시 검증한다.
  */
 function Gate() {
@@ -42,7 +43,7 @@ function Gate() {
       </View>
     );
   }
-  const allowed = can(session.data?.user, 'admin.access');
+  const allowed = canEnterConsole(session.data?.user);
 
   return (
     <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal', headerShadowVisible: false }}>

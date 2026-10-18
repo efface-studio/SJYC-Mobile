@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { can } from '@/domain/permissions';
+import { useSession } from '@/features/auth/session';
 import { dashboardQuery } from '~/admin-kit/queries';
 import { useColors } from '~/shared/theme';
 
@@ -9,8 +11,21 @@ import { useColors } from '~/shared/theme';
  */
 export default function TabsLayout() {
   const c = useColors();
-  const dashboard = useQuery({ ...dashboardQuery(7), refetchInterval: 60_000 });
+  const operator = can(useSession().data?.user, 'admin.access');
+  const dashboard = useQuery({ ...dashboardQuery(7), refetchInterval: 60_000, enabled: operator });
   const pending = dashboard.data?.applicationsSubmitted ?? 0;
+
+  // 동아리 담당자 전용 계정은 운영 탭 없이 더보기(동아리 운영·출석)만 쓴다
+  if (!operator) {
+    return (
+      <NativeTabs tintColor={c.tint} labelVisibilityMode="labeled">
+        <NativeTabs.Trigger name="more">
+          <NativeTabs.Trigger.Label>동아리 운영</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf={{ default: 'person.3', selected: 'person.3.fill' }} md="groups" />
+        </NativeTabs.Trigger>
+      </NativeTabs>
+    );
+  }
 
   return (
     <NativeTabs tintColor={c.tint} labelVisibilityMode="labeled">

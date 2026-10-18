@@ -407,6 +407,14 @@ export default function MyScreen() {
           onPress={() => router.push('/my/attendance')}
         />
       </Rows>
+      {session.user.managedClubIds.length > 0 && (
+        <Gutter style={{ paddingVertical: space.md }}>
+          <Txt variant="caption" color="textSecondary">
+            동아리 담당자로 지정되어 있습니다. 회원·가입 신청·출석·소식 관리는 관리자 앱(또는 웹 관리자
+            화면)의 동아리 운영에서 할 수 있습니다.
+          </Txt>
+        </Gutter>
+      )}
 
       <InfoSections />
 

@@ -5,6 +5,7 @@ import { api, errorMessage, isApiError } from '@/api';
 import { clubFormSchema, parseValues, type ClubFormInput, type FieldErrors } from '@/domain/schemas';
 import type { Club } from '@/domain/types';
 import { NoPermission, RowGroup, RowItem, listError, useCan, useRows } from '~/admin-kit/components';
+import { ClubManagersSection } from '~/admin-kit/club-managers';
 import { useInvalidateAdmin } from '~/admin-kit/queries';
 import {
   Button,
@@ -298,6 +299,7 @@ function ClubForm({ club }: { club: Club | null }) {
           </RowItem>
         ))}
       </RowGroup>
+      {club && <ClubManagersSection clubId={club.id} clubName={club.name} />}
     </Screen>
   );
 }

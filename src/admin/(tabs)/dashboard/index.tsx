@@ -4,8 +4,8 @@ import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
 import { useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { APPLICATION_STATUS, PUBLISH_STATUS } from '@/domain/labels';
-import { ROLE_LABEL, type Permission } from '@/domain/permissions';
-import type { DashboardSummary, Role } from '@/domain/types';
+import { primaryRole, ROLE_LABEL, type Permission } from '@/domain/permissions';
+import type { DashboardSummary } from '@/domain/types';
 import { useSession } from '@/features/auth/session';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { Rows, StatusBadge, useCan } from '~/admin-kit/components';
@@ -118,9 +118,6 @@ const PERIODS = [
   { value: '30', label: '최근 30일' },
 ];
 
-const topRole = (roles: Role[]): Role =>
-  roles.includes('admin') ? 'admin' : roles.includes('staff') ? 'staff' : 'member';
-
 function Greeting() {
   const user = useSession().data?.user;
   const today = new Intl.DateTimeFormat('ko-KR', {
@@ -134,7 +131,7 @@ function Greeting() {
     <Gutter style={styles.greeting}>
       <Txt variant="title3">{user.name}님, 안녕하세요</Txt>
       <Txt variant="caption" color="textTertiary">
-        {ROLE_LABEL[topRole(user.roles)]} · {today}
+        {ROLE_LABEL[primaryRole(user)]} · {today}
       </Txt>
     </Gutter>
   );
