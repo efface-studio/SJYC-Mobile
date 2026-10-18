@@ -1,0 +1,1287 @@
+/**
+ * 개발용 mock adapter — 서버가 준비되기 전 UI 흐름을 검증하기 위한 구현이다.
+ * 서버가 해야 할 검증(세션, 권한, 중복 신청, 정원, 취소 기한)을 같은 규칙으로 흉내 내지만
+ * 브라우저 안에서만 동작하므로 보안 경계가 아니다. 실제 운영에는 http adapter 를 쓴다.
+ */
+import { can, type Permission } from '@/domain/permissions';
+import { computeRecruitStatus } from '@/domain/program';
+import { buildSlots, overlaps, reservationWindowError } from '@/domain/space';
+import type {
+  AuditEvent,
+  Club,
+  ClubApplication,
+  Notification,
+  Page,
+  Program,
+  ProgramApplication,
+  Session,
+  SpaceReservation,
+  User,
+} from '@/domain/types';
+import { todayKst } from '@/lib/format';
+import type { AdminListQuery, ApiClient } from '../client';
+import { ApiError } from '../errors';
+import type { MockDb } from './seed';
+import {
+  expireSession,
+  loadDb,
+  readScenario,
+  readSession,
+  resetDb,
+  saveDb,
+  writeScenario,
+  writeSession,
+  type Scenario,
+} from './store';
+
+type DbUser = MockDb['users'][number];
+
+const DAY = 86_400_000;
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** 지연·오류 시나리오를 적용하고, 내부 객체가 UI 로 새지 않도록 복사본을 돌려준다 */
+async function respond<T>(fn: (db: MockDb) => T): Promise<T> {
+  const scenario = readScenario();
+  await wait(scenario === 'slow' ? 1500 : 150);
+  if (scenario === 'error') throw new ApiError('SERVER', '개발용 오류 시나리오가 켜져 있습니다.');
+  const db = loadDb();
+  const result = fn(db);
+  saveDb(db);
+  // structuredClone 은 React Native(Hermes)에 없다 — 데이터가 JSON 이므로 JSON 복사로 충분
+  return result === undefined ? result : (JSON.parse(JSON.stringify(result)) as T);
+}
+
+const isEmptyScenario = () => readScenario() === 'empty';
+
+function publicUser(u: DbUser): User {
+  const { password: _password, ...rest } = u;
+  return rest;
+}
+
+function currentUser(db: MockDb): DbUser | null {
+  const s = readSession();
+  if (!s || Date.parse(s.expiresAt) <= Date.now()) return null;
+  const u = db.users.find((x) => x.id === s.userId);
+  return u && u.status === 'active' ? u : null;
+}
+
+function requireUser(db: MockDb): DbUser {
+  const u = currentUser(db);
+  if (!u) throw new ApiError('UNAUTHENTICATED', '로그인이 필요하거나 로그인이 만료되었습니다.');
+  return u;
+}
+
+function requirePermission(db: MockDb, permission: Permission): DbUser {
+  const u = requireUser(db);
+  if (!can(u, permission)) throw new ApiError('FORBIDDEN', '이 작업을 수행할 권한이 없습니다.');
+  return u;
+}
+
+function nextId(db: MockDb, prefix: string): string {
+  db.seq += 1;
+  return `${prefix}-${db.seq}`;
+}
+
+function paginate<T>(items: T[], page = 1, pageSize = 10): Page<T> {
+  const list = isEmptyScenario() ? [] : items;
+  const start = (Math.max(1, page) - 1) * pageSize;
+  return {
+    items: list.slice(start, start + pageSize),
+    total: list.length,
+    page: Math.max(1, page),
+    pageSize,
+  };
+}
+
+function matches(text: string, q?: string): boolean {
+  return !q || text.toLowerCase().includes(q.trim().toLowerCase());
+}
+
+function sortBy<T>(
+  items: T[],
+  sort: AdminListQuery['sort'],
+  date: (x: T) => string,
+  title: (x: T) => string,
+): T[] {
+  const copy = [...items];
+  if (sort === 'title') return copy.sort((a, b) => title(a).localeCompare(title(b), 'ko'));
+  const dir = sort === 'oldest' ? 1 : -1;
+  return copy.sort((a, b) => dir * (Date.parse(date(a)) - Date.parse(date(b))));
+}
+
+function findOr404<T extends { id: string }>(list: T[], id: string): T {
+  const hit = list.find((x) => x.id === id);
+  if (!hit) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+  return hit;
+}
+
+function withRecruitStatus(p: Program): Program {
+  return { ...p, recruitStatus: computeRecruitStatus(p, new Date()) };
+}
+
+function withCancellable(db: MockDb, a: ProgramApplication): ProgramApplication {
+  const program = db.programs.find((p) => p.id === a.programId);
+  const open = a.status === 'submitted' || a.status === 'approved';
+  return { ...a, cancellable: open && !!program && Date.now() < Date.parse(program.cancelDeadline) };
+}
+
+/** 이용일 시작 전이고 대기·확정 상태일 때만 취소 가능 */
+function withReservationCancellable(r: MockDb['reservations'][number]): SpaceReservation {
+  const open = r.status === 'pending' || r.status === 'approved';
+  return { ...r, cancellable: open && r.date > todayKst() };
+}
+
+function audit(db: MockDb, actor: DbUser, e: Omit<AuditEvent, 'id' | 'at' | 'actorName'>): void {
+  db.audit.unshift({ id: nextId(db, 'ev'), at: new Date().toISOString(), actorName: actor.name, ...e });
+}
+
+/** 처리 결과를 신청자에게 알린다 (실서버에서는 서버가 같은 시점에 만든다) */
+function notify(db: MockDb, n: Pick<Notification, 'userId' | 'kind' | 'title' | 'body' | 'link'>): void {
+  db.notifications.unshift({ id: nextId(db, 'nt'), createdAt: new Date().toISOString(), readAt: null, ...n });
+}
+
+/** undefined 값은 "보내지 않음" — 기존 값을 유지한다 */
+function defined<T extends object>(input: T): Partial<T> {
+  return Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
+/** 날짜 입력값(YYYY-MM-DD, KST) → ISO */
+const kst = (date: string, time: string) => new Date(`${date}T${time}:00+09:00`).toISOString();
+
+function toSession(u: DbUser): Session {
+  const s = readSession();
+  return { user: publicUser(u), expiresAt: s?.expiresAt ?? new Date(Date.now() + DAY).toISOString() };
+}
+
+let lastResetToken: { token: string; userId: string } | null = null;
+
+export const mockClient: ApiClient = {
+  auth: {
+    me: () => respond((db) => (currentUser(db) ? toSession(currentUser(db)!) : null)),
+    login: (input) =>
+      respond((db) => {
+        const u = db.users.find((x) => x.email.toLowerCase() === input.email.toLowerCase());
+        if (!u || u.password !== input.password || u.status === 'withdrawn') {
+          throw new ApiError('VALIDATION', '이메일 또는 비밀번호가 올바르지 않습니다.');
+        }
+        if (u.status === 'suspended')
+          throw new ApiError('FORBIDDEN', '이용이 제한된 계정입니다. 센터에 문의해 주세요.');
+        if (!u.emailVerified)
+          throw new ApiError('FORBIDDEN', '이메일 인증을 완료한 뒤 로그인할 수 있습니다.');
+        writeSession(u.id);
+        return toSession(u);
+      }),
+    logout: () =>
+      respond(() => {
+        writeSession(null);
+      }),
+    signup: (input) =>
+      respond((db) => {
+        if (db.users.some((x) => x.email.toLowerCase() === input.email.toLowerCase())) {
+          throw new ApiError('CONFLICT', '이미 가입된 이메일입니다.', {
+            reason: 'EMAIL_TAKEN',
+            fieldErrors: { email: '이미 가입된 이메일입니다.' },
+          });
+        }
+        const now = new Date().toISOString();
+        db.users.push({
+          id: nextId(db, 'u'),
+          email: input.email,
+          name: input.name,
+          phone: null,
+          birthYear: input.birthYear,
+          roles: ['member'],
+          status: 'active',
+          emailVerified: false,
+          providers: [],
+          consents: [
+            { key: 'terms', required: true, agreed: true, agreedAt: now },
+            { key: 'privacy', required: true, agreed: true, agreedAt: now },
+            {
+              key: 'marketing',
+              required: false,
+              agreed: input.agreeMarketing,
+              agreedAt: input.agreeMarketing ? now : null,
+            },
+          ],
+          createdAt: now,
+          password: input.password,
+        });
+        return { requiresEmailVerification: true };
+      }),
+    resendVerification: () => respond(() => undefined),
+    requestPasswordReset: (email) =>
+      respond((db) => {
+        // 계정 존재 여부와 관계없이 같은 응답 — 가입 여부 노출 방지
+        const u = db.users.find((x) => x.email.toLowerCase() === email.toLowerCase());
+        lastResetToken = u
+          ? { token: `dev-${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`, userId: u.id }
+          : null;
+      }),
+    resetPassword: (token, password) =>
+      respond((db) => {
+        if (!lastResetToken || lastResetToken.token !== token) {
+          throw new ApiError(
+            'VALIDATION',
+            '재설정 링크가 만료되었거나 올바르지 않습니다. 다시 요청해 주세요.',
+          );
+        }
+        findOr404(db.users, lastResetToken.userId).password = password;
+        lastResetToken = null;
+      }),
+  },
+
+  me: {
+    updateProfile: (input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        u.name = input.name;
+        u.phone = input.phone || null;
+        u.consents = u.consents.map((c) =>
+          c.key === 'marketing'
+            ? {
+                ...c,
+                agreed: input.agreeMarketing,
+                agreedAt: input.agreeMarketing ? new Date().toISOString() : null,
+              }
+            : c,
+        );
+        return publicUser(u);
+      }),
+    withdraw: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        u.status = 'withdrawn';
+        writeSession(null);
+      }),
+    applications: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        const list = db.applications.filter((a) => a.userId === u.id).map((a) => withCancellable(db, a));
+        return isEmptyScenario()
+          ? []
+          : sortBy(
+              list,
+              'newest',
+              (a) => a.createdAt,
+              (a) => a.programTitle,
+            );
+      }),
+    application: (id) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const a = findOr404(db.applications, id);
+        if (a.userId !== u.id) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+        return withCancellable(db, a);
+      }),
+    cancelApplication: (id) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const a = findOr404(db.applications, id);
+        if (a.userId !== u.id) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+        if (!withCancellable(db, a).cancellable) {
+          throw new ApiError('CONFLICT', '취소 가능 기간이 지났거나 이미 처리된 신청입니다.', {
+            reason: 'CANCEL_DEADLINE_PASSED',
+          });
+        }
+        a.status = 'cancelled';
+        a.history.push({
+          at: new Date().toISOString(),
+          status: 'cancelled',
+          actor: 'applicant',
+          reason: null,
+        });
+        const p = db.programs.find((x) => x.id === a.programId);
+        if (p) p.appliedCount = Math.max(0, p.appliedCount - 1);
+        return withCancellable(db, a);
+      }),
+    clubs: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        return db.memberships
+          .filter((m) => m.userId === u.id)
+          .map((m) => ({ club: findOr404(db.clubs, m.clubId), role: m.role }));
+      }),
+    clubApplications: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        return db.clubApplications.filter((a) => a.userId === u.id);
+      }),
+    reservations: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        const list = db.reservations.filter((r) => r.userId === u.id).map(withReservationCancellable);
+        return isEmptyScenario()
+          ? []
+          : list.sort((a, b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime));
+      }),
+    cancelReservation: (id) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const r = findOr404(db.reservations, id);
+        if (r.userId !== u.id) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+        if (!withReservationCancellable(r).cancellable) {
+          throw new ApiError('CONFLICT', '이미 지난 예약이거나 처리된 예약은 취소할 수 없습니다.', {
+            reason: 'INVALID_STATE',
+          });
+        }
+        r.status = 'cancelled';
+        return withReservationCancellable(r);
+      }),
+    inquiries: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        const list = db.inquiries.filter((q) => q.userId === u.id);
+        return isEmptyScenario()
+          ? []
+          : sortBy(
+              list,
+              'newest',
+              (q) => q.createdAt,
+              (q) => q.title,
+            );
+      }),
+    inquiry: (id) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const q = findOr404(db.inquiries, id);
+        // 다른 사람의 문의는 존재 여부도 알려주지 않는다
+        if (q.userId !== u.id) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+        return q;
+      }),
+    notifications: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        return isEmptyScenario()
+          ? []
+          : sortBy(
+              db.notifications.filter((n) => n.userId === u.id),
+              'newest',
+              (n) => n.createdAt,
+              (n) => n.title,
+            );
+      }),
+    markNotificationsRead: (ids) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const now = new Date().toISOString();
+        for (const n of db.notifications) {
+          if (n.userId === u.id && n.readAt === null && (!ids || ids.includes(n.id))) n.readAt = now;
+        }
+      }),
+  },
+
+  media: {
+    list: () =>
+      respond((db) =>
+        isEmptyScenario() ? [] : [...db.media].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')),
+      ),
+  },
+
+  spaces: {
+    list: () => respond((db) => (isEmptyScenario() ? [] : db.spaces)),
+    get: (id) => respond((db) => findOr404(db.spaces, id)),
+    availability: (id, date) =>
+      respond((db) => {
+        findOr404(db.spaces, id);
+        const taken = db.reservations.filter(
+          (r) => r.spaceId === id && r.date === date && (r.status === 'pending' || r.status === 'approved'),
+        );
+        return buildSlots(date, taken);
+      }),
+    reserve: (id, input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const s = findOr404(db.spaces, id);
+        if (!s.reservable) {
+          throw new ApiError('CONFLICT', '현재 예약을 받지 않는 공간입니다.', { reason: 'RECRUIT_CLOSED' });
+        }
+        const windowError = reservationWindowError(input.date, input.startTime, input.endTime, todayKst());
+        if (windowError)
+          throw new ApiError('VALIDATION', windowError, { fieldErrors: { date: windowError } });
+        if (input.headcount > s.capacity) {
+          throw new ApiError('VALIDATION', `이 공간의 수용 인원은 ${s.capacity}명입니다.`, {
+            fieldErrors: { headcount: `수용 인원(${s.capacity}명) 이하로 입력해 주세요.` },
+          });
+        }
+        const clash = db.reservations.some(
+          (r) =>
+            r.spaceId === id &&
+            r.date === input.date &&
+            (r.status === 'pending' || r.status === 'approved') &&
+            overlaps(input.startTime, input.endTime, r.startTime, r.endTime),
+        );
+        if (clash)
+          throw new ApiError('CONFLICT', '선택한 시간에 이미 예약이 있습니다. 다른 시간을 선택해 주세요.', {
+            reason: 'DUPLICATE',
+          });
+        const r = {
+          id: nextId(db, 'r'),
+          spaceId: s.id,
+          spaceName: s.name,
+          userId: u.id,
+          applicantName: u.name,
+          phone: input.phone.replace(/-/g, ''),
+          date: input.date,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          headcount: input.headcount,
+          purpose: input.purpose,
+          status: 'pending' as const,
+          reason: null,
+          createdAt: new Date().toISOString(),
+        };
+        db.reservations.push(r);
+        return withReservationCancellable(r);
+      }),
+  },
+
+  inquiries: {
+    create: (input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const q = {
+          id: nextId(db, 'q'),
+          userId: u.id,
+          authorName: u.name,
+          category: input.category,
+          title: input.title,
+          body: input.body,
+          status: 'open' as const,
+          createdAt: new Date().toISOString(),
+          answer: null,
+        };
+        db.inquiries.push(q);
+        return q;
+      }),
+  },
+
+  faqs: {
+    list: () =>
+      respond((db) =>
+        isEmptyScenario() ? [] : db.faqs.filter((f) => f.published).sort((a, b) => a.order - b.order),
+      ),
+  },
+
+  policies: {
+    get: (key) =>
+      respond((db) =>
+        findOr404(
+          db.policies.map((p) => ({ ...p, id: p.key })),
+          key,
+        ),
+      ),
+  },
+
+  programs: {
+    categories: () => respond((db) => db.categories),
+    list: (q) =>
+      respond((db) => {
+        const list = db.programs
+          .filter((p) => p.status === 'published')
+          .map(withRecruitStatus)
+          .filter((p) => !q.categoryId || p.categoryId === q.categoryId)
+          .filter((p) => !q.recruitStatus || p.recruitStatus === q.recruitStatus)
+          .filter((p) => matches(`${p.title} ${p.summary} ${p.target}`, q.q));
+        // 모집 중 → 모집 예정 → 마감 순, 같은 상태는 모집 마감일 순
+        const order = { open: 0, upcoming: 1, full: 2, closed: 3 };
+        list.sort(
+          (a, b) =>
+            order[a.recruitStatus] - order[b.recruitStatus] ||
+            Date.parse(a.recruitEndsAt) - Date.parse(b.recruitEndsAt),
+        );
+        return paginate(list, q.page, q.pageSize ?? 9);
+      }),
+    get: (id) =>
+      respond((db) => {
+        const p = findOr404(db.programs, id);
+        if (p.status !== 'published') throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+        return withRecruitStatus(p);
+      }),
+    apply: (id, input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const p = findOr404(db.programs, id);
+        const status = computeRecruitStatus(p, new Date());
+        if (p.status !== 'published' || status === 'upcoming' || status === 'closed') {
+          throw new ApiError('CONFLICT', '모집 기간이 아닙니다.', { reason: 'RECRUIT_CLOSED' });
+        }
+        const active = db.applications.find(
+          (a) =>
+            a.programId === id && a.userId === u.id && (a.status === 'submitted' || a.status === 'approved'),
+        );
+        if (active) {
+          throw new ApiError(
+            'CONFLICT',
+            '이미 신청한 프로그램입니다. 마이페이지에서 신청 상태를 확인해 주세요.',
+            {
+              reason: 'DUPLICATE',
+            },
+          );
+        }
+        if (status === 'full')
+          throw new ApiError('CONFLICT', '정원이 마감되었습니다.', { reason: 'CAPACITY_FULL' });
+        const now = new Date().toISOString();
+        const a: ProgramApplication = {
+          id: nextId(db, 'a'),
+          receiptNo: `DEV-${String(db.seq).padStart(5, '0')}`,
+          programId: p.id,
+          programTitle: p.title,
+          userId: u.id,
+          applicantName: u.name,
+          phone: input.phone,
+          note: input.note,
+          status: 'submitted',
+          createdAt: now,
+          history: [{ at: now, status: 'submitted', actor: 'applicant', reason: null }],
+          cancellable: true,
+        };
+        db.applications.push(a);
+        p.appliedCount += 1;
+        return withCancellable(db, a);
+      }),
+  },
+
+  notices: {
+    list: (q) =>
+      respond((db) => {
+        const list = db.notices
+          .filter((n) => n.status === 'published')
+          .filter((n) => !q.category || n.category === q.category)
+          .filter((n) => matches(`${n.title} ${n.body}`, q.q))
+          .sort(
+            (a, b) =>
+              Number(b.pinned) - Number(a.pinned) || Date.parse(b.publishedAt!) - Date.parse(a.publishedAt!),
+          );
+        return paginate(list, q.page, q.pageSize ?? 10);
+      }),
+    get: (id) =>
+      respond((db) => {
+        const n = findOr404(db.notices, id);
+        if (n.status !== 'published') throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+        return n;
+      }),
+  },
+
+  clubs: {
+    list: () => respond((db) => (isEmptyScenario() ? [] : db.clubs.filter((c) => c.status === 'active'))),
+    get: (id) =>
+      respond((db) => {
+        const c = findOr404(db.clubs, id);
+        if (c.status !== 'active') throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+        return c;
+      }),
+    members: (id) =>
+      respond((db) => {
+        const u = requireUser(db);
+        if (!db.memberships.some((m) => m.clubId === id && m.userId === u.id)) {
+          throw new ApiError('FORBIDDEN', '동아리원만 명단을 볼 수 있습니다.');
+        }
+        return db.memberships
+          .filter((m) => m.clubId === id)
+          .sort((a, b) => (a.role === 'leader' ? -1 : b.role === 'leader' ? 1 : 0))
+          .map((m) => {
+            const name = db.users.find((x) => x.id === m.userId)?.name ?? '알 수 없음';
+            const chars = [...name];
+            const masked =
+              chars.length <= 2
+                ? `${chars[0]}*`
+                : `${chars[0]}${'*'.repeat(chars.length - 2)}${chars.at(-1)}`;
+            return { displayName: masked, role: m.role, joinedAt: m.joinedAt };
+          });
+      }),
+    posts: (id) =>
+      respond((db) => {
+        const u = requireUser(db);
+        if (!db.memberships.some((m) => m.clubId === id && m.userId === u.id)) {
+          throw new ApiError('FORBIDDEN', '동아리원만 볼 수 있습니다.');
+        }
+        return db.clubPosts
+          .filter((p) => p.clubId === id)
+          .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+      }),
+    apply: (id, input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const c = findOr404(db.clubs, id);
+        if (!c.recruiting || c.status !== 'active') {
+          throw new ApiError('CONFLICT', '현재 가입 신청을 받지 않는 동아리입니다.', {
+            reason: 'RECRUIT_CLOSED',
+          });
+        }
+        if (db.memberships.some((m) => m.clubId === id && m.userId === u.id)) {
+          throw new ApiError('CONFLICT', '이미 가입한 동아리입니다.', { reason: 'DUPLICATE' });
+        }
+        if (db.clubApplications.some((a) => a.clubId === id && a.userId === u.id && a.status === 'pending')) {
+          throw new ApiError('CONFLICT', '검토 중인 가입 신청이 있습니다.', { reason: 'DUPLICATE' });
+        }
+        const a: ClubApplication = {
+          id: nextId(db, 'ca'),
+          clubId: c.id,
+          clubName: c.name,
+          userId: u.id,
+          applicantName: u.name,
+          motivation: input.motivation,
+          status: 'pending',
+          reason: null,
+          createdAt: new Date().toISOString(),
+        };
+        db.clubApplications.push(a);
+        return a;
+      }),
+  },
+
+  admin: {
+    dashboard: (periodDays) =>
+      respond((db) => {
+        requirePermission(db, 'admin.access');
+        const since = Date.now() - periodDays * DAY;
+        const programs = db.programs.map(withRecruitStatus);
+        return {
+          generatedAt: new Date().toISOString(),
+          programsOpen: programs.filter((p) => p.status === 'published' && p.recruitStatus === 'open').length,
+          applicationsSubmitted: db.applications.filter((a) => a.status === 'submitted').length,
+          applicationsInPeriod: db.applications.filter((a) => Date.parse(a.createdAt) >= since).length,
+          clubApplicationsPending: db.clubApplications.filter((a) => a.status === 'pending').length,
+          reservationsPending: db.reservations.filter((r) => r.status === 'pending').length,
+          inquiriesOpen: db.inquiries.filter((x) => x.status === 'open').length,
+          noticesPublished: db.notices.filter((n) => n.status === 'published').length,
+          recentApplications: isEmptyScenario()
+            ? []
+            : sortBy(
+                db.applications,
+                'newest',
+                (a) => a.createdAt,
+                (a) => a.programTitle,
+              ).slice(0, 5),
+          recentNotices: isEmptyScenario()
+            ? []
+            : sortBy(
+                db.notices,
+                'newest',
+                (n) => n.updatedAt,
+                (n) => n.title,
+              ).slice(0, 5),
+        };
+      }),
+
+    notices: {
+      list: (q) =>
+        respond((db) => {
+          requirePermission(db, 'notice.write');
+          const list = db.notices
+            .filter((n) => !q.status || n.status === q.status)
+            .filter((n) => matches(n.title, q.q));
+          return paginate(
+            sortBy(
+              list,
+              q.sort,
+              (n) => n.updatedAt,
+              (n) => n.title,
+            ),
+            q.page,
+            q.pageSize,
+          );
+        }),
+      get: (id) =>
+        respond((db) => {
+          requirePermission(db, 'notice.write');
+          return findOr404(db.notices, id);
+        }),
+      create: (input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'notice.write');
+          const now = new Date().toISOString();
+          const n = {
+            id: nextId(db, 'n'),
+            ...input,
+            publishedAt: input.status === 'published' ? now : null,
+            updatedAt: now,
+            attachments: [],
+          };
+          db.notices.push(n);
+          audit(db, actor, {
+            action: 'notice.create',
+            targetType: 'notice',
+            targetId: n.id,
+            summary: `공지 등록: ${n.title}`,
+          });
+          return n;
+        }),
+      update: (id, input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'notice.write');
+          const n = findOr404(db.notices, id);
+          const now = new Date().toISOString();
+          const publishedAt = input.status === 'published' ? (n.publishedAt ?? now) : n.publishedAt;
+          Object.assign(n, input, { updatedAt: now, publishedAt });
+          audit(db, actor, {
+            action: 'notice.update',
+            targetType: 'notice',
+            targetId: id,
+            summary: `공지 수정: ${n.title}`,
+          });
+          return n;
+        }),
+      remove: (id) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'notice.write');
+          const n = findOr404(db.notices, id);
+          db.notices = db.notices.filter((x) => x.id !== id);
+          audit(db, actor, {
+            action: 'notice.delete',
+            targetType: 'notice',
+            targetId: id,
+            summary: `공지 삭제: ${n.title}`,
+          });
+        }),
+    },
+
+    programs: {
+      list: (q) =>
+        respond((db) => {
+          requirePermission(db, 'program.write');
+          const list = db.programs
+            .map(withRecruitStatus)
+            .filter((p) => !q.status || p.status === q.status)
+            .filter((p) => matches(p.title, q.q));
+          return paginate(
+            sortBy(
+              list,
+              q.sort,
+              (p) => p.updatedAt,
+              (p) => p.title,
+            ),
+            q.page,
+            q.pageSize,
+          );
+        }),
+      get: (id) =>
+        respond((db) => {
+          requirePermission(db, 'program.write');
+          return withRecruitStatus(findOr404(db.programs, id));
+        }),
+      create: (input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'program.write');
+          findOr404(db.categories, input.categoryId);
+          const p: Program = {
+            id: nextId(db, 'p'),
+            title: input.title,
+            categoryId: input.categoryId,
+            summary: input.summary,
+            description: input.description,
+            target: input.target,
+            place: input.place,
+            startsAt: kst(input.startsAt, '09:00'),
+            endsAt: kst(input.endsAt, '18:00'),
+            recruitStartsAt: kst(input.recruitStartsAt, '09:00'),
+            recruitEndsAt: kst(input.recruitEndsAt, '18:00'),
+            cancelDeadline: kst(input.cancelDeadline, '18:00'),
+            capacity: input.capacity,
+            appliedCount: 0,
+            status: input.status,
+            recruitStatus: 'upcoming',
+            updatedAt: new Date().toISOString(),
+          };
+          db.programs.push(p);
+          audit(db, actor, {
+            action: 'program.create',
+            targetType: 'program',
+            targetId: p.id,
+            summary: `프로그램 등록: ${p.title}`,
+          });
+          return withRecruitStatus(p);
+        }),
+      update: (id, input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'program.write');
+          const p = findOr404(db.programs, id);
+          if (input.capacity < p.appliedCount) {
+            throw new ApiError('VALIDATION', '정원은 현재 신청 인원보다 적을 수 없습니다.', {
+              fieldErrors: { capacity: `현재 신청 인원(${p.appliedCount}명)보다 적을 수 없습니다.` },
+            });
+          }
+          Object.assign(p, {
+            ...input,
+            startsAt: kst(input.startsAt, '09:00'),
+            endsAt: kst(input.endsAt, '18:00'),
+            recruitStartsAt: kst(input.recruitStartsAt, '09:00'),
+            recruitEndsAt: kst(input.recruitEndsAt, '18:00'),
+            cancelDeadline: kst(input.cancelDeadline, '18:00'),
+            updatedAt: new Date().toISOString(),
+          });
+          for (const a of db.applications) if (a.programId === id) a.programTitle = p.title;
+          audit(db, actor, {
+            action: 'program.update',
+            targetType: 'program',
+            targetId: id,
+            summary: `프로그램 수정: ${p.title}`,
+          });
+          return withRecruitStatus(p);
+        }),
+      remove: (id) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'program.write');
+          const p = findOr404(db.programs, id);
+          if (db.applications.some((a) => a.programId === id)) {
+            throw new ApiError(
+              'CONFLICT',
+              '신청 내역이 있는 프로그램은 삭제할 수 없습니다. 비공개로 전환해 주세요.',
+              {
+                reason: 'INVALID_STATE',
+              },
+            );
+          }
+          db.programs = db.programs.filter((x) => x.id !== id);
+          audit(db, actor, {
+            action: 'program.delete',
+            targetType: 'program',
+            targetId: id,
+            summary: `프로그램 삭제: ${p.title}`,
+          });
+        }),
+    },
+
+    applications: {
+      list: (q) =>
+        respond((db) => {
+          requirePermission(db, 'application.decide');
+          const list = db.applications
+            .filter((a) => !q.programId || a.programId === q.programId)
+            .filter((a) => !q.status || a.status === q.status)
+            .filter((a) => matches(`${a.applicantName} ${a.programTitle} ${a.receiptNo ?? ''}`, q.q))
+            .map((a) => withCancellable(db, a));
+          return paginate(
+            sortBy(
+              list,
+              q.sort,
+              (a) => a.createdAt,
+              (a) => a.programTitle,
+            ),
+            q.page,
+            q.pageSize,
+          );
+        }),
+      get: (id) =>
+        respond((db) => {
+          requirePermission(db, 'application.decide');
+          return withCancellable(db, findOr404(db.applications, id));
+        }),
+      decide: (ids, decision, reason) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'application.decide');
+          if (decision === 'rejected' && !reason?.trim()) {
+            throw new ApiError('VALIDATION', '반려 사유를 입력해 주세요.', {
+              fieldErrors: { reason: '반려 사유를 입력해 주세요.' },
+            });
+          }
+          const result = { succeeded: [] as string[], failed: [] as { id: string; reason: string }[] };
+          for (const id of ids) {
+            const a = db.applications.find((x) => x.id === id);
+            if (!a) {
+              result.failed.push({ id, reason: '신청을 찾을 수 없습니다.' });
+              continue;
+            }
+            if (a.status !== 'submitted') {
+              result.failed.push({ id, reason: '이미 처리되었거나 취소된 신청입니다.' });
+              continue;
+            }
+            a.status = decision;
+            a.history.push({
+              at: new Date().toISOString(),
+              status: decision,
+              actor: 'staff',
+              reason: reason?.trim() || null,
+            });
+            if (decision === 'rejected') {
+              const p = db.programs.find((x) => x.id === a.programId);
+              if (p) p.appliedCount = Math.max(0, p.appliedCount - 1);
+            }
+            result.succeeded.push(id);
+            notify(db, {
+              userId: a.userId,
+              kind: 'application',
+              title: `프로그램 신청이 ${decision === 'approved' ? '승인' : '반려'}되었습니다`,
+              body: reason?.trim() ? `${a.programTitle} · 사유: ${reason.trim()}` : a.programTitle,
+              link: `/my/applications/${a.id}`,
+            });
+            audit(db, actor, {
+              action: `application.${decision}`,
+              targetType: 'application',
+              targetId: id,
+              summary: `신청 ${decision === 'approved' ? '승인' : '반려'}: ${a.applicantName} · ${a.programTitle}`,
+            });
+          }
+          return result;
+        }),
+    },
+
+    members: {
+      list: (q) =>
+        respond((db) => {
+          requirePermission(db, 'member.read');
+          const list = db.users
+            .filter((u) => !q.status || u.status === q.status)
+            .filter((u) => matches(`${u.name} ${u.email}`, q.q))
+            .map(publicUser);
+          return paginate(
+            sortBy(
+              list,
+              q.sort,
+              (u) => u.createdAt,
+              (u) => u.name,
+            ),
+            q.page,
+            q.pageSize,
+          );
+        }),
+      get: (id) =>
+        respond((db) => {
+          requirePermission(db, 'member.read');
+          return publicUser(findOr404(db.users, id));
+        }),
+      update: (id, patch) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'member.manage');
+          if (actor.id === id) {
+            throw new ApiError('CONFLICT', '자기 자신의 권한·상태는 변경할 수 없습니다.', {
+              reason: 'INVALID_STATE',
+            });
+          }
+          const u = findOr404(db.users, id);
+          if (patch.roles) {
+            if (patch.roles.length === 0) throw new ApiError('VALIDATION', '역할을 1개 이상 지정해 주세요.');
+            u.roles = patch.roles;
+          }
+          if (patch.status) u.status = patch.status;
+          audit(db, actor, {
+            action: 'user.update',
+            targetType: 'user',
+            targetId: id,
+            summary: `회원 변경: ${u.name} (${[patch.roles && `역할 ${patch.roles.join(',')}`, patch.status && `상태 ${patch.status}`].filter(Boolean).join(', ')})`,
+          });
+          return publicUser(u);
+        }),
+    },
+
+    clubs: {
+      list: () =>
+        respond((db) => {
+          requirePermission(db, 'club.manage');
+          return isEmptyScenario() ? [] : db.clubs;
+        }),
+      get: (id) =>
+        respond((db) => {
+          requirePermission(db, 'club.manage');
+          return findOr404(db.clubs, id);
+        }),
+      create: (input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'club.manage');
+          const c = {
+            id: nextId(db, 'cl'),
+            memberCount: 0,
+            target: null,
+            photos: [],
+            activities: [],
+            sourceUrls: [],
+            ...defined(input),
+          } as Club;
+          db.clubs.push(c);
+          audit(db, actor, {
+            action: 'club.create',
+            targetType: 'club',
+            targetId: c.id,
+            summary: `동아리 등록: ${c.name}`,
+          });
+          return c;
+        }),
+      update: (id, input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'club.manage');
+          const c = findOr404(db.clubs, id);
+          Object.assign(c, defined(input));
+          for (const a of db.clubApplications) if (a.clubId === id) a.clubName = c.name;
+          audit(db, actor, {
+            action: 'club.update',
+            targetType: 'club',
+            targetId: id,
+            summary: `동아리 수정: ${c.name}`,
+          });
+          return c;
+        }),
+      applications: (q) =>
+        respond((db) => {
+          requirePermission(db, 'club.manage');
+          const list = db.clubApplications
+            .filter((a) => !q.status || a.status === q.status)
+            .filter((a) => matches(`${a.applicantName} ${a.clubName}`, q.q));
+          return paginate(
+            sortBy(
+              list,
+              q.sort,
+              (a) => a.createdAt,
+              (a) => a.clubName,
+            ),
+            q.page,
+            q.pageSize,
+          );
+        }),
+      decideApplication: (id, decision, reason) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'club.manage');
+          const a = findOr404(db.clubApplications, id);
+          if (a.status !== 'pending') {
+            throw new ApiError('CONFLICT', '이미 처리된 신청입니다.', { reason: 'INVALID_STATE' });
+          }
+          if (decision === 'rejected' && !reason?.trim()) {
+            throw new ApiError('VALIDATION', '반려 사유를 입력해 주세요.', {
+              fieldErrors: { reason: '반려 사유를 입력해 주세요.' },
+            });
+          }
+          a.status = decision;
+          a.reason = reason?.trim() || null;
+          if (decision === 'approved') {
+            db.memberships.push({
+              clubId: a.clubId,
+              userId: a.userId,
+              role: 'member',
+              joinedAt: new Date().toISOString(),
+            });
+            const c = db.clubs.find((x) => x.id === a.clubId);
+            if (c) c.memberCount += 1;
+          }
+          notify(db, {
+            userId: a.userId,
+            kind: 'club_application',
+            title: `동아리 가입 신청이 ${decision === 'approved' ? '승인' : '반려'}되었습니다`,
+            body: a.reason ? `${a.clubName} · 사유: ${a.reason}` : a.clubName,
+            link: decision === 'approved' ? `/clubs/${a.clubId}` : '/my',
+          });
+          audit(db, actor, {
+            action: `club_application.${decision}`,
+            targetType: 'club_application',
+            targetId: id,
+            summary: `동아리 가입 ${decision === 'approved' ? '승인' : '반려'}: ${a.applicantName} · ${a.clubName}`,
+          });
+          return a;
+        }),
+    },
+
+    spaces: {
+      list: () =>
+        respond((db) => {
+          requirePermission(db, 'space.manage');
+          return db.spaces;
+        }),
+      update: (id, input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'space.manage');
+          const s = findOr404(db.spaces, id);
+          Object.assign(s, input);
+          audit(db, actor, {
+            action: 'space.update',
+            targetType: 'space',
+            targetId: id,
+            summary: `공간 설정 변경: ${s.name} (예약 ${s.reservable ? '받음' : '중지'})`,
+          });
+          return s;
+        }),
+      reservations: (q) =>
+        respond((db) => {
+          requirePermission(db, 'space.manage');
+          const list = db.reservations
+            .filter((r) => !q.status || r.status === q.status)
+            .filter((r) => !q.spaceId || r.spaceId === q.spaceId)
+            .filter((r) => !q.date || r.date === q.date)
+            .filter((r) => matches(`${r.applicantName} ${r.spaceName} ${r.purpose}`, q.q))
+            .map(withReservationCancellable);
+          return paginate(
+            sortBy(
+              list,
+              q.sort,
+              (r) => r.createdAt,
+              (r) => r.spaceName,
+            ),
+            q.page,
+            q.pageSize,
+          );
+        }),
+      decideReservation: (id, decision, reason) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'space.manage');
+          const r = findOr404(db.reservations, id);
+          if (r.status !== 'pending')
+            throw new ApiError('CONFLICT', '이미 처리된 예약입니다.', { reason: 'INVALID_STATE' });
+          if (decision === 'rejected' && !reason?.trim()) {
+            throw new ApiError('VALIDATION', '반려 사유를 입력해 주세요.', {
+              fieldErrors: { reason: '반려 사유를 입력해 주세요.' },
+            });
+          }
+          r.status = decision;
+          r.reason = reason?.trim() || null;
+          notify(db, {
+            userId: r.userId,
+            kind: 'reservation',
+            title: `공간 예약이 ${decision === 'approved' ? '확정' : '반려'}되었습니다`,
+            body: `${r.spaceName} · ${r.date} ${r.startTime}–${r.endTime}${r.reason ? ` · 사유: ${r.reason}` : ''}`,
+            link: '/my#reservations',
+          });
+          audit(db, actor, {
+            action: `reservation.${decision}`,
+            targetType: 'reservation',
+            targetId: id,
+            summary: `공간 예약 ${decision === 'approved' ? '확정' : '반려'}: ${r.applicantName} · ${r.spaceName} ${r.date} ${r.startTime}`,
+          });
+          return withReservationCancellable(r);
+        }),
+    },
+
+    inquiries: {
+      list: (q) =>
+        respond((db) => {
+          requirePermission(db, 'inquiry.answer');
+          const list = db.inquiries
+            .filter((x) => !q.status || x.status === q.status)
+            .filter((x) => matches(`${x.title} ${x.authorName}`, q.q));
+          return paginate(
+            sortBy(
+              list,
+              q.sort,
+              (x) => x.createdAt,
+              (x) => x.title,
+            ),
+            q.page,
+            q.pageSize,
+          );
+        }),
+      get: (id) =>
+        respond((db) => {
+          requirePermission(db, 'inquiry.answer');
+          return findOr404(db.inquiries, id);
+        }),
+      answer: (id, body) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'inquiry.answer');
+          const x = findOr404(db.inquiries, id);
+          x.answer = { body, answeredAt: new Date().toISOString(), answeredBy: actor.name };
+          x.status = 'answered';
+          notify(db, {
+            userId: x.userId,
+            kind: 'inquiry',
+            title: '1:1 문의에 답변이 등록되었습니다',
+            body: x.title,
+            link: `/qna/${x.id}`,
+          });
+          audit(db, actor, {
+            action: 'inquiry.answer',
+            targetType: 'inquiry',
+            targetId: id,
+            summary: `문의 답변: ${x.title}`,
+          });
+          return x;
+        }),
+    },
+
+    faqs: {
+      list: () =>
+        respond((db) => {
+          requirePermission(db, 'inquiry.answer');
+          return [...db.faqs].sort((a, b) => a.order - b.order);
+        }),
+      create: (input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'inquiry.answer');
+          const f = { id: nextId(db, 'fq'), ...input };
+          db.faqs.push(f);
+          audit(db, actor, {
+            action: 'faq.create',
+            targetType: 'faq',
+            targetId: f.id,
+            summary: `FAQ 등록: ${f.question}`,
+          });
+          return f;
+        }),
+      update: (id, input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'inquiry.answer');
+          const f = findOr404(db.faqs, id);
+          Object.assign(f, input);
+          audit(db, actor, {
+            action: 'faq.update',
+            targetType: 'faq',
+            targetId: id,
+            summary: `FAQ 수정: ${f.question}`,
+          });
+          return f;
+        }),
+      remove: (id) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'inquiry.answer');
+          const f = findOr404(db.faqs, id);
+          db.faqs = db.faqs.filter((x) => x.id !== id);
+          audit(db, actor, {
+            action: 'faq.delete',
+            targetType: 'faq',
+            targetId: id,
+            summary: `FAQ 삭제: ${f.question}`,
+          });
+        }),
+    },
+
+    policies: {
+      list: () =>
+        respond((db) => {
+          requirePermission(db, 'policy.manage');
+          return db.policies;
+        }),
+      update: (key, input) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'policy.manage');
+          const p = db.policies.find((x) => x.key === key);
+          if (!p) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+          p.body = input.body;
+          p.effectiveAt = new Date(`${input.effectiveAt}T00:00:00+09:00`).toISOString();
+          p.confirmed = true;
+          p.updatedAt = new Date().toISOString();
+          audit(db, actor, {
+            action: 'policy.update',
+            targetType: 'policy',
+            targetId: key,
+            summary: `정책 문서 개정: ${p.title}`,
+          });
+          return p;
+        }),
+    },
+
+    audit: {
+      list: (q) =>
+        respond((db) => {
+          requirePermission(db, 'audit.read');
+          const list = db.audit.filter((e) => matches(`${e.summary} ${e.actorName}`, q.q));
+          return paginate(list, q.page, q.pageSize ?? 20);
+        }),
+    },
+  },
+};
+
+/** 개발 패널 전용 조작 — mock 모드에서만 노출한다 */
+export const mockDev = {
+  readScenario,
+  setScenario: (s: Scenario) => writeScenario(s),
+  expireSession,
+  reset: resetDb,
+  /** 비밀번호 재설정 메일 대신 화면에 링크를 보여 주기 위한 값 */
+  lastResetToken: () => lastResetToken?.token ?? null,
+  verifyEmail: (email: string) => {
+    const db = loadDb();
+    const u = db.users.find((x) => x.email.toLowerCase() === email.toLowerCase());
+    if (u) {
+      u.emailVerified = true;
+      saveDb(db);
+    }
+    return !!u;
+  },
+};
