@@ -32,3 +32,6 @@ jobs:
 
       - name: Bundle user app (iOS · Android)
         run: npm run export:user
+
+      - name: Bundle admin app (iOS · Android)
+        run: npm run export:admin
