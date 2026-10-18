@@ -1,5 +1,9 @@
 import type {
+  AttendanceSessionInput,
+  CheckInInput,
   ClubApplyInput,
+  ClubIntroInput,
+  ClubPostInput,
   ClubFormInput,
   FaqFormInput,
   InquiryInput,
@@ -14,17 +18,26 @@ import type {
   SpaceFormInput,
 } from '@/domain/schemas';
 import type {
+  AttendanceMark,
+  AttendanceMemberStat,
+  AttendanceSession,
+  AttendanceTarget,
+  AttendanceTargetSummary,
   AuditEvent,
   BulkResult,
   Club,
   ClubApplication,
   ClubApplicationStatus,
+  ClubManager,
   ClubMember,
   ClubPost,
+  ClubRole,
+  ClubRosterEntry,
   DashboardSummary,
   Faq,
   Inquiry,
   MediaItem,
+  MyAttendance,
   MyClub,
   Notification,
   PolicyDoc,
@@ -106,6 +119,49 @@ export interface ApiClient {
     notifications(): Promise<Notification[]>;
     /** ids 를 생략하면 본인 알림 전체를 읽음 처리 */
     markNotificationsRead(ids?: string[]): Promise<void>;
+    /** 본인이 명단에 있는 출석부 기록, 최신순 */
+    attendance(): Promise<MyAttendance[]>;
+    /** 담당자가 연 출석 코드로 본인 출석 — 틀린 입력이 반복되면 RATE_LIMITED */
+    checkIn(input: CheckInInput): Promise<MyAttendance>;
+  };
+  /** 동아리 운영 — 센터 직원 이상(club.manage) 또는 그 동아리 담당자. 서버가 동아리별로 검사한다. */
+  manage: {
+    /** 내가 운영하는 동아리 (센터 직원 이상은 전체) */
+    clubs(): Promise<Club[]>;
+    /** 연락처가 포함된 회원 명단 + 출석률 */
+    roster(clubId: string): Promise<ClubRosterEntry[]>;
+    setMemberRole(clubId: string, userId: string, role: ClubRole): Promise<ClubRosterEntry>;
+    /** 동아리에서 제외 */
+    removeMember(clubId: string, userId: string): Promise<void>;
+    /** 가입 신청, 대기 먼저 */
+    applications(clubId: string): Promise<ClubApplication[]>;
+    decideApplication(
+      clubId: string,
+      applicationId: string,
+      decision: Decision,
+      reason: string | null,
+    ): Promise<ClubApplication>;
+    /** 소개·모임 일정·모집 여부 (사진·활동 기록·출처는 센터 직원이 관리) */
+    updateIntro(clubId: string, input: ClubIntroInput): Promise<Club>;
+    createPost(clubId: string, input: ClubPostInput): Promise<ClubPost>;
+    removePost(clubId: string, postId: string): Promise<void>;
+  };
+  /** 출석부 — attendance.manage(센터 직원 이상) 또는 동아리 담당자(그 동아리만). 서버가 대상별 권한을 다시 검사한다. */
+  attendance: {
+    /** 출석을 관리할 수 있는 동아리·프로그램 */
+    targets(): Promise<AttendanceTargetSummary[]>;
+    /** 회차 목록, 날짜 최신순 */
+    sessions(target: AttendanceTarget): Promise<AttendanceSession[]>;
+    get(id: string): Promise<AttendanceSession>;
+    /** 명단(동아리원 / 승인된 신청자)을 채운 새 회차 */
+    create(target: AttendanceTarget, input: AttendanceSessionInput): Promise<AttendanceSession>;
+    remove(id: string): Promise<void>;
+    /** 여러 명을 한 번에 체크 — 명단에 없는 회원이 있으면 VALIDATION */
+    mark(id: string, marks: AttendanceMark[]): Promise<AttendanceSession>;
+    /** 본인 출석 체크 열기(서버가 4자리 코드 발급, 10분 후 자동 마감)·닫기 */
+    setCheckIn(id: string, open: boolean): Promise<AttendanceSession>;
+    /** 회원별 누적 출석 */
+    stats(target: AttendanceTarget): Promise<AttendanceMemberStat[]>;
   };
   media: {
     /** 센터 공식 채널의 사진·영상, 최신순 */
@@ -180,6 +236,11 @@ export interface ApiClient {
         query: AdminListQuery & { status?: ClubApplicationStatus | '' },
       ): Promise<Page<ClubApplication>>;
       decideApplication(id: string, decision: Decision, reason: string | null): Promise<ClubApplication>;
+      /** 동아리별 담당자 — club.manage */
+      managers(clubId: string): Promise<ClubManager[]>;
+      /** 가입된 활동 회원의 이메일로 지정 — 없는 회원이면 VALIDATION, 이미 담당자면 CONFLICT(DUPLICATE) */
+      assignManager(clubId: string, email: string): Promise<ClubManager>;
+      removeManager(clubId: string, userId: string): Promise<void>;
     };
     spaces: {
       list(): Promise<Space[]>;

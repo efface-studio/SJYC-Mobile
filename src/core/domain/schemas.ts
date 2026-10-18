@@ -301,6 +301,37 @@ export const clubFormSchema = z.object({
   sourceUrls: z.array(httpsUrl).max(10, { error: '출처는 10개까지 등록할 수 있습니다.' }).optional(),
 });
 
+export const clubIntroSchema = z.object({
+  summary: z.string().trim().min(5, { error: '한 줄 소개를 5자 이상 입력해 주세요.' }).max(120),
+  description: z.string().trim().min(10, { error: '소개를 10자 이상 입력해 주세요.' }).max(5000),
+  meetingInfo: z.string().trim().min(2, { error: '모임 일정을 입력해 주세요.' }).max(100),
+  recruiting: z.union([z.boolean(), optionalChecked]),
+});
+
+export const clubPostSchema = z.object({
+  kind: z.enum(['notice', 'schedule', 'activity'], { error: '분류를 선택해 주세요.' }),
+  title: z.string().trim().min(2, { error: '제목을 2자 이상 입력해 주세요.' }).max(100),
+  body: z.string().trim().min(2, { error: '내용을 입력해 주세요.' }).max(2000),
+});
+
+export const managerEmailSchema = z.object({ email });
+
+export const attendanceSessionSchema = z.object({
+  date: dateOnly,
+  title: z
+    .string()
+    .trim()
+    .min(1, { error: '회차 이름을 입력해 주세요.' })
+    .max(50, { error: '50자 이하로 입력해 주세요.' }),
+});
+
+export const checkInSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{4}$/, { error: '출석 코드 4자리를 입력해 주세요.' }),
+});
+
 export const rejectReasonSchema = z.object({
   reason: z.string().trim().min(2, { error: '반려 사유를 2자 이상 입력해 주세요.' }).max(300),
 });
@@ -318,6 +349,10 @@ export type InquiryInput = z.infer<typeof inquirySchema>;
 export type FaqFormInput = z.infer<typeof faqFormSchema>;
 export type PolicyFormInput = z.infer<typeof policyFormSchema>;
 export type SpaceFormInput = z.infer<typeof spaceFormSchema>;
+export type AttendanceSessionInput = z.infer<typeof attendanceSessionSchema>;
+export type ClubIntroInput = z.infer<typeof clubIntroSchema>;
+export type ClubPostInput = z.infer<typeof clubPostSchema>;
+export type CheckInInput = z.infer<typeof checkInSchema>;
 
 export type FieldErrors = Record<string, string>;
 

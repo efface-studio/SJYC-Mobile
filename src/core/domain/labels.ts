@@ -1,4 +1,7 @@
 import type {
+  ClubRole,
+  AttendanceStatus,
+  AttendanceTargetType,
   ApplicationStatus,
   ClubApplicationStatus,
   InquiryCategory,
@@ -67,6 +70,26 @@ export const RESERVATION_STATUS: Record<ReservationStatus, Label> = {
   cancelled: { text: '취소', tone: 'neutral' },
 };
 
+export const CLUB_ROLE_LABEL: Record<ClubRole, string> = { leader: '대표', member: '동아리원' };
+
+export const CLUB_POST_KIND_LABEL: Record<'notice' | 'schedule' | 'activity', string> = {
+  notice: '공지',
+  schedule: '일정',
+  activity: '활동',
+};
+
+export const ATTENDANCE_STATUS: Record<AttendanceStatus, Label> = {
+  present: { text: '출석', tone: 'success' },
+  late: { text: '지각', tone: 'warning' },
+  absent: { text: '결석', tone: 'danger' },
+  excused: { text: '공결', tone: 'info' },
+};
+
+export const ATTENDANCE_TARGET_LABEL: Record<AttendanceTargetType, string> = {
+  club: '동아리',
+  program: '프로그램',
+};
+
 export const INQUIRY_STATUS: Record<InquiryStatus, Label> = {
   open: { text: '답변 대기', tone: 'info' },
   answered: { text: '답변 완료', tone: 'success' },
@@ -108,6 +131,7 @@ export const NOTIFICATION_KIND_LABEL: Record<NotificationKind, string> = {
   club_application: '동아리 가입',
   inquiry: '1:1 문의',
   notice: '공지',
+  club_manager: '동아리 담당',
 };
 
 export const OAUTH_PROVIDER_LABEL: Record<OAuthProvider, string> = {

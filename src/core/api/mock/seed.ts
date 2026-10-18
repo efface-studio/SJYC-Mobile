@@ -5,6 +5,7 @@
  * 데모 계정 비밀번호는 이 파일에만 기록한다 (mock 모드 전용, 실서버에는 존재하지 않음).
  */
 import type {
+  AttendanceSession,
   AuditEvent,
   Club,
   ClubApplication,
@@ -23,15 +24,17 @@ import type {
   ProgramCategory,
   User,
 } from '@/domain/types';
+import { toDateInput } from '@/lib/format';
 import { REFERENCE_COLLECTED_AT, RESEARCH_CLUBS, RESEARCH_MEDIA, RESEARCH_NOTICES } from './research';
 
 export const DEMO_PASSWORD = 'demo1234!';
 
 export const DEMO_ACCOUNTS = [
   { email: 'member@demo.test', label: '일반 회원' },
-  { email: 'leader@demo.test', label: '동아리 대표 회원' },
+  { email: 'leader@demo.test', label: '동아리 담당자' },
   { email: 'staff@demo.test', label: '센터 직원' },
   { email: 'admin@demo.test', label: '최고 관리자' },
+  { email: 'developer@demo.test', label: '개발자' },
 ] as const;
 
 export interface MockMembership {
@@ -42,7 +45,7 @@ export interface MockMembership {
 }
 
 export interface MockDb {
-  version: 5;
+  version: 8;
   notifications: Notification[];
   media: MediaItem[];
   spaces: Space[];
@@ -51,7 +54,9 @@ export interface MockDb {
   faqs: Faq[];
   policies: PolicyDoc[];
   seq: number;
-  users: (User & { password: string })[];
+  /** managedClubIds 는 clubManagers 에서 계산해 내려준다 */
+  users: (Omit<User, 'managedClubIds'> & { password: string })[];
+  clubManagers: { clubId: string; userId: string; assignedAt: string }[];
   categories: ProgramCategory[];
   programs: Program[];
   applications: ProgramApplication[];
@@ -61,6 +66,9 @@ export interface MockDb {
   clubPosts: (ClubPost & { clubId: string })[];
   clubApplications: ClubApplication[];
   audit: AuditEvent[];
+  attendance: AttendanceSession[];
+  /** 출석 코드 틀린 횟수·잠금 (회원별) */
+  checkInFailures: { userId: string; count: number; lockedUntil: string | null }[];
 }
 
 const DAY = 86_400_000;
@@ -83,7 +91,7 @@ export function createSeed(now = new Date()): MockDb {
     name: string,
     roles: User['roles'],
     extra: Partial<User> = {},
-  ): User & { password: string } => ({
+  ): MockDb['users'][number] => ({
     id,
     email,
     name,
@@ -104,6 +112,7 @@ export function createSeed(now = new Date()): MockDb {
     user('u-leader', 'leader@demo.test', '이데모', ['member'], { birthYear: 2008 }),
     user('u-staff', 'staff@demo.test', '박직원', ['staff'], { birthYear: 1990 }),
     user('u-admin', 'admin@demo.test', '최관리', ['admin'], { birthYear: 1985 }),
+    user('u-developer', 'developer@demo.test', '강개발', ['developer'], { birthYear: 1993 }),
     user('u-5', 'sample5@demo.test', '정예시', ['member'], { birthYear: 2010 }),
     user('u-6', 'sample6@demo.test', '한테스트', ['member'], { birthYear: 2007 }),
     user('u-7', 'sample7@demo.test', '오가상', ['member'], { status: 'suspended' }),
@@ -293,7 +302,7 @@ export function createSeed(now = new Date()): MockDb {
     id: string,
     seq: number,
     p: Program,
-    u: User,
+    u: MockDb['users'][number],
     status: ProgramApplication['status'],
     createdDaysAgo: number,
   ): ProgramApplication => {
@@ -704,8 +713,56 @@ export function createSeed(now = new Date()): MockDb {
     },
   ];
 
+  const names = (ids: string[]) => ids.map((id) => ({ userId: id, name: byId(users, id).name }));
+  const attendanceSession = (
+    id: string,
+    target: { type: 'club' | 'program'; id: string; name: string },
+    daysAgo: number,
+    title: string,
+    marks: [string, AttendanceSession['records'][number]['status']][],
+  ): AttendanceSession => ({
+    id,
+    targetType: target.type,
+    targetId: target.id,
+    targetName: target.name,
+    date: toDateInput(at(-daysAgo, 9)),
+    title,
+    checkInCode: null,
+    checkInClosesAt: null,
+    createdAt: at(-daysAgo - 1, 15),
+    createdBy: '박직원',
+    records: names(marks.map(([u]) => u)).map((n, i) => ({
+      ...n,
+      status: marks[i]![1],
+      checkedAt: marks[i]![1] ? at(-daysAgo, 16) : null,
+      method: marks[i]![1] ? ('manager' as const) : null,
+      note: marks[i]![1] === 'excused' ? '학교 행사' : null,
+    })),
+  });
+  const frame = { type: 'club' as const, id: 'cl-frame', name: byId(clubs, 'cl-frame').name };
+  const attendance: AttendanceSession[] = [
+    attendanceSession('at-1', frame, 14, '정기 모임', [
+      ['u-leader', 'present'],
+      ['u-member', 'present'],
+      ['u-5', 'late'],
+    ]),
+    attendanceSession('at-2', frame, 7, '정기 모임', [
+      ['u-leader', 'present'],
+      ['u-member', 'absent'],
+      ['u-5', 'excused'],
+    ]),
+    attendanceSession(
+      'at-3',
+      { type: 'program', id: 'p-6', name: byId(programs, 'p-6').title },
+      10,
+      '1회차',
+      [['u-member', 'present']],
+    ),
+  ];
+
   return {
-    version: 5,
+    version: 8,
+    clubManagers: [{ clubId: 'cl-frame', userId: 'u-leader', assignedAt: at(-60) }],
     notifications,
     media: RESEARCH_MEDIA,
     spaces,
@@ -724,5 +781,7 @@ export function createSeed(now = new Date()): MockDb {
     clubPosts,
     clubApplications,
     audit,
+    attendance,
+    checkInFailures: [],
   };
 }

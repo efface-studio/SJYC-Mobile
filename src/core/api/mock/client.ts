@@ -3,13 +3,24 @@
  * 서버가 해야 할 검증(세션, 권한, 중복 신청, 정원, 취소 기한)을 같은 규칙으로 흉내 내지만
  * 브라우저 안에서만 동작하므로 보안 경계가 아니다. 실제 운영에는 http adapter 를 쓴다.
  */
-import { can, type Permission } from '@/domain/permissions';
+import { memberStats } from '@/domain/attendance';
+import { assignableRoles, can, canManageClub, canManageUser, type Permission } from '@/domain/permissions';
 import { computeRecruitStatus } from '@/domain/program';
+import {
+  attendanceSessionSchema,
+  clubIntroSchema,
+  clubPostSchema,
+  managerEmailSchema,
+  parseValues,
+} from '@/domain/schemas';
 import { buildSlots, overlaps, reservationWindowError } from '@/domain/space';
 import type {
+  AttendanceSession,
+  AttendanceTarget,
   AuditEvent,
   Club,
   ClubApplication,
+  ClubRosterEntry,
   Notification,
   Page,
   Program,
@@ -19,11 +30,22 @@ import type {
   User,
 } from '@/domain/types';
 import { todayKst } from '@/lib/format';
-import type { AdminListQuery, ApiClient } from '../client';
+import type { AdminListQuery, ApiClient, Decision } from '../client';
 import { ApiError } from '../errors';
+import {
+  CHECK_IN_MINUTES,
+  checkIn,
+  isCheckInOpen,
+  issueCode,
+  rosterOf,
+  targetName,
+  toMyAttendance,
+} from './attendance';
 import type { MockDb } from './seed';
 import {
   expireSession,
+  exportDb,
+  importDb,
   loadDb,
   readScenario,
   readSession,
@@ -54,9 +76,12 @@ async function respond<T>(fn: (db: MockDb) => T): Promise<T> {
 
 const isEmptyScenario = () => readScenario() === 'empty';
 
-function publicUser(u: DbUser): User {
+const managedClubIds = (db: MockDb, userId: string) =>
+  db.clubManagers.filter((m) => m.userId === userId).map((m) => m.clubId);
+
+function publicUser(db: MockDb, u: DbUser): User {
   const { password: _password, ...rest } = u;
-  return rest;
+  return { ...rest, managedClubIds: managedClubIds(db, u.id) };
 }
 
 function currentUser(db: MockDb): DbUser | null {
@@ -76,6 +101,89 @@ function requirePermission(db: MockDb, permission: Permission): DbUser {
   const u = requireUser(db);
   if (!can(u, permission)) throw new ApiError('FORBIDDEN', '이 작업을 수행할 권한이 없습니다.');
   return u;
+}
+
+/** 동아리 운영 — 센터 직원 이상 또는 그 동아리 담당자 */
+function requireClubManager(db: MockDb, clubId: string): DbUser {
+  const u = requireUser(db);
+  findOr404(db.clubs, clubId);
+  if (!canManageClub(publicUser(db, u), clubId)) {
+    throw new ApiError('FORBIDDEN', '이 동아리를 운영할 권한이 없습니다.');
+  }
+  return u;
+}
+
+/** 출석부 관리 — 센터 직원 이상(모든 대상) 또는 동아리 담당자(그 동아리만) */
+function requireAttendanceManager(db: MockDb, target: AttendanceTarget): DbUser {
+  const u = requireUser(db);
+  if (can(u, 'attendance.manage')) return u;
+  if (target.type === 'club' && managedClubIds(db, u.id).includes(target.id)) return u;
+  throw new ApiError('FORBIDDEN', '이 출석부를 관리할 권한이 없습니다.');
+}
+
+function rosterEntry(
+  db: MockDb,
+  m: MockDb['memberships'][number],
+  attendanceRate: number | null,
+): ClubRosterEntry {
+  const u = findOr404(db.users, m.userId);
+  return {
+    userId: u.id,
+    name: u.name,
+    email: u.email,
+    phone: u.phone,
+    role: m.role,
+    joinedAt: m.joinedAt,
+    attendanceRate,
+  };
+}
+
+function decideClubApplication(
+  db: MockDb,
+  actor: DbUser,
+  a: ClubApplication,
+  decision: Decision,
+  reason: string | null,
+): ClubApplication {
+  if (a.status !== 'pending') {
+    throw new ApiError('CONFLICT', '이미 처리된 신청입니다.', { reason: 'INVALID_STATE' });
+  }
+  if (decision === 'rejected' && !reason?.trim()) {
+    throw new ApiError('VALIDATION', '반려 사유를 입력해 주세요.', {
+      fieldErrors: { reason: '반려 사유를 입력해 주세요.' },
+    });
+  }
+  a.status = decision;
+  a.reason = reason?.trim() || null;
+  if (decision === 'approved') {
+    db.memberships.push({
+      clubId: a.clubId,
+      userId: a.userId,
+      role: 'member',
+      joinedAt: new Date().toISOString(),
+    });
+    const c = db.clubs.find((x) => x.id === a.clubId);
+    if (c) c.memberCount += 1;
+  }
+  notify(db, {
+    userId: a.userId,
+    kind: 'club_application',
+    title: `동아리 가입 신청이 ${decision === 'approved' ? '승인' : '반려'}되었습니다`,
+    body: a.reason ? `${a.clubName} · 사유: ${a.reason}` : a.clubName,
+    link: decision === 'approved' ? `/clubs/${a.clubId}` : '/my',
+  });
+  audit(db, actor, {
+    action: `club_application.${decision}`,
+    targetType: 'club_application',
+    targetId: a.id,
+    summary: `동아리 가입 ${decision === 'approved' ? '승인' : '반려'}: ${a.applicantName} · ${a.clubName}`,
+  });
+  return a;
+}
+
+/** 마감 시간이 지난 출석 코드는 내려주지 않는다 */
+function withCheckIn(s: AttendanceSession): AttendanceSession {
+  return isCheckInOpen(s) ? s : { ...s, checkInCode: null, checkInClosesAt: null };
 }
 
 function nextId(db: MockDb, prefix: string): string {
@@ -149,16 +257,16 @@ function defined<T extends object>(input: T): Partial<T> {
 /** 날짜 입력값(YYYY-MM-DD, KST) → ISO */
 const kst = (date: string, time: string) => new Date(`${date}T${time}:00+09:00`).toISOString();
 
-function toSession(u: DbUser): Session {
+function toSession(db: MockDb, u: DbUser): Session {
   const s = readSession();
-  return { user: publicUser(u), expiresAt: s?.expiresAt ?? new Date(Date.now() + DAY).toISOString() };
+  return { user: publicUser(db, u), expiresAt: s?.expiresAt ?? new Date(Date.now() + DAY).toISOString() };
 }
 
 let lastResetToken: { token: string; userId: string } | null = null;
 
 export const mockClient: ApiClient = {
   auth: {
-    me: () => respond((db) => (currentUser(db) ? toSession(currentUser(db)!) : null)),
+    me: () => respond((db) => (currentUser(db) ? toSession(db, currentUser(db)!) : null)),
     login: (input) =>
       respond((db) => {
         const u = db.users.find((x) => x.email.toLowerCase() === input.email.toLowerCase());
@@ -170,7 +278,7 @@ export const mockClient: ApiClient = {
         if (!u.emailVerified)
           throw new ApiError('FORBIDDEN', '이메일 인증을 완료한 뒤 로그인할 수 있습니다.');
         writeSession(u.id);
-        return toSession(u);
+        return toSession(db, u);
       }),
     logout: () =>
       respond(() => {
@@ -247,7 +355,7 @@ export const mockClient: ApiClient = {
               }
             : c,
         );
-        return publicUser(u);
+        return publicUser(db, u);
       }),
     withdraw: () =>
       respond((db) => {
@@ -369,6 +477,275 @@ export const mockClient: ApiClient = {
         for (const n of db.notifications) {
           if (n.userId === u.id && n.readAt === null && (!ids || ids.includes(n.id))) n.readAt = now;
         }
+      }),
+    attendance: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        if (isEmptyScenario()) return [];
+        return db.attendance
+          .filter((s) => s.records.some((r) => r.userId === u.id))
+          .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+          .map((s) => toMyAttendance(s, u.id));
+      }),
+    checkIn: (input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        return checkIn(db, u.id, input.code.trim());
+      }),
+  },
+
+  manage: {
+    clubs: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        const all = can(u, 'club.manage');
+        const managed = managedClubIds(db, u.id);
+        if (!all && managed.length === 0) throw new ApiError('FORBIDDEN', '운영하는 동아리가 없습니다.');
+        return isEmptyScenario() ? [] : db.clubs.filter((c) => all || managed.includes(c.id));
+      }),
+    roster: (clubId) =>
+      respond((db) => {
+        requireClubManager(db, clubId);
+        const stats = memberStats(
+          db.attendance.filter((s) => s.targetType === 'club' && s.targetId === clubId),
+        );
+        return db.memberships
+          .filter((m) => m.clubId === clubId)
+          .map((m) => rosterEntry(db, m, stats.find((x) => x.userId === m.userId)?.rate ?? null))
+          .sort((a, b) =>
+            a.role === b.role ? a.name.localeCompare(b.name, 'ko') : a.role === 'leader' ? -1 : 1,
+          );
+      }),
+    setMemberRole: (clubId, userId, role) =>
+      respond((db) => {
+        const actor = requireClubManager(db, clubId);
+        const m = db.memberships.find((x) => x.clubId === clubId && x.userId === userId);
+        if (!m) throw new ApiError('NOT_FOUND', '동아리 회원을 찾을 수 없습니다.');
+        m.role = role;
+        const entry = rosterEntry(db, m, null);
+        audit(db, actor, {
+          action: 'club.member.role',
+          targetType: 'club',
+          targetId: clubId,
+          summary: `동아리 역할 변경: ${entry.name} → ${role === 'leader' ? '대표' : '동아리원'}`,
+        });
+        return entry;
+      }),
+    removeMember: (clubId, userId) =>
+      respond((db) => {
+        const actor = requireClubManager(db, clubId);
+        const before = db.memberships.length;
+        db.memberships = db.memberships.filter((m) => !(m.clubId === clubId && m.userId === userId));
+        if (db.memberships.length === before) {
+          throw new ApiError('NOT_FOUND', '동아리 회원을 찾을 수 없습니다.');
+        }
+        const club = findOr404(db.clubs, clubId);
+        club.memberCount = Math.max(0, club.memberCount - 1);
+        audit(db, actor, {
+          action: 'club.member.remove',
+          targetType: 'club',
+          targetId: clubId,
+          summary: `동아리 회원 제외: ${findOr404(db.users, userId).name} · ${club.name}`,
+        });
+      }),
+    applications: (clubId) =>
+      respond((db) => {
+        requireClubManager(db, clubId);
+        if (isEmptyScenario()) return [];
+        return db.clubApplications
+          .filter((a) => a.clubId === clubId)
+          .sort(
+            (a, b) =>
+              Number(b.status === 'pending') - Number(a.status === 'pending') ||
+              b.createdAt.localeCompare(a.createdAt),
+          );
+      }),
+    decideApplication: (clubId, id, decision, reason) =>
+      respond((db) => {
+        const actor = requireClubManager(db, clubId);
+        const a = findOr404(db.clubApplications, id);
+        if (a.clubId !== clubId) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
+        return decideClubApplication(db, actor, a, decision, reason);
+      }),
+    updateIntro: (clubId, input) =>
+      respond((db) => {
+        const actor = requireClubManager(db, clubId);
+        const parsed = parseValues(clubIntroSchema, input);
+        if (!parsed.ok) {
+          throw new ApiError('VALIDATION', '입력값을 확인해 주세요.', { fieldErrors: parsed.errors });
+        }
+        const club = findOr404(db.clubs, clubId);
+        Object.assign(club, parsed.data);
+        audit(db, actor, {
+          action: 'club.intro.update',
+          targetType: 'club',
+          targetId: clubId,
+          summary: `동아리 소개 수정: ${club.name}`,
+        });
+        return club;
+      }),
+    createPost: (clubId, input) =>
+      respond((db) => {
+        const actor = requireClubManager(db, clubId);
+        const parsed = parseValues(clubPostSchema, input);
+        if (!parsed.ok) {
+          throw new ApiError('VALIDATION', '입력값을 확인해 주세요.', { fieldErrors: parsed.errors });
+        }
+        const post = { id: nextId(db, 'cp'), at: new Date().toISOString(), ...parsed.data };
+        db.clubPosts.unshift({ ...post, clubId });
+        audit(db, actor, {
+          action: 'club.post.create',
+          targetType: 'club',
+          targetId: clubId,
+          summary: `동아리 소식 작성: ${post.title}`,
+        });
+        return post;
+      }),
+    removePost: (clubId, postId) =>
+      respond((db) => {
+        const actor = requireClubManager(db, clubId);
+        const post = db.clubPosts.find((p) => p.id === postId && p.clubId === clubId);
+        if (!post) throw new ApiError('NOT_FOUND', '소식을 찾을 수 없습니다.');
+        db.clubPosts = db.clubPosts.filter((p) => p !== post);
+        audit(db, actor, {
+          action: 'club.post.delete',
+          targetType: 'club',
+          targetId: clubId,
+          summary: `동아리 소식 삭제: ${post.title}`,
+        });
+      }),
+  },
+
+  attendance: {
+    targets: () =>
+      respond((db) => {
+        const u = requireUser(db);
+        const all = can(u, 'attendance.manage');
+        const managed = managedClubIds(db, u.id);
+        if (!all && managed.length === 0) {
+          throw new ApiError('FORBIDDEN', '출석부를 관리할 권한이 없습니다.');
+        }
+        if (isEmptyScenario()) return [];
+        const count = (t: AttendanceTarget) =>
+          db.attendance.filter((s) => s.targetType === t.type && s.targetId === t.id).length;
+        const clubs = db.clubs
+          .filter((c) => c.status === 'active' && (all || managed.includes(c.id)))
+          .map((c) => ({ type: 'club' as const, id: c.id, name: c.name }));
+        const programs = all
+          ? db.programs
+              .filter((p) => p.status === 'published')
+              .map((p) => ({ type: 'program' as const, id: p.id, name: p.title }))
+          : [];
+        return [...clubs, ...programs].map((t) => ({
+          ...t,
+          rosterCount: rosterOf(db, t).length,
+          sessionCount: count(t),
+        }));
+      }),
+    sessions: (target) =>
+      respond((db) => {
+        requireAttendanceManager(db, target);
+        if (isEmptyScenario()) return [];
+        return db.attendance
+          .filter((s) => s.targetType === target.type && s.targetId === target.id)
+          .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+          .map(withCheckIn);
+      }),
+    get: (id) =>
+      respond((db) => {
+        const s = findOr404(db.attendance, id);
+        requireAttendanceManager(db, { type: s.targetType, id: s.targetId });
+        return withCheckIn(s);
+      }),
+    create: (target, input) =>
+      respond((db) => {
+        const actor = requireAttendanceManager(db, target);
+        const parsed = parseValues(attendanceSessionSchema, input);
+        if (!parsed.ok)
+          throw new ApiError('VALIDATION', '입력값을 확인해 주세요.', { fieldErrors: parsed.errors });
+        const s: AttendanceSession = {
+          id: nextId(db, 'at'),
+          targetType: target.type,
+          targetId: target.id,
+          targetName: targetName(db, target),
+          date: parsed.data.date,
+          title: parsed.data.title,
+          checkInCode: null,
+          checkInClosesAt: null,
+          createdAt: new Date().toISOString(),
+          createdBy: actor.name,
+          records: rosterOf(db, target).map((r) => ({
+            ...r,
+            status: null,
+            checkedAt: null,
+            method: null,
+            note: null,
+          })),
+        };
+        db.attendance.push(s);
+        audit(db, actor, {
+          action: 'attendance.create',
+          targetType: 'attendance',
+          targetId: s.id,
+          summary: `출석부 생성: ${s.targetName} ${s.date} ${s.title}`,
+        });
+        return withCheckIn(s);
+      }),
+    remove: (id) =>
+      respond((db) => {
+        const s = findOr404(db.attendance, id);
+        const actor = requireAttendanceManager(db, { type: s.targetType, id: s.targetId });
+        db.attendance = db.attendance.filter((x) => x.id !== id);
+        audit(db, actor, {
+          action: 'attendance.delete',
+          targetType: 'attendance',
+          targetId: id,
+          summary: `출석부 삭제: ${s.targetName} ${s.date} ${s.title}`,
+        });
+      }),
+    mark: (id, marks) =>
+      respond((db) => {
+        const s = findOr404(db.attendance, id);
+        requireAttendanceManager(db, { type: s.targetType, id: s.targetId });
+        if (marks.some((m) => !s.records.some((r) => r.userId === m.userId))) {
+          throw new ApiError('VALIDATION', '출석부 명단에 없는 회원이 포함되어 있습니다.');
+        }
+        const now = new Date().toISOString();
+        for (const m of marks) {
+          const r = s.records.find((x) => x.userId === m.userId)!;
+          r.status = m.status;
+          r.checkedAt = m.status ? now : null;
+          r.method = m.status ? 'manager' : null;
+          if (m.note !== undefined) r.note = m.note?.trim().slice(0, 100) || null;
+        }
+        return withCheckIn(s);
+      }),
+    setCheckIn: (id, open) =>
+      respond((db) => {
+        const s = findOr404(db.attendance, id);
+        const actor = requireAttendanceManager(db, { type: s.targetType, id: s.targetId });
+        if (open) {
+          s.checkInCode = issueCode(db);
+          s.checkInClosesAt = new Date(Date.now() + CHECK_IN_MINUTES * 60_000).toISOString();
+        } else {
+          s.checkInCode = null;
+          s.checkInClosesAt = null;
+        }
+        audit(db, actor, {
+          action: open ? 'attendance.checkin.open' : 'attendance.checkin.close',
+          targetType: 'attendance',
+          targetId: id,
+          summary: `출석 코드 ${open ? '열기' : '닫기'}: ${s.targetName} ${s.date} ${s.title}`,
+        });
+        return withCheckIn(s);
+      }),
+    stats: (target) =>
+      respond((db) => {
+        requireAttendanceManager(db, target);
+        if (isEmptyScenario()) return [];
+        return memberStats(
+          db.attendance.filter((s) => s.targetType === target.type && s.targetId === target.id),
+        );
       }),
   },
 
@@ -925,7 +1302,7 @@ export const mockClient: ApiClient = {
           const list = db.users
             .filter((u) => !q.status || u.status === q.status)
             .filter((u) => matches(`${u.name} ${u.email}`, q.q))
-            .map(publicUser);
+            .map((u) => publicUser(db, u));
           return paginate(
             sortBy(
               list,
@@ -940,7 +1317,7 @@ export const mockClient: ApiClient = {
       get: (id) =>
         respond((db) => {
           requirePermission(db, 'member.read');
-          return publicUser(findOr404(db.users, id));
+          return publicUser(db, findOr404(db.users, id));
         }),
       update: (id, patch) =>
         respond((db) => {
@@ -951,8 +1328,15 @@ export const mockClient: ApiClient = {
             });
           }
           const u = findOr404(db.users, id);
+          if (!canManageUser(actor, u)) {
+            throw new ApiError('FORBIDDEN', '개발자 계정은 개발자만 변경할 수 있습니다.');
+          }
           if (patch.roles) {
             if (patch.roles.length === 0) throw new ApiError('VALIDATION', '역할을 1개 이상 지정해 주세요.');
+            const allowed = assignableRoles(actor);
+            if (patch.roles.some((r) => !allowed.includes(r))) {
+              throw new ApiError('FORBIDDEN', '부여할 수 없는 역할입니다.');
+            }
             u.roles = patch.roles;
           }
           if (patch.status) u.status = patch.status;
@@ -962,7 +1346,7 @@ export const mockClient: ApiClient = {
             targetId: id,
             summary: `회원 변경: ${u.name} (${[patch.roles && `역할 ${patch.roles.join(',')}`, patch.status && `상태 ${patch.status}`].filter(Boolean).join(', ')})`,
           });
-          return publicUser(u);
+          return publicUser(db, u);
         }),
     },
 
@@ -1032,41 +1416,65 @@ export const mockClient: ApiClient = {
       decideApplication: (id, decision, reason) =>
         respond((db) => {
           const actor = requirePermission(db, 'club.manage');
-          const a = findOr404(db.clubApplications, id);
-          if (a.status !== 'pending') {
-            throw new ApiError('CONFLICT', '이미 처리된 신청입니다.', { reason: 'INVALID_STATE' });
-          }
-          if (decision === 'rejected' && !reason?.trim()) {
-            throw new ApiError('VALIDATION', '반려 사유를 입력해 주세요.', {
-              fieldErrors: { reason: '반려 사유를 입력해 주세요.' },
+          return decideClubApplication(db, actor, findOr404(db.clubApplications, id), decision, reason);
+        }),
+      managers: (clubId) =>
+        respond((db) => {
+          requirePermission(db, 'club.manage');
+          findOr404(db.clubs, clubId);
+          return db.clubManagers
+            .filter((m) => m.clubId === clubId)
+            .map((m) => {
+              const u = findOr404(db.users, m.userId);
+              return { ...m, name: u.name, email: u.email };
             });
+        }),
+      assignManager: (clubId, email) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'club.manage');
+          const club = findOr404(db.clubs, clubId);
+          const parsed = parseValues(managerEmailSchema, { email });
+          const u = parsed.ok
+            ? db.users.find((x) => x.email.toLowerCase() === parsed.data.email.toLowerCase())
+            : undefined;
+          if (!u || u.status !== 'active') {
+            const message = parsed.ok ? '가입된 활동 회원의 이메일이 아닙니다.' : parsed.errors.email!;
+            throw new ApiError('VALIDATION', message, { fieldErrors: { email: message } });
           }
-          a.status = decision;
-          a.reason = reason?.trim() || null;
-          if (decision === 'approved') {
-            db.memberships.push({
-              clubId: a.clubId,
-              userId: a.userId,
-              role: 'member',
-              joinedAt: new Date().toISOString(),
-            });
-            const c = db.clubs.find((x) => x.id === a.clubId);
-            if (c) c.memberCount += 1;
+          if (db.clubManagers.some((m) => m.clubId === clubId && m.userId === u.id)) {
+            throw new ApiError('CONFLICT', '이미 이 동아리의 담당자입니다.', { reason: 'DUPLICATE' });
           }
+          const m = { clubId, userId: u.id, assignedAt: new Date().toISOString() };
+          db.clubManagers.push(m);
           notify(db, {
-            userId: a.userId,
-            kind: 'club_application',
-            title: `동아리 가입 신청이 ${decision === 'approved' ? '승인' : '반려'}되었습니다`,
-            body: a.reason ? `${a.clubName} · 사유: ${a.reason}` : a.clubName,
-            link: decision === 'approved' ? `/clubs/${a.clubId}` : '/my',
+            userId: u.id,
+            kind: 'club_manager',
+            title: '동아리 담당자로 지정되었습니다',
+            body: `${club.name} — 관리자 화면의 동아리 운영에서 회원·가입·출석·소식을 관리할 수 있습니다.`,
+            link: `/admin/my-clubs/${clubId}`,
           });
           audit(db, actor, {
-            action: `club_application.${decision}`,
-            targetType: 'club_application',
-            targetId: id,
-            summary: `동아리 가입 ${decision === 'approved' ? '승인' : '반려'}: ${a.applicantName} · ${a.clubName}`,
+            action: 'club.manager.assign',
+            targetType: 'club',
+            targetId: clubId,
+            summary: `동아리 담당자 지정: ${u.name} · ${club.name}`,
           });
-          return a;
+          return { ...m, name: u.name, email: u.email };
+        }),
+      removeManager: (clubId, userId) =>
+        respond((db) => {
+          const actor = requirePermission(db, 'club.manage');
+          const club = findOr404(db.clubs, clubId);
+          const before = db.clubManagers.length;
+          db.clubManagers = db.clubManagers.filter((m) => !(m.clubId === clubId && m.userId === userId));
+          if (db.clubManagers.length === before)
+            throw new ApiError('NOT_FOUND', '담당자를 찾을 수 없습니다.');
+          audit(db, actor, {
+            action: 'club.manager.remove',
+            targetType: 'club',
+            targetId: clubId,
+            summary: `동아리 담당자 해제: ${findOr404(db.users, userId).name} · ${club.name}`,
+          });
         }),
     },
 
@@ -1273,6 +1681,8 @@ export const mockDev = {
   setScenario: (s: Scenario) => writeScenario(s),
   expireSession,
   reset: resetDb,
+  exportDb,
+  importDb,
   /** 비밀번호 재설정 메일 대신 화면에 링크를 보여 주기 위한 값 */
   lastResetToken: () => lastResetToken?.token ?? null,
   verifyEmail: (email: string) => {
