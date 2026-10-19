@@ -101,7 +101,7 @@ export default function MyAttendanceScreen() {
                 description="가입한 동아리나 승인된 프로그램의 출석부가 만들어지면 여기에 표시됩니다."
               />
             ) : (
-              <View style={{ gap: space.lg, paddingBottom: space.xl }}>
+              <View style={{ gap: space.lg, paddingTop: space.xl, paddingBottom: space.xl }}>
                 {groupByTarget(items).map((group) => {
                   const first = group[0]!;
                   const rate = rateOf(group);
