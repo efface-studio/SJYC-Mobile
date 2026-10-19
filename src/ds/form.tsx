@@ -205,7 +205,7 @@ export function DateField({
             accentColor={t.action}
             minimumDate={minimumDate}
             maximumDate={maximumDate}
-            onChange={(_e, d) => d && onChange(toYmd(d))}
+            onValueChange={(_e, d) => onChange(toYmd(d))}
           />
         </View>
       </FieldShell>
@@ -222,7 +222,7 @@ export function DateField({
             mode: 'date',
             minimumDate,
             maximumDate,
-            onChange: (e, d) => e.type === 'set' && d && onChange(toYmd(d)),
+            onValueChange: (_e, d) => onChange(toYmd(d)),
           })
         }
         style={[styles.select, { backgroundColor: t.bgSubtle }]}
