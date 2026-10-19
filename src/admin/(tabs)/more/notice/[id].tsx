@@ -80,7 +80,11 @@ function NoticeForm({ notice }: { notice: Notice | null }) {
   });
   const remove = useMutation({
     mutationFn: (id: string) => api.admin.notices.remove(id),
-    onSuccess: done,
+    // 삭제한 공지의 상세 캐시는 갱신(재조회) 대신 지운다 — 다시 불러오면 404
+    onSuccess: (_r, id) => {
+      qc.removeQueries({ queryKey: ['admin', 'notice', id] });
+      done();
+    },
     onError: (e) => notify('공지를 삭제하지 못했습니다', errorMessage(e)),
   });
   const busy = save.isPending || remove.isPending;

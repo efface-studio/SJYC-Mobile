@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -75,6 +75,7 @@ function ProgramSummary({ program }: { program: Program }) {
 }
 
 function Editor({ program }: { program: Program | null }) {
+  const qc = useQueryClient();
   const invalidate = useInvalidateAdmin();
   const [serverErrors, setServerErrors] = useState<FieldErrors>({});
   // 먼저 화면을 닫고 갱신한다 — 삭제된 항목을 다시 조회하지 않도록
@@ -94,7 +95,11 @@ function Editor({ program }: { program: Program | null }) {
   });
   const remove = useMutation({
     mutationFn: (id: string) => api.admin.programs.remove(id),
-    onSuccess: done,
+    // 삭제한 프로그램의 상세 캐시는 갱신(재조회) 대신 지운다 — 다시 불러오면 404
+    onSuccess: (_r, id) => {
+      qc.removeQueries({ queryKey: ['admin', 'program', id] });
+      done();
+    },
     // 신청 내역이 있으면 서버가 CONFLICT 와 안내 문구를 돌려준다
     onError: (e) => notify('프로그램을 삭제하지 못했습니다', errorMessage(e)),
   });
