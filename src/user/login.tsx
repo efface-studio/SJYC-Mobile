@@ -12,7 +12,7 @@ import type { OAuthProvider } from '@/domain/types';
 import { forgotPasswordSchema, loginSchema, parseValues, type FieldErrors } from '@/domain/schemas';
 import { SESSION_KEY } from '@/features/auth/session';
 import { Button, Gutter, Screen, Tap, TextField, Txt, radius, space, useTheme } from '~/ds';
-import { closeModal } from '~/user-kit';
+import { ModalGuard, closeModal } from '~/user-kit';
 import { notify } from '~/shared/dialogs';
 
 /** 각 공급자 브랜드 가이드 색 */
@@ -127,8 +127,35 @@ export default function LoginScreen() {
 
   if (mode === 'forgot') {
     return (
+      <>
+        <ModalGuard dirty={false} fallback="/my" />
+        <Screen>
+          <Header title="비밀번호 찾기" description="가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다." />
+          <Gutter style={styles.form}>
+            <TextField
+              label="이메일"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="example@email.com"
+              keyboardType="email-address"
+              autoComplete="email"
+              returnKeyType="send"
+              onSubmitEditing={submitForgot}
+              error={errors.email}
+            />
+            <Button label="재설정 링크 받기" onPress={submitForgot} loading={forgot.isPending} />
+            <Button label="로그인으로 돌아가기" variant="text" size="md" onPress={() => switchMode('login')} />
+          </Gutter>
+        </Screen>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <ModalGuard dirty={false} fallback="/my" />
       <Screen>
-        <Header title="비밀번호 찾기" description="가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다." />
+        <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
         <Gutter style={styles.form}>
           <TextField
             label="이메일"
@@ -137,99 +164,78 @@ export default function LoginScreen() {
             placeholder="example@email.com"
             keyboardType="email-address"
             autoComplete="email"
-            returnKeyType="send"
-            onSubmitEditing={submitForgot}
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
             error={errors.email}
           />
-          <Button label="재설정 링크 받기" onPress={submitForgot} loading={forgot.isPending} />
-          <Button label="로그인으로 돌아가기" variant="text" size="md" onPress={() => switchMode('login')} />
-        </Gutter>
-      </Screen>
-    );
-  }
-
-  return (
-    <Screen>
-      <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
-      <Gutter style={styles.form}>
-        <TextField
-          label="이메일"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="example@email.com"
-          keyboardType="email-address"
-          autoComplete="email"
-          returnKeyType="next"
-          onSubmitEditing={() => passwordRef.current?.focus()}
-          error={errors.email}
-        />
-        <TextField
-          ref={passwordRef}
-          label="비밀번호"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="비밀번호"
-          secureTextEntry
-          autoComplete="password"
-          returnKeyType="go"
-          onSubmitEditing={submitLogin}
-          error={errors.password}
-        />
-        <Button label="로그인" onPress={submitLogin} loading={login.isPending} />
-        <View style={styles.links}>
-          <Tap onPress={() => switchMode('forgot')} accessibilityLabel="비밀번호 찾기" style={styles.link}>
-            <Txt variant="caption" color="textSecondary">
-              비밀번호 찾기
-            </Txt>
-          </Tap>
-          <View style={[styles.sep, { backgroundColor: t.line }]} />
-          <Tap onPress={() => router.replace('/signup')} accessibilityLabel="회원가입" style={styles.link}>
-            <Txt variant="caption" color="textSecondary">
-              회원가입
-            </Txt>
-          </Tap>
-        </View>
-      </Gutter>
-
-      {/* 서버 OAuth 설정 전에는 성공을 흉내 내지 않고 "설정 필요"로 안내한다 */}
-      <Gutter style={styles.socialBlock}>
-        <View style={styles.orRow}>
-          <View style={[styles.orLine, { backgroundColor: t.line }]} />
-          <Txt variant="small" color="textTertiary">
-            간편 로그인
-          </Txt>
-          <View style={[styles.orLine, { backgroundColor: t.line }]} />
-        </View>
-        {providerStates().map((p) => (
-          <SocialButton key={p.provider} p={p} />
-        ))}
-      </Gutter>
-
-      {IS_MOCK && (
-        <Gutter style={styles.demo}>
-          <Txt variant="captionStrong" color="textTertiary">
-            개발용 데모 계정으로 바로 로그인
-          </Txt>
-          <View style={styles.demoChips}>
-            {DEMO_ACCOUNTS.filter(
-              (a) => a.email === 'member@demo.test' || a.email === 'leader@demo.test',
-            ).map((a) => (
-              <Tap
-                key={a.email}
-                rounded={radius.md}
-                accessibilityLabel={`${a.label} 데모 계정으로 로그인`}
-                onPress={() => login.mutate({ email: a.email, password: DEMO_PASSWORD })}
-                style={[styles.demoChip, { borderColor: t.tone.warning.fg }]}
-              >
-                <Txt variant="label" color={t.tone.warning.fg}>
-                  {a.label}
-                </Txt>
-              </Tap>
-            ))}
+          <TextField
+            ref={passwordRef}
+            label="비밀번호"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="비밀번호"
+            secureTextEntry
+            autoComplete="password"
+            returnKeyType="go"
+            onSubmitEditing={submitLogin}
+            error={errors.password}
+          />
+          <Button label="로그인" onPress={submitLogin} loading={login.isPending} />
+          <View style={styles.links}>
+            <Tap onPress={() => switchMode('forgot')} accessibilityLabel="비밀번호 찾기" style={styles.link}>
+              <Txt variant="caption" color="textSecondary">
+                비밀번호 찾기
+              </Txt>
+            </Tap>
+            <View style={[styles.sep, { backgroundColor: t.line }]} />
+            <Tap onPress={() => router.replace('/signup')} accessibilityLabel="회원가입" style={styles.link}>
+              <Txt variant="caption" color="textSecondary">
+                회원가입
+              </Txt>
+            </Tap>
           </View>
         </Gutter>
-      )}
-    </Screen>
+
+        {/* 서버 OAuth 설정 전에는 성공을 흉내 내지 않고 "설정 필요"로 안내한다 */}
+        <Gutter style={styles.socialBlock}>
+          <View style={styles.orRow}>
+            <View style={[styles.orLine, { backgroundColor: t.line }]} />
+            <Txt variant="small" color="textTertiary">
+              간편 로그인
+            </Txt>
+            <View style={[styles.orLine, { backgroundColor: t.line }]} />
+          </View>
+          {providerStates().map((p) => (
+            <SocialButton key={p.provider} p={p} />
+          ))}
+        </Gutter>
+
+        {IS_MOCK && (
+          <Gutter style={styles.demo}>
+            <Txt variant="captionStrong" color="textTertiary">
+              개발용 데모 계정으로 바로 로그인
+            </Txt>
+            <View style={styles.demoChips}>
+              {DEMO_ACCOUNTS.filter(
+                (a) => a.email === 'member@demo.test' || a.email === 'leader@demo.test',
+              ).map((a) => (
+                <Tap
+                  key={a.email}
+                  rounded={radius.md}
+                  accessibilityLabel={`${a.label} 데모 계정으로 로그인`}
+                  onPress={() => login.mutate({ email: a.email, password: DEMO_PASSWORD })}
+                  style={[styles.demoChip, { borderColor: t.tone.warning.fg }]}
+                >
+                  <Txt variant="label" color={t.tone.warning.fg}>
+                    {a.label}
+                  </Txt>
+                </Tap>
+              ))}
+            </View>
+          </Gutter>
+        )}
+      </Screen>
+    </>
   );
 }
 

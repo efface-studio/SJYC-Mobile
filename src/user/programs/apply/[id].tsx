@@ -22,7 +22,7 @@ import {
   space,
 } from '~/ds';
 import { notify } from '~/shared/dialogs';
-import { QueryScreen, SignInPrompt, closeModal } from '~/user-kit';
+import { ModalGuard, QueryScreen, SignInPrompt, closeModal } from '~/user-kit';
 
 function ApplyForm({ program, session }: { program: Program; session: Session }) {
   const qc = useQueryClient();
@@ -31,6 +31,7 @@ function ApplyForm({ program, session }: { program: Program; session: Session })
   const [note, setNote] = useState('');
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const dirty = phone !== (session.user.phone ?? '') || Boolean(note) || agree;
 
   const apply = useMutation({
     mutationFn: (input: Parameters<typeof api.programs.apply>[1]) => api.programs.apply(id, input),
@@ -63,72 +64,75 @@ function ApplyForm({ program, session }: { program: Program; session: Session })
   };
 
   return (
-    <Screen
-      footer={
-        <StickyFooter>
-          <Button label="신청하기" onPress={submit} loading={apply.isPending} />
-        </StickyFooter>
-      }
-    >
-      <Gutter style={{ paddingTop: space.lg }}>
-        <Card style={{ gap: space.xs }}>
-          <Txt variant="caption" color="textTertiary">
-            신청 프로그램
-          </Txt>
-          <Txt variant="title3">{program.title}</Txt>
-          <View style={{ marginTop: space.xs }}>
-            <InfoRow label="기간" value={formatPeriod(program.startsAt, program.endsAt)} />
-            <InfoRow label="장소" value={program.place} />
-            <InfoRow label="신청자" value={session.user.name} />
-          </View>
-        </Card>
-      </Gutter>
-
-      <FormSection title="신청 정보">
-        <TextField
-          label="연락처"
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="010-1234-5678"
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          error={errors.phone}
-        />
-        <TextField
-          label="요청 사항 (선택)"
-          value={note}
-          onChangeText={setNote}
-          placeholder="참여에 필요한 배려 사항이 있다면 적어 주세요"
-          multiline
-          maxLength={300}
-          hint={`${note.length}/300`}
-          error={errors.note}
-        />
-      </FormSection>
-
-      <FormSection title="개인정보 수집·이용 동의">
-        <Card style={{ gap: space.xs }}>
-          <InfoRow label="수집 항목" value="이름, 연락처, 요청 사항" />
-          <InfoRow label="이용 목적" value="프로그램 신청 접수, 참여 안내 및 연락" />
-          <InfoRow label="보유 기간" value="센터 개인정보처리방침에 따름" />
-          <Tap
-            onPress={() => router.push('/policies/privacy')}
-            accessibilityLabel="개인정보처리방침 보기"
-            style={{ alignSelf: 'flex-start', paddingVertical: 10 }}
-          >
-            <Txt variant="captionStrong" color="action">
-              개인정보처리방침 보기
+    <>
+      <ModalGuard dirty={dirty} fallback="/programs" />
+      <Screen
+        footer={
+          <StickyFooter>
+            <Button label="신청하기" onPress={submit} loading={apply.isPending} />
+          </StickyFooter>
+        }
+      >
+        <Gutter style={{ paddingTop: space.lg }}>
+          <Card style={{ gap: space.xs }}>
+            <Txt variant="caption" color="textTertiary">
+              신청 프로그램
             </Txt>
-          </Tap>
-        </Card>
-        <SwitchRow
-          label="[필수] 위 내용을 확인했으며 동의합니다"
-          value={agree}
-          onValueChange={setAgree}
-          error={errors.agreePrivacy}
-        />
-      </FormSection>
-    </Screen>
+            <Txt variant="title3">{program.title}</Txt>
+            <View style={{ marginTop: space.xs }}>
+              <InfoRow label="기간" value={formatPeriod(program.startsAt, program.endsAt)} />
+              <InfoRow label="장소" value={program.place} />
+              <InfoRow label="신청자" value={session.user.name} />
+            </View>
+          </Card>
+        </Gutter>
+
+        <FormSection title="신청 정보">
+          <TextField
+            label="연락처"
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="010-1234-5678"
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            error={errors.phone}
+          />
+          <TextField
+            label="요청 사항 (선택)"
+            value={note}
+            onChangeText={setNote}
+            placeholder="참여에 필요한 배려 사항이 있다면 적어 주세요"
+            multiline
+            maxLength={300}
+            hint={`${note.length}/300`}
+            error={errors.note}
+          />
+        </FormSection>
+
+        <FormSection title="개인정보 수집·이용 동의">
+          <Card style={{ gap: space.xs }}>
+            <InfoRow label="수집 항목" value="이름, 연락처, 요청 사항" />
+            <InfoRow label="이용 목적" value="프로그램 신청 접수, 참여 안내 및 연락" />
+            <InfoRow label="보유 기간" value="센터 개인정보처리방침에 따름" />
+            <Tap
+              onPress={() => router.push('/policies/privacy')}
+              accessibilityLabel="개인정보처리방침 보기"
+              style={{ alignSelf: 'flex-start', paddingVertical: 10 }}
+            >
+              <Txt variant="captionStrong" color="action">
+                개인정보처리방침 보기
+              </Txt>
+            </Tap>
+          </Card>
+          <SwitchRow
+            label="[필수] 위 내용을 확인했으며 동의합니다"
+            value={agree}
+            onValueChange={setAgree}
+            error={errors.agreePrivacy}
+          />
+        </FormSection>
+      </Screen>
+    </>
   );
 }
 
