@@ -41,25 +41,41 @@ export default function NoticeScreen() {
               <Txt variant="captionStrong" color="textSecondary">
                 첨부파일 {n.attachments.length}
               </Txt>
-              {n.attachments.map((f) => (
-                <Tap
-                  key={f.id}
-                  rounded={radius.md}
-                  onPress={
-                    isExternal(f.url) && f.url.startsWith('https://') ? () => openExternal(f.url) : undefined
-                  }
-                  accessibilityLabel={`첨부파일 ${f.name} ${formatBytes(f.size)} 열기`}
-                  style={[styles.file, { backgroundColor: t.bgSubtle }]}
-                >
-                  <Icon ios="paperclip" android="attach_file" color={t.textSecondary} size={16} />
-                  <Txt variant="label" numberOfLines={1} style={{ flex: 1 }}>
-                    {f.name}
-                  </Txt>
-                  <Txt variant="caption" color="textTertiary">
-                    {formatBytes(f.size)}
-                  </Txt>
-                </Tap>
-              ))}
+              {n.attachments.map((f) => {
+                // 앱은 https 주소만 연다 — 열 수 없는 첨부는 누를 수 있는 모양으로 두지 않는다
+                const openable = isExternal(f.url) && f.url.startsWith('https://');
+                const row = (
+                  <>
+                    <Icon ios="paperclip" android="attach_file" color={t.textSecondary} size={16} />
+                    <Txt variant="label" numberOfLines={1} style={{ flex: 1 }}>
+                      {f.name}
+                    </Txt>
+                    <Txt variant="caption" color="textTertiary">
+                      {openable ? formatBytes(f.size) : `${formatBytes(f.size)} · 앱에서 열 수 없음`}
+                    </Txt>
+                  </>
+                );
+                return openable ? (
+                  <Tap
+                    key={f.id}
+                    rounded={radius.md}
+                    onPress={() => openExternal(f.url)}
+                    accessibilityLabel={`첨부파일 ${f.name} ${formatBytes(f.size)} 열기`}
+                    style={[styles.file, { backgroundColor: t.bgSubtle }]}
+                  >
+                    {row}
+                  </Tap>
+                ) : (
+                  <View
+                    key={f.id}
+                    accessible
+                    accessibilityLabel={`첨부파일 ${f.name} ${formatBytes(f.size)}, 앱에서 열 수 없음`}
+                    style={[styles.file, { backgroundColor: t.bgSubtle, borderRadius: radius.md }]}
+                  >
+                    {row}
+                  </View>
+                );
+              })}
             </Gutter>
           )}
         </Screen>
