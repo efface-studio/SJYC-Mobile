@@ -1,8 +1,11 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
+  Keyboard,
+  LayoutAnimation,
   Platform,
   Pressable,
   RefreshControl,
@@ -27,15 +30,12 @@ export function Screen({
   onRefresh,
   subtle = false,
   footer,
-  bottomInset,
   keyboardInsets = true,
 }: {
   children: ReactNode;
   onRefresh?: () => Promise<unknown>;
   subtle?: boolean;
   footer?: ReactNode;
-  /** 하단 고정 영역 높이에 맞춘 스크롤 여백 (기본: footer 가 있으면 140) */
-  bottomInset?: number;
   /**
    * 키보드에 맞춰 스크롤 인셋을 조정한다 (입력 폼). 입력칸이 없는 화면은 끈다 —
    * iOS 입력 알림(Alert.prompt)의 키보드에도 반응해, 닫은 뒤 목록이 위로 밀린 채 남는다.
@@ -45,6 +45,7 @@ export function Screen({
   const t = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const bg = subtle ? t.bgSubtle : t.bg;
+  const keyboardOverlap = useKeyboardOverlap(footer != null);
   const scroll = (
     <ScrollView
       // iOS 큰 제목은 화면의 첫 하위 뷰가 ScrollView 여야 스크롤에 맞춰 접힌다 — 감싸는 View 를 두지 않는다
@@ -54,7 +55,7 @@ export function Screen({
       automaticallyAdjustKeyboardInsets={keyboardInsets}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentContainerStyle={{ paddingBottom: bottomInset ?? (footer ? 140 : 48) }}
+      contentContainerStyle={{ paddingBottom: 48 }}
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -77,24 +78,80 @@ export function Screen({
     </ScrollView>
   );
   if (!footer) return scroll;
+  // 하단 고정 영역은 스크롤 아래에 두고, iOS 에서는 키보드가 올라오면 함께 올린다 (입력 중에도 제출 버튼이 보이게)
   return (
-    <View style={{ flex: 1, backgroundColor: bg }}>
+    <View style={{ flex: 1, backgroundColor: bg, paddingBottom: keyboardOverlap }}>
       {scroll}
       {footer}
     </View>
   );
 }
 
-/** 화면 하단 고정 행동 영역 (신청하기 등) */
+/**
+ * iOS 키보드가 화면 아래쪽을 가리는 높이. 하단 고정 영역이 있는 화면은 모두 화면(시트) 맨 아래까지
+ * 닿으므로 키보드 윗변과 화면 높이로 잰다 (KeyboardAvoidingView·measureInWindow 는 모달 시트 안에서
+ * 시트 기준 좌표를 써서 덜 올라간다).
+ */
+function useKeyboardOverlap(enabled: boolean): number {
+  const [overlap, setOverlap] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !enabled) return;
+    const apply = (duration: number, value: number) => {
+      if (duration > 0) {
+        LayoutAnimation.configureNext({
+          duration,
+          update: { duration, type: LayoutAnimation.Types.keyboard },
+        });
+      }
+      setOverlap(value);
+    };
+    const change = Keyboard.addListener('keyboardWillChangeFrame', (e) =>
+      apply(e.duration, Math.max(0, Dimensions.get('screen').height - e.endCoordinates.screenY)),
+    );
+    const hide = Keyboard.addListener('keyboardWillHide', (e) => apply(e.duration, 0));
+    return () => {
+      change.remove();
+      hide.remove();
+    };
+  }, [enabled]);
+  return overlap;
+}
+
+/** iOS 키보드가 떠 있는지 (하단 고정 영역의 홈 인디케이터 여백을 줄이는 데 쓴다) */
+function useKeyboardShown(): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const show = Keyboard.addListener('keyboardWillShow', () => setShown(true));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setShown(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return shown;
+}
+
+/**
+ * 떠 있는 하단 탭 바 위에 그려지는 스택인지 (탭 안에서 쌓이는 화면). iOS 네이티브 탭 바는 RN 안전 영역에
+ * 잡히지 않아 하단 고정 영역이 가려지므로, 탭 스택이 이 값을 true 로 내려 준다.
+ */
+export const OverTabBarContext = createContext(false);
+/** iPhone 하단 탭 바 높이 (홈 인디케이터 안전 영역 위). iPad 탭 바는 위쪽, Android 는 내용이 탭 바 위에서 끝난다 */
+const TAB_BAR_HEIGHT = Platform.OS === 'ios' && !Platform.isPad ? 49 : 0;
+
+/** 화면 하단 고정 행동 영역 (신청하기 등). 키보드가 떠 있으면 키보드 바로 위에 붙인다 */
 export function StickyFooter({ children }: { children: ReactNode }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const keyboard = useKeyboardShown();
+  const overTabBar = useContext(OverTabBarContext);
+  const bottom = keyboard
+    ? space.md
+    : Math.max(insets.bottom, space.lg) + (overTabBar ? TAB_BAR_HEIGHT + space.sm : 0);
   return (
     <View
-      style={[
-        styles.sticky,
-        { backgroundColor: t.bg, borderTopColor: t.line, paddingBottom: Math.max(insets.bottom, space.lg) },
-      ]}
+      style={[styles.sticky, { backgroundColor: t.bg, borderTopColor: t.line, paddingBottom: bottom }]}
     >
       {children}
     </View>
@@ -460,10 +517,6 @@ export function QueryBoundary<T>({
 
 const styles = StyleSheet.create({
   sticky: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     paddingHorizontal: GUTTER,
     paddingTop: space.md,
     borderTopWidth: StyleSheet.hairlineWidth,

@@ -17,6 +17,7 @@ import {
   EmptyState,
   FormSection,
   GUTTER,
+  OverTabBarContext,
   QueryBoundary,
   Screen,
   Tap,
@@ -29,12 +30,17 @@ import {
 import { Icon } from '~/shared/icon';
 import type { Option, Paged } from './queries';
 
-/** 각 탭의 내비게이션 스택 — 탭 첫 화면은 iOS 큰 제목 (제목은 화면마다 Stack.Screen 으로 지정) */
+/**
+ * 각 탭의 내비게이션 스택 — 탭 첫 화면은 iOS 큰 제목 (제목은 화면마다 Stack.Screen 으로 지정).
+ * 이 스택의 화면은 떠 있는 탭 바 위에 그려지므로 하단 고정 영역이 탭 바를 피하게 한다.
+ */
 export function TabStack() {
   return (
-    <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal', headerShadowVisible: false }}>
-      <Stack.Screen name="index" options={{ headerLargeTitle: true, headerLargeTitleShadowVisible: false }} />
-    </Stack>
+    <OverTabBarContext.Provider value>
+      <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal', headerShadowVisible: false }}>
+        <Stack.Screen name="index" options={{ headerLargeTitle: true, headerLargeTitleShadowVisible: false }} />
+      </Stack>
+    </OverTabBarContext.Provider>
   );
 }
 
@@ -195,7 +201,6 @@ export function PagedList<T extends { id: string }>({
   tools,
   below,
   footer,
-  bottomInset,
   emptyText,
   renderRow,
 }: {
@@ -204,8 +209,6 @@ export function PagedList<T extends { id: string }>({
   tools?: ReactNode;
   below?: ReactNode;
   footer?: ReactNode;
-  /** 하단 고정 영역이 기본(140)보다 높을 때 목록 끝 여백 */
-  bottomInset?: number;
   emptyText: string;
   renderRow: (item: T) => ReactNode;
 }) {
@@ -215,7 +218,6 @@ export function PagedList<T extends { id: string }>({
     <Screen
       onRefresh={() => query.refetch()}
       footer={footer}
-      bottomInset={bottomInset}
       keyboardInsets={false}
     >
       {chips}
