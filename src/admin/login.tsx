@@ -6,15 +6,15 @@ import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { CENTER } from '@/config/center';
 import { IS_MOCK } from '@/config/env';
-import { can } from '@/domain/permissions';
+import { canEnterConsole } from '@/domain/permissions';
 import { loginSchema, parseValues, type FieldErrors, type LoginInput } from '@/domain/schemas';
 import { SESSION_KEY, useLogout } from '@/features/auth/session';
 import { Badge, Button, Chips, GUTTER, TextField, Txt, radius, space, useTheme } from '~/ds';
 import { notify } from '~/shared/dialogs';
 
-/** 데모(mock) 모드에서만 노출하는 직원·관리자 계정 */
+/** 데모(mock) 모드에서만 노출하는 동아리 담당자·직원·관리자 계정 (웹 관리자 로그인과 같은 목록) */
 const STAFF_DEMOS = DEMO_ACCOUNTS.filter((a) =>
-  ['staff@demo.test', 'admin@demo.test', 'developer@demo.test'].includes(a.email),
+  ['leader@demo.test', 'staff@demo.test', 'admin@demo.test', 'developer@demo.test'].includes(a.email),
 );
 const DEMO_OPTIONS = STAFF_DEMOS.map((a) => ({ value: a.email as string, label: a.label as string }));
 
@@ -30,9 +30,10 @@ export default function Login() {
   const login = useMutation({
     mutationFn: (input: LoginInput) => api.auth.login(input),
     onSuccess: (session) => {
-      if (!can(session.user, 'admin.access')) {
+      // 루트 게이트와 같은 기준 — 운영자 또는 동아리 담당자
+      if (!canEnterConsole(session.user)) {
         logout.mutate();
-        notify('관리자 권한이 없는 계정입니다', '센터 직원 계정으로 로그인해 주세요.');
+        notify('관리자 권한이 없는 계정입니다', '센터 직원 또는 동아리 담당자 계정으로 로그인해 주세요.');
         return;
       }
       // 세션이 바뀌면 루트 게이트가 관리자 화면으로 전환한다
@@ -78,7 +79,7 @@ export default function Login() {
             <Badge text="관리자" tone="brand" />
           </View>
           <Txt variant="label" color="textSecondary" style={{ textAlign: 'center' }}>
-            센터 직원 계정으로 로그인해 주세요
+            센터 직원·동아리 담당자 계정으로 로그인해 주세요
           </Txt>
         </View>
 
