@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, View, useColorScheme } from 'react-native';
+import { useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { CENTER } from '@/config/center';
@@ -42,6 +42,7 @@ export default function Login() {
   });
   const busy = login.isPending || logout.isPending;
 
+  const passwordRef = useRef<TextInput>(null);
   const submit = () => {
     const parsed = parseValues(loginSchema, { email, password });
     if (!parsed.ok) {
@@ -91,9 +92,11 @@ export default function Login() {
             autoComplete="email"
             autoCorrect={false}
             returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
             error={errors.email}
           />
           <TextField
+            ref={passwordRef}
             label="비밀번호"
             value={password}
             onChangeText={setPassword}
@@ -101,7 +104,7 @@ export default function Login() {
             secureTextEntry
             autoComplete="current-password"
             autoCorrect={false}
-            returnKeyType="done"
+            returnKeyType="go"
             onSubmitEditing={submit}
             error={errors.password}
           />

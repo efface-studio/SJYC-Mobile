@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, View, useColorScheme } from 'react-native';
+import { useRef, useState } from 'react';
+import { StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { CENTER } from '@/config/center';
@@ -105,6 +105,7 @@ export default function LoginScreen() {
     onError: (e) => notify('요청하지 못했습니다', errorMessage(e)),
   });
 
+  const passwordRef = useRef<TextInput>(null);
   const submitLogin = () => {
     if (login.isPending) return;
     const parsed = parseValues(loginSchema, { email, password });
@@ -136,6 +137,8 @@ export default function LoginScreen() {
             placeholder="example@email.com"
             keyboardType="email-address"
             autoComplete="email"
+            returnKeyType="send"
+            onSubmitEditing={submitForgot}
             error={errors.email}
           />
           <Button label="재설정 링크 받기" onPress={submitForgot} loading={forgot.isPending} />
@@ -156,15 +159,20 @@ export default function LoginScreen() {
           placeholder="example@email.com"
           keyboardType="email-address"
           autoComplete="email"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
           error={errors.email}
         />
         <TextField
+          ref={passwordRef}
           label="비밀번호"
           value={password}
           onChangeText={setPassword}
           placeholder="비밀번호"
           secureTextEntry
           autoComplete="password"
+          returnKeyType="go"
+          onSubmitEditing={submitLogin}
           error={errors.password}
         />
         <Button label="로그인" onPress={submitLogin} loading={login.isPending} />

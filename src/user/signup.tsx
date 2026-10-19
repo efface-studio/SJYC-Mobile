@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { StyleSheet, View, type TextInput } from 'react-native';
 import { api, errorMessage, isApiError } from '@/api';
 import { CENTER } from '@/config/center';
 import { parseValues, signupSchema, type FieldErrors } from '@/domain/schemas';
@@ -41,6 +41,11 @@ export default function SignupScreen() {
   const [privacy, setPrivacy] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  // 키보드 return 키로 다음 입력칸으로 이동
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
+  const birthRef = useRef<TextInput>(null);
   const set = (key: keyof typeof v) => (text: string) => setV((prev) => ({ ...prev, [key]: text }));
   const all = terms && privacy && marketing;
 
@@ -96,18 +101,24 @@ export default function SignupScreen() {
           onChangeText={set('name')}
           placeholder="이름"
           autoComplete="name"
+          returnKeyType="next"
+          onSubmitEditing={() => emailRef.current?.focus()}
           error={errors.name}
         />
         <TextField
+          ref={emailRef}
           label="이메일 (로그인 아이디)"
           value={v.email}
           onChangeText={set('email')}
           placeholder="example@email.com"
           keyboardType="email-address"
           autoComplete="email"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
           error={errors.email}
         />
         <TextField
+          ref={passwordRef}
           label="비밀번호"
           value={v.password}
           onChangeText={set('password')}
@@ -115,18 +126,24 @@ export default function SignupScreen() {
           secureTextEntry
           autoComplete="new-password"
           hint="8~64자, 영문·숫자 포함"
+          returnKeyType="next"
+          onSubmitEditing={() => confirmRef.current?.focus()}
           error={errors.password}
         />
         <TextField
+          ref={confirmRef}
           label="비밀번호 확인"
           value={v.passwordConfirm}
           onChangeText={set('passwordConfirm')}
           placeholder="비밀번호 다시 입력"
           secureTextEntry
           autoComplete="new-password"
+          returnKeyType="next"
+          onSubmitEditing={() => birthRef.current?.focus()}
           error={errors.passwordConfirm}
         />
         <TextField
+          ref={birthRef}
           label="출생 연도"
           value={v.birthYear}
           onChangeText={set('birthYear')}
