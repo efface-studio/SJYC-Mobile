@@ -38,35 +38,42 @@ export function Screen({
 }) {
   const t = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const bg = subtle ? t.bgSubtle : t.bg;
+  const scroll = (
+    <ScrollView
+      // iOS 큰 제목은 화면의 첫 하위 뷰가 ScrollView 여야 스크롤에 맞춰 접힌다 — 감싸는 View 를 두지 않는다
+      style={{ flex: 1, backgroundColor: bg }}
+      contentInsetAdjustmentBehavior="automatic"
+      // iOS: 키보드가 올라오면 스크롤 인셋을 자동 조정해 입력칸·버튼이 가려지지 않게 한다
+      automaticallyAdjustKeyboardInsets
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      contentContainerStyle={{ paddingBottom: bottomInset ?? (footer ? 140 : 48) }}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            tintColor={t.textTertiary}
+            colors={[t.action]}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try {
+                await onRefresh();
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+          />
+        ) : undefined
+      }
+    >
+      {children}
+    </ScrollView>
+  );
+  if (!footer) return scroll;
   return (
-    <View style={{ flex: 1, backgroundColor: subtle ? t.bgSubtle : t.bg }}>
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        // iOS: 키보드가 올라오면 스크롤 인셋을 자동 조정해 입력칸·버튼이 가려지지 않게 한다
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-        contentContainerStyle={{ paddingBottom: bottomInset ?? (footer ? 140 : 48) }}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing}
-              tintColor={t.textTertiary}
-              colors={[t.action]}
-              onRefresh={async () => {
-                setRefreshing(true);
-                try {
-                  await onRefresh();
-                } finally {
-                  setRefreshing(false);
-                }
-              }}
-            />
-          ) : undefined
-        }
-      >
-        {children}
-      </ScrollView>
+    <View style={{ flex: 1, backgroundColor: bg }}>
+      {scroll}
       {footer}
     </View>
   );
