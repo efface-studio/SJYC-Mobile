@@ -28,6 +28,7 @@ export function Screen({
   subtle = false,
   footer,
   bottomInset,
+  keyboardInsets = true,
 }: {
   children: ReactNode;
   onRefresh?: () => Promise<unknown>;
@@ -35,6 +36,11 @@ export function Screen({
   footer?: ReactNode;
   /** 하단 고정 영역 높이에 맞춘 스크롤 여백 (기본: footer 가 있으면 140) */
   bottomInset?: number;
+  /**
+   * 키보드에 맞춰 스크롤 인셋을 조정한다 (입력 폼). 입력칸이 없는 화면은 끈다 —
+   * iOS 입력 알림(Alert.prompt)의 키보드에도 반응해, 닫은 뒤 목록이 위로 밀린 채 남는다.
+   */
+  keyboardInsets?: boolean;
 }) {
   const t = useTheme();
   const [refreshing, setRefreshing] = useState(false);
@@ -45,7 +51,7 @@ export function Screen({
       style={{ flex: 1, backgroundColor: bg }}
       contentInsetAdjustmentBehavior="automatic"
       // iOS: 키보드가 올라오면 스크롤 인셋을 자동 조정해 입력칸·버튼이 가려지지 않게 한다
-      automaticallyAdjustKeyboardInsets
+      automaticallyAdjustKeyboardInsets={keyboardInsets}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       contentContainerStyle={{ paddingBottom: bottomInset ?? (footer ? 140 : 48) }}

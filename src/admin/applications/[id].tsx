@@ -42,7 +42,9 @@ export default function ApplicationDetail() {
 function ApplicationView({ a }: { a: ProgramApplication }) {
   const decision = useDecision('application');
   return (
+    // 입력칸 없음 — 반려 사유 입력 알림의 키보드에 스크롤 인셋이 반응하지 않게 한다
     <Screen
+      keyboardInsets={false}
       footer={
         a.status === 'submitted' ? (
           <StickyFooter>

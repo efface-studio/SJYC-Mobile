@@ -211,7 +211,13 @@ export function PagedList<T extends { id: string }>({
 }) {
   const { query, more } = paged;
   return (
-    <Screen onRefresh={() => query.refetch()} footer={footer} bottomInset={bottomInset}>
+    // 목록에는 입력칸이 없다 — 반려 사유 입력 알림의 키보드에 스크롤 인셋이 반응하지 않게 한다
+    <Screen
+      onRefresh={() => query.refetch()}
+      footer={footer}
+      bottomInset={bottomInset}
+      keyboardInsets={false}
+    >
       {chips}
       <ListToolbar count={query.data?.total}>{tools}</ListToolbar>
       {below}
