@@ -1,8 +1,14 @@
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  focusManager,
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { AppState, Platform, useColorScheme } from 'react-native';
 import { ApiError } from '@/api/errors';
 import { SESSION_KEY } from '@/features/auth/session';
 import { OptionSheetHost, useAppFonts, useTheme } from '~/ds';
@@ -26,10 +32,24 @@ export function AppProviders({ children }: { children: ReactNode }) {
     const qc: QueryClient = new QueryClient({
       queryCache: new QueryCache({ onError }),
       mutationCache: new MutationCache({ onError }),
-      defaultOptions: { queries: { retry: shouldRetry, staleTime: 30_000 }, mutations: { retry: false } },
+      defaultOptions: {
+        queries: { retry: shouldRetry, staleTime: 30_000 },
+        mutations: { retry: false },
+      },
     });
     return qc;
   });
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (AppState.currentState != null) focusManager.setFocused(AppState.currentState === 'active');
+    const subscription = AppState.addEventListener('change', (state) =>
+      focusManager.setFocused(state === 'active'),
+    );
+    return () => {
+      subscription.remove();
+      focusManager.setFocused(undefined);
+    };
+  }, []);
   const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   // 폰트가 준비될 때까지 스플래시를 유지한다 (실패 시 시스템 폰트로 진행)
   if (!fontsReady) return null;

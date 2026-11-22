@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { attendanceSessionSchema, parseValues, type FieldErrors } from '@/domain/schemas';
 import type { AttendanceSession, AttendanceTargetSummary } from '@/domain/types';
@@ -59,12 +59,27 @@ function useRemaining(until: string | null): string | null {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!until) return;
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
+    const deadline = Date.parse(until);
+    if (!Number.isFinite(deadline)) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    function update() {
+      clearTimeout(timer);
+      const current = Date.now();
+      setNow(current);
+      const left = deadline - current;
+      if (left > 0 && AppState.currentState !== 'background' && AppState.currentState !== 'inactive') {
+        timer = setTimeout(update, Math.min(1000, left));
+      }
+    }
+    update();
+    const sub = AppState.addEventListener('change', update);
+    return () => {
+      sub.remove();
+      clearTimeout(timer);
+    };
   }, [until]);
-  if (!until) return null;
-  const left = Math.max(0, Math.floor((Date.parse(until) - now) / 1000));
+  if (!until || !Number.isFinite(Date.parse(until))) return null;
+  const left = Math.max(0, Math.ceil((Date.parse(until) - now) / 1000));
   return `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
 }
 
