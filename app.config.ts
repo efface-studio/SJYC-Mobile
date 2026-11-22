@@ -41,6 +41,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     ['expo-router', { root: FLAVOR === 'admin' ? './src/admin' : './src/user' }],
+    ...(FLAVOR === 'user'
+      ? [
+          [
+            'expo-camera',
+            {
+              cameraPermission: '출석 QR 코드를 스캔하려면 카메라 접근을 허용해 주세요.',
+              microphonePermission: false,
+              recordAudioAndroid: false,
+            },
+          ] as [string, Record<string, unknown>],
+        ]
+      : []),
     'expo-splash-screen',
     '@react-native-community/datetimepicker',
   ],

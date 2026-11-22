@@ -1,6 +1,6 @@
+import { CheckIn } from '~/shared/attendance-controls';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { sessionCounts } from '@/domain/attendance';
@@ -10,7 +10,6 @@ import { formatDateTime } from '@/lib/format';
 import { DangerTextButton } from '~/admin-kit/components';
 import {
   Button,
-  Card,
   Divider,
   Gutter,
   QueryBoundary,
@@ -24,18 +23,6 @@ import {
 import { confirm, notify } from '~/shared/dialogs';
 
 const STATUSES: AttendanceStatus[] = ['present', 'late', 'absent', 'excused'];
-
-function useRemaining(until: string | null): string | null {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!until) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [until]);
-  if (!until) return null;
-  const left = Math.max(0, Math.floor((Date.parse(until) - now) / 1000));
-  return `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-}
 
 /** 한 번에 누르는 출석 상태 — 선택된 항목을 다시 누르면 해제 */
 function StatusPicker({
@@ -76,63 +63,6 @@ function StatusPicker({
         );
       })}
     </View>
-  );
-}
-
-function CheckIn({
-  session,
-  onChange,
-}: {
-  session: AttendanceSession;
-  onChange: (s: AttendanceSession) => void;
-}) {
-  const remaining = useRemaining(session.checkInClosesAt);
-  const toggle = useMutation({
-    mutationFn: (open: boolean) => api.attendance.setCheckIn(session.id, open),
-    onSuccess: onChange,
-    onError: (e) => notify('출석 코드를 바꾸지 못했습니다', errorMessage(e)),
-  });
-  const open = !!session.checkInCode && remaining !== '0:00';
-  return (
-    <Gutter>
-      <Card tone={open ? 'brand' : 'subtle'} style={{ gap: space.md }}>
-        <Txt variant="captionStrong" color="textSecondary">
-          출석 코드
-        </Txt>
-        {open ? (
-          <>
-            <View accessible accessibilityLabel={`출석 코드 ${session.checkInCode!.split('').join(' ')}`}>
-              <Txt variant="display" color="action" style={styles.code}>
-                {session.checkInCode}
-              </Txt>
-            </View>
-            <Txt variant="caption" color="textSecondary">
-              회원이 앱 MY → 출석에서 입력합니다 · 남은 시간 {remaining}
-            </Txt>
-            <Button
-              label="코드 닫기"
-              variant="secondary"
-              size="md"
-              loading={toggle.isPending}
-              onPress={() => toggle.mutate(false)}
-            />
-          </>
-        ) : (
-          <>
-            <Txt variant="caption" color="textSecondary">
-              코드를 열면 명단의 회원이 10분 동안 직접 출석할 수 있습니다. 담당자가 이미 체크한 회원은 바뀌지
-              않습니다.
-            </Txt>
-            <Button
-              label="출석 코드 열기"
-              size="md"
-              loading={toggle.isPending}
-              onPress={() => toggle.mutate(true)}
-            />
-          </>
-        )}
-      </Card>
-    </Gutter>
   );
 }
 
@@ -267,5 +197,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     overflow: 'hidden',
   },
-  code: { fontSize: 44, lineHeight: 52, letterSpacing: 12 },
 });
