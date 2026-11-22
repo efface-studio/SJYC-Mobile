@@ -200,6 +200,7 @@ function ReservationRow({ r, onCancel }: { r: SpaceReservation; onCancel: () => 
 }
 
 export default function MyScreen() {
+  const t = useTheme();
   const qc = useQueryClient();
   const { data: session, isPending } = useSession();
   const logout = useLogout();
@@ -282,13 +283,30 @@ export default function MyScreen() {
                 {data.map((a) => {
                   const s = APPLICATION_STATUS[a.status];
                   return (
-                    <ListRow
+                    <Tap
                       key={a.id}
-                      title={a.programTitle}
-                      meta={`${formatDate(a.createdAt)} 신청`}
-                      trailing={<Badge text={s.text} tone={s.tone} />}
+                      accessibilityLabel={`${a.programTitle}, ${s.text}, ${formatDate(a.createdAt)} 신청, 상세 보기`}
+                      style={styles.applicationRow}
                       onPress={() => router.push(`/my/applications/${a.id}`)}
-                    />
+                    >
+                      <View style={styles.applicationCopy}>
+                        <Txt variant="bodyStrong" numberOfLines={2}>
+                          {a.programTitle}
+                        </Txt>
+                        <View style={styles.applicationMeta}>
+                          <Txt variant="captionStrong" color={t.tone[s.tone].fg}>
+                            {s.text}
+                          </Txt>
+                          <Txt variant="caption" color="textTertiary">
+                            ·
+                          </Txt>
+                          <Txt variant="caption" color="textTertiary">
+                            {formatDate(a.createdAt)} 신청
+                          </Txt>
+                        </View>
+                      </View>
+                      <Icon ios="chevron.right" android="chevron_right" size={14} color={t.lineStrong} />
+                    </Tap>
                   );
                 })}
               </Rows>
@@ -417,6 +435,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: space.lg,
   },
+  applicationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    minHeight: 60,
+  },
+  applicationCopy: { flex: 1, gap: 2 },
+  applicationMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5 },
   resRow: { flexDirection: 'row', gap: space.md, paddingHorizontal: 20, paddingVertical: 14 },
   cancel: { paddingTop: 12, paddingBottom: 8, paddingLeft: 12 },
 });

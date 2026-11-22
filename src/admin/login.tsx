@@ -1,15 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Image } from 'expo-image';
+import { Wordmark } from '~/shared/wordmark';
 import { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
+import { ScrollView, StyleSheet, View, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
-import { CENTER } from '@/config/center';
 import { IS_MOCK } from '@/config/env';
 import { canEnterConsole } from '@/domain/permissions';
 import { loginSchema, parseValues, type FieldErrors, type LoginInput } from '@/domain/schemas';
 import { SESSION_KEY, useLogout } from '@/features/auth/session';
-import { Badge, Button, Chips, GUTTER, TextField, Txt, radius, space, useTheme } from '~/ds';
+import { Button, Chips, GUTTER, TextField, Txt, space, useTheme } from '~/ds';
 import { notify } from '~/shared/dialogs';
 
 /** 데모(mock) 모드에서만 노출하는 동아리 담당자·직원·관리자 계정 (웹 관리자 로그인과 같은 목록) */
@@ -20,7 +19,6 @@ const DEMO_OPTIONS = STAFF_DEMOS.map((a) => ({ value: a.email as string, label: 
 
 export default function Login() {
   const t = useTheme();
-  const dark = useColorScheme() === 'dark';
   const qc = useQueryClient();
   const logout = useLogout();
   const [email, setEmail] = useState('');
@@ -63,22 +61,11 @@ export default function Login() {
     >
       <View style={styles.inner}>
         <View style={styles.brand}>
-          {dark ? (
-            <Txt variant="title2" style={{ textAlign: 'center' }}>
-              {CENTER.formalName}
-            </Txt>
-          ) : (
-            <Image
-              source={require('../../assets/logo-horizontal.jpg')}
-              accessibilityLabel={CENTER.formalName}
-              style={styles.logo}
-              contentFit="contain"
-            />
-          )}
-          <View style={{ alignSelf: 'center' }}>
-            <Badge text="관리자" tone="brand" />
-          </View>
-          <Txt variant="label" color="textSecondary" style={{ textAlign: 'center' }}>
+          <Wordmark width={165} />
+          <Txt variant="display" accessibilityRole="header">
+            관리자 로그인
+          </Txt>
+          <Txt variant="label" color="textSecondary">
             센터 직원·동아리 담당자 계정으로 로그인해 주세요
           </Txt>
         </View>
@@ -115,8 +102,8 @@ export default function Login() {
         </View>
 
         {IS_MOCK && (
-          <View style={[styles.demo, { backgroundColor: t.tone.warning.bg }]}>
-            <Txt variant="captionStrong" color={t.tone.warning.fg} style={{ paddingHorizontal: space.lg }}>
+          <View style={[styles.demo, { borderTopColor: t.line }]}>
+            <Txt variant="captionStrong" color="textTertiary" style={{ paddingHorizontal: space.lg }}>
               데모 계정 (개발용) · 눌러서 채우기
             </Txt>
             <View style={{ marginHorizontal: -(GUTTER - space.lg) }}>
@@ -139,7 +126,6 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: GUTTER, paddingVertical: 64 },
   inner: { width: '100%', maxWidth: 420, alignSelf: 'center', gap: space.xxxl },
-  brand: { alignItems: 'center', gap: space.md },
-  logo: { width: 216, height: 36 },
-  demo: { borderRadius: radius.md, paddingTop: space.md, paddingBottom: space.xs },
+  brand: { alignItems: 'flex-start', gap: space.sm },
+  demo: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.md, paddingBottom: space.xs },
 });

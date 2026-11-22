@@ -1,3 +1,4 @@
+import { translucentHeader } from '~/shared/header';
 import { Stack } from 'expo-router';
 import { View } from 'react-native';
 import { errorMessage } from '@/api';
@@ -5,12 +6,15 @@ import { canEnterConsole } from '@/domain/permissions';
 import { useSession } from '@/features/auth/session';
 import { Button, EmptyState, LoadingState, useTheme } from '~/ds';
 import { AppProviders } from '~/shared/providers';
+import { ThemeAudience } from '~/ds/tokens';
 
 export default function RootLayout() {
   return (
-    <AppProviders>
-      <Gate />
-    </AppProviders>
+    <ThemeAudience.Provider value="admin">
+      <AppProviders>
+        <Gate />
+      </AppProviders>
+    </ThemeAudience.Provider>
   );
 }
 
@@ -46,7 +50,7 @@ function Gate() {
   const allowed = canEnterConsole(session.data?.user);
 
   return (
-    <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal', headerShadowVisible: false }}>
+    <Stack screenOptions={translucentHeader}>
       <Stack.Protected guard={allowed}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

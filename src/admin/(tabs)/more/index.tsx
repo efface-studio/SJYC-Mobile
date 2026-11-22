@@ -5,12 +5,14 @@ import { can, canManageAttendance, managesAnyClub, ROLE_LABEL, type Permission }
 import type { User } from '@/domain/types';
 import { useLogout, useSession } from '@/features/auth/session';
 import { Rows } from '~/admin-kit/components';
-import { Badge, Button, Divider, EmptyState, Gutter, ListRow, Screen, Txt, space } from '~/ds';
+import { Badge, Button, Divider, EmptyState, Gutter, ListRow, Screen, Txt, space, useTheme } from '~/ds';
+import { Icon, type IconProps } from '~/shared/icon';
 import { confirm } from '~/shared/dialogs';
 
 interface Menu {
   title: string;
   subtitle: string;
+  icon: Pick<IconProps, 'ios' | 'android'>;
   href: Href;
   /** 권한 이름 또는 조건 (동아리 담당자처럼 역할만으로 정해지지 않는 메뉴) */
   permission: Permission | ((user: User | undefined) => boolean);
@@ -23,12 +25,14 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     items: [
       {
         title: '공지',
+        icon: { ios: 'megaphone', android: 'campaign' },
         subtitle: '작성 · 게시 상태 · 상단 고정',
         href: '/more/notices',
         permission: 'notice.write',
       },
       {
         title: '프로그램',
+        icon: { ios: 'calendar', android: 'event' },
         subtitle: '등록 · 모집 일정 · 정원',
         href: '/more/programs',
         permission: 'program.write',
@@ -40,6 +44,7 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     items: [
       {
         title: '공간 설정',
+        icon: { ios: 'door.left.hand.open', android: 'meeting_room' },
         subtitle: '예약 접수 · 수용 인원',
         href: '/more/spaces',
         permission: 'space.manage',
@@ -51,30 +56,35 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     items: [
       {
         title: '동아리 운영',
+        icon: { ios: 'person.2', android: 'group' },
         subtitle: '담당 동아리 회원 · 가입 신청 · 소식 · 소개',
         href: '/more/my-clubs',
         permission: managesAnyClub,
       },
       {
         title: '동아리',
+        icon: { ios: 'person.3', android: 'groups' },
         subtitle: '등록 · 운영 상태 · 모집',
         href: '/more/clubs',
         permission: 'club.manage',
       },
       {
         title: '동아리 가입 신청',
+        icon: { ios: 'person.badge.plus', android: 'person_add' },
         subtitle: '가입 승인 · 반려',
         href: '/more/club-applications',
         permission: 'club.manage',
       },
       {
         title: '출석',
+        icon: { ios: 'checkmark.circle', android: 'fact_check' },
         subtitle: '출석부 · 출석 코드 · 회원별 출석률',
         href: '/more/attendance',
         permission: canManageAttendance,
       },
       {
         title: 'FAQ',
+        icon: { ios: 'questionmark.circle', android: 'help' },
         subtitle: '자주 묻는 질문 관리',
         href: '/more/faqs',
         permission: 'inquiry.answer',
@@ -86,6 +96,7 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     items: [
       {
         title: '회원',
+        icon: { ios: 'person.crop.circle', android: 'account_circle' },
         subtitle: '역할 · 이용 정지',
         href: '/more/members',
         permission: 'member.read',
@@ -97,12 +108,14 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     items: [
       {
         title: '정책 문서',
+        icon: { ios: 'doc.text', android: 'description' },
         subtitle: '약관 · 개인정보 처리방침 개정',
         href: '/more/policies',
         permission: 'policy.manage',
       },
       {
         title: '감사 로그',
+        icon: { ios: 'clock.arrow.circlepath', android: 'history' },
         subtitle: '관리 작업 기록',
         href: '/more/audit',
         permission: 'audit.read',
@@ -114,6 +127,7 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     items: [
       {
         title: '개발자 도구',
+        icon: { ios: 'terminal', android: 'terminal' },
         subtitle: '환경 · 권한 · API 요청 · 캐시 · 데모 데이터',
         href: '/more/developer',
         permission: 'developer.access',
@@ -125,6 +139,7 @@ const GROUPS: { group: string; items: Menu[] }[] = [
 export default function More() {
   const user = useSession().data?.user;
   const logout = useLogout();
+  const t = useTheme();
   const allowed = (m: Menu) =>
     typeof m.permission === 'function' ? m.permission(user) : can(user, m.permission);
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(allowed) })).filter(
@@ -139,10 +154,10 @@ export default function More() {
 
   return (
     <>
-      <Stack.Screen options={{ title: '더보기' }} />
+      <Stack.Screen options={{ title: '운영 메뉴' }} />
       <Screen>
         {user && (
-          <View style={styles.profile}>
+          <View style={[styles.profile, { borderColor: t.line }]}>
             <View style={{ flex: 1, gap: 2 }}>
               <Txt variant="title3" numberOfLines={1}>
                 {user.name}
@@ -162,7 +177,6 @@ export default function More() {
             </View>
           </View>
         )}
-        <Divider />
         {groups.length === 0 ? (
           <EmptyState
             title="사용할 수 있는 메뉴가 없습니다"
@@ -176,13 +190,20 @@ export default function More() {
                   {g.group}
                 </Txt>
               </Gutter>
-              <Rows
-                items={g.items}
-                rowKey={(m) => m.title}
-                render={(m) => (
-                  <ListRow title={m.title} subtitle={m.subtitle} onPress={() => router.push(m.href)} />
-                )}
-              />
+              <View style={[styles.group, { borderColor: t.line }]}>
+                <Rows
+                  items={g.items}
+                  rowKey={(m) => m.title}
+                  render={(m) => (
+                    <ListRow
+                      leading={<Icon {...m.icon} size={19} color={t.textTertiary} />}
+                      title={m.title}
+                      subtitle={m.subtitle}
+                      onPress={() => router.push(m.href)}
+                    />
+                  )}
+                />
+              </View>
             </View>
           ))
         )}
@@ -204,7 +225,11 @@ export default function More() {
 }
 
 const styles = StyleSheet.create({
+  group: { borderBottomWidth: StyleSheet.hairlineWidth },
   profile: {
+    marginHorizontal: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,

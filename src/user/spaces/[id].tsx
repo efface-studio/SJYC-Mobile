@@ -1,3 +1,4 @@
+import { SpacePhoto } from '~/user-kit/space-photo';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -294,14 +295,19 @@ function ReservationForm({ space: sp, session }: { space: Space; session: Sessio
 
 function SpaceHero({ s }: { s: Space }) {
   return (
-    <Hero eyebrow={s.floor} title={s.name}>
-      <Txt variant="body" color="textSecondary">
-        {s.description}
-      </Txt>
-      <Txt variant="caption" color="textTertiary">
-        최대 {s.capacity}명 · 1시간 단위, 최대 {RESERVATION_MAX_HOURS}시간 · 담당자 확인 후 확정
-      </Txt>
-    </Hero>
+    <>
+      <Gutter style={{ paddingTop: space.sm }}>
+        <SpacePhoto space={s} />
+      </Gutter>
+      <Hero eyebrow={s.floor} title={s.name}>
+        <Txt variant="body" color="textSecondary">
+          {s.description}
+        </Txt>
+        <Txt variant="caption" color="textTertiary">
+          최대 {s.capacity}명 · 1시간 단위, 최대 {RESERVATION_MAX_HOURS}시간 · 담당자 확인 후 확정
+        </Txt>
+      </Hero>
+    </>
   );
 }
 

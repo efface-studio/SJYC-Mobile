@@ -1,3 +1,4 @@
+import { translucentHeader } from '~/shared/header';
 import { Stack } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import {
@@ -31,14 +32,14 @@ import { Icon } from '~/shared/icon';
 import type { Option, Paged } from './queries';
 
 /**
- * 각 탭의 내비게이션 스택 — 탭 첫 화면은 iOS 큰 제목 (제목은 화면마다 Stack.Screen 으로 지정).
+ * 각 탭의 내비게이션 스택 — 탭 첫 화면은 기본 높이의 제목 (제목은 화면마다 Stack.Screen 으로 지정).
  * 이 스택의 화면은 떠 있는 탭 바 위에 그려지므로 하단 고정 영역이 탭 바를 피하게 한다.
  */
 export function TabStack() {
   return (
     <OverTabBarContext.Provider value>
-      <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal', headerShadowVisible: false }}>
-        <Stack.Screen name="index" options={{ headerLargeTitle: true, headerLargeTitleShadowVisible: false }} />
+      <Stack screenOptions={translucentHeader}>
+        <Stack.Screen name="index" options={{ headerLargeTitle: false }} />
       </Stack>
     </OverTabBarContext.Provider>
   );
@@ -215,11 +216,7 @@ export function PagedList<T extends { id: string }>({
   const { query, more } = paged;
   return (
     // 목록에는 입력칸이 없다 — 반려 사유 입력 알림의 키보드에 스크롤 인셋이 반응하지 않게 한다
-    <Screen
-      onRefresh={() => query.refetch()}
-      footer={footer}
-      keyboardInsets={false}
-    >
+    <Screen onRefresh={() => query.refetch()} footer={footer} keyboardInsets={false}>
       {chips}
       <ListToolbar count={query.data?.total}>{tools}</ListToolbar>
       {below}
