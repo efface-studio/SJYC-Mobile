@@ -266,6 +266,15 @@ export function openInternal(link: string): void {
   router.push(path as Href);
 }
 
+export function SettingsButton() {
+  const t = useTheme();
+  return (
+    <Tap rounded={22} accessibilityLabel="설정" onPress={() => router.push('/my/settings')} style={styles.bell}>
+      <Icon ios="gearshape" android="settings" color={t.text} size={22} />
+    </Tap>
+  );
+}
+
 /** 알림 종 버튼 — 읽지 않은 수 표시 */
 export function BellButton() {
   const t = useTheme();
