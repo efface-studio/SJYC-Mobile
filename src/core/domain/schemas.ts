@@ -56,9 +56,9 @@ export const signupSchema = z
   .object({
     name,
     email,
-    phone: z.union([z.literal(''), phone]).optional(),
     password,
     passwordConfirm: z.string(),
+    phone: z.union([z.literal(''), phone]).optional(),
     birthYear: z.coerce
       .number({ error: '출생 연도를 입력해 주세요.' })
       .int()

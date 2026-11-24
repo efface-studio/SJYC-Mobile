@@ -3,8 +3,9 @@ export function formatMobilePhone(value: string) {
   const domestic = value.trim().replace(/^\+82[\s()-]*0?(?=1)/, '0');
   if (!/^[\d\s()-]*$/.test(domestic)) return value;
   const digits = domestic.replace(/\D/g, '');
-  if (!digits.startsWith('01') || digits.length < 4 || digits.length > 11) return domestic;
-  if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3);
+  if (digits.length < 4) return digits;
+  if (!digits.startsWith('01') || digits.length > 11) return domestic;
+  if (digits.length <= 7) return digits.slice(0, 3) + '-' + digits.slice(3);
   const middleEnd = digits.length === 11 ? 7 : 6;
   return [digits.slice(0, 3), digits.slice(3, middleEnd), digits.slice(middleEnd)].filter(Boolean).join('-');
 }
