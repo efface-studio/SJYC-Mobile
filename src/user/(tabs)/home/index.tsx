@@ -130,17 +130,25 @@ export default function HomeScreen() {
       </QueryBoundary>
 
       <SectionHeader title="공지사항" action="전체 보기" onAction={() => router.push('/notices')} />
-      {(notices.data?.items ?? []).map((n, i) => (
-        <View key={n.id}>
-          {i > 0 && <Divider inset={20} />}
-          <ListRow
-            meta={`${NOTICE_CATEGORY_LABEL[n.category]} · ${n.publishedAt ? formatDate(n.publishedAt) : ''}`}
-            title={n.title}
-            trailing={n.pinned ? <Badge text="중요" tone="brand" /> : undefined}
-            onPress={() => router.push(`/notices/${n.id}`)}
-          />
-        </View>
-      ))}
+      <QueryBoundary
+        query={notices}
+        isEmpty={(data) => data.items.length === 0}
+        empty={{ title: '등록된 공지사항이 없습니다' }}
+      >
+        {(data) =>
+          data.items.map((n, i) => (
+            <View key={n.id}>
+              {i > 0 && <Divider inset={20} />}
+              <ListRow
+                meta={`${NOTICE_CATEGORY_LABEL[n.category]} · ${n.publishedAt ? formatDate(n.publishedAt) : ''}`}
+                title={n.title}
+                trailing={n.pinned ? <Badge text="중요" tone="brand" /> : undefined}
+                onPress={() => router.push(`/notices/${n.id}`)}
+              />
+            </View>
+          ))
+        }
+      </QueryBoundary>
 
       {photos.length > 0 && (
         <>
