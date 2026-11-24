@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
-import { IS_MOCK } from '@/config/env';
+import { DEMO_DATA } from '@/config/env';
 import { RECRUIT_STATUS } from '@/domain/labels';
 import { remainingSeats } from '@/domain/program';
 import type { Program } from '@/domain/types';
@@ -124,7 +124,7 @@ function ProgramDetail({ p, category }: { p: Program; category?: string }) {
       <SectionHeader title="프로그램 안내" />
       <Gutter style={{ gap: space.lg }}>
         <Article>{p.description}</Article>
-        {IS_MOCK && (
+        {DEMO_DATA && (
           <Callout tone="warning">개발용 샘플 프로그램입니다. 실제 일정·정원·장소가 아닙니다.</Callout>
         )}
       </Gutter>

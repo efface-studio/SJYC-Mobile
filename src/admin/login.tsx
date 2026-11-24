@@ -5,14 +5,14 @@ import { ScrollView, StyleSheet, View, useColorScheme } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { CENTER } from '@/config/center';
-import { IS_MOCK } from '@/config/env';
+import { DEMO_DATA } from '@/config/env';
 import { can } from '@/domain/permissions';
 import { loginSchema, parseValues, type FieldErrors, type LoginInput } from '@/domain/schemas';
 import { SESSION_KEY, useLogout } from '@/features/auth/session';
 import { Badge, Button, Chips, GUTTER, TextField, Txt, radius, space, useTheme } from '~/ds';
 import { notify } from '~/shared/dialogs';
 
-/** 데모(mock) 모드에서만 노출하는 직원·관리자 계정 */
+/** 데모 데이터(mock·시연 서버)에서만 노출하는 직원·관리자 계정 */
 const STAFF_DEMOS = DEMO_ACCOUNTS.filter((a) =>
   ['staff@demo.test', 'admin@demo.test', 'developer@demo.test'].includes(a.email),
 );
@@ -110,7 +110,7 @@ export default function Login() {
           </View>
         </View>
 
-        {IS_MOCK && (
+        {DEMO_DATA && (
           <View style={[styles.demo, { backgroundColor: t.tone.warning.bg }]}>
             <Txt variant="captionStrong" color={t.tone.warning.fg} style={{ paddingHorizontal: space.lg }}>
               데모 계정 (개발용) · 눌러서 채우기
