@@ -37,7 +37,7 @@ function PolicyLink({ label, href }: { label: string; href: '/policies/terms' | 
 }
 
 export default function SignupScreen() {
-  const [v, setV] = useState({ name: '', email: '', password: '', passwordConfirm: '', birthDate: '' });
+  const [v, setV] = useState({ name: '', email: '', password: '', passwordConfirm: '', birthDate: '', phone: '' });
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [marketing, setMarketing] = useState(false);
@@ -151,6 +151,15 @@ export default function SignupScreen() {
             error={errors.passwordConfirm || (match !== '일치합니다.' ? match : undefined)}
           />
           <BirthDateField value={v.birthDate} onChange={set('birthDate')} error={errors.birthYear} />
+          <TextField
+            label="휴대전화 (선택)"
+            value={v.phone}
+            onChangeText={set('phone')}
+            placeholder="010-1234-5678"
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            error={errors.phone}
+          />
         </FormSection>
 
         <FormSection title="약관 동의">

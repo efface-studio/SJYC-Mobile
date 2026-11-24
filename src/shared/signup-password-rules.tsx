@@ -4,7 +4,7 @@ import { passwordRules } from '@/domain/signup-feedback';
 import { Txt, useTheme } from '~/ds';
 import { Icon } from './icon';
 
-function useProgress(active: boolean, reduce: boolean, delay = 0) {
+function useProgress(active: boolean, reduce: boolean) {
   const value = useRef(new Animated.Value(active ? 1 : 0)).current;
   useEffect(() => {
     const target = active ? 1 : 0;
@@ -15,28 +15,12 @@ function useProgress(active: boolean, reduce: boolean, delay = 0) {
     const animation = Animated.timing(value, {
       toValue: target,
       duration: 250,
-      delay: active ? delay : 0,
       useNativeDriver: true,
     });
     animation.start();
     return () => animation.stop();
-  }, [active, delay, reduce, value]);
+  }, [active, reduce, value]);
   return value;
-}
-
-function Segment({ active, index, reduce }: { active: boolean; index: number; reduce: boolean }) {
-  const theme = useTheme();
-  const progress = useProgress(active, reduce, index * 50);
-  return (
-    <View style={{ flex: 1, height: 4, borderRadius: 2, overflow: 'hidden', backgroundColor: theme.line }}>
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: theme.action, transformOrigin: 'left', transform: [{ scaleX: progress }] },
-        ]}
-      />
-    </View>
-  );
 }
 
 function Rule({ label, met, reduce }: { label: string; met: boolean; reduce: boolean }) {
@@ -74,6 +58,7 @@ function Rule({ label, met, reduce }: { label: string; met: boolean; reduce: boo
 }
 
 export function SignupPasswordRules({ password }: { password: string }) {
+  const theme = useTheme();
   const [reduce, setReduce] = useState(true);
   useEffect(() => {
     let active = true;
@@ -97,7 +82,10 @@ export function SignupPasswordRules({ password }: { password: string }) {
         accessibilityLiveRegion="polite"
       >
         {passwordRules.map(({ label }, i) => (
-          <Segment key={label} active={i < count} index={i} reduce={reduce} />
+          <View
+            key={label}
+            style={[styles.segment, { backgroundColor: i < count ? theme.action : theme.line }]}
+          />
         ))}
         <Txt variant="caption" color="textSecondary">
           {count} / {passed.length}
@@ -113,6 +101,7 @@ export function SignupPasswordRules({ password }: { password: string }) {
 }
 const styles = StyleSheet.create({
   meter: { flexDirection: 'row', gap: 5, alignItems: 'center' },
+  segment: { flex: 1, height: 4, borderRadius: 2 },
   rules: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 4 },
   rule: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   circle: {
