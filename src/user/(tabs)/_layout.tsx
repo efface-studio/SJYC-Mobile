@@ -70,7 +70,12 @@ function TabNavigator() {
     );
   }
   return (
-    <NativeTabs tintColor={t.action} labelVisibilityMode="labeled" minimizeBehavior="never">
+    <NativeTabs
+      tintColor={t.action}
+      labelStyle={{ fontFamily: FONT.semibold, fontSize: 11 }}
+      labelVisibilityMode="labeled"
+      minimizeBehavior="never"
+    >
       {tabs.map(({ name, label, art, rest }) => (
         <NativeTabs.Trigger key={name} name={name}>
           <NativeTabs.Trigger.Label>{label}</NativeTabs.Trigger.Label>
