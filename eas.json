@@ -29,13 +29,13 @@
     "production": {
       "extends": "base",
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_API_MODE": "http", "EXPO_PUBLIC_API_BASE_URL": "https://api.example.invalid" }
+      "env": { "EXPO_PUBLIC_API_MODE": "http", "EXPO_PUBLIC_API_BASE_URL": "https://sjyc.efface.dev/api/v1" }
     },
     "production-admin": {
       "extends": "production",
       "env": {
         "EXPO_PUBLIC_API_MODE": "http",
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.example.invalid",
+        "EXPO_PUBLIC_API_BASE_URL": "https://sjyc.efface.dev/api/v1",
         "APP_FLAVOR": "admin"
       }
     }
