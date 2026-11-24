@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import { RECRUIT_STATUS } from '@/domain/labels';
 import type { RecruitStatus } from '@/domain/types';
-import { Chips, Gutter, QueryBoundary, Screen, Tap, Txt, pickOption, radius, space, useTheme } from '~/ds';
+import { Chips, Gutter, QueryBoundary, Screen, Tap, Txt, pickOption, space, useTheme } from '~/ds';
 import { Icon } from '~/shared/icon';
 import { ProgramRow, Rows } from '~/user-kit';
 
@@ -74,9 +74,8 @@ export default function ProgramsScreen() {
         <Gutter style={styles.toolbar}>
           <Tap
             onPress={() => void pickCategory()}
-            rounded={radius.md}
             accessibilityLabel={`분류 ${currentCategory?.name ?? '전체'}, 변경`}
-            style={[styles.select, { borderColor: categoryId ? t.action : t.lineStrong }]}
+            style={styles.select}
           >
             <Txt variant="label" color={categoryId ? 'action' : 'textSecondary'}>
               분류: {currentCategory?.name ?? '전체'}
@@ -125,8 +124,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    height: 44,
-    paddingHorizontal: 14,
-    borderWidth: 1,
+    minHeight: 44,
+    minWidth: 44,
+    paddingRight: space.sm,
   },
 });
