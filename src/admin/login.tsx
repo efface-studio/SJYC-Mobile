@@ -4,14 +4,14 @@ import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
-import { IS_MOCK } from '@/config/env';
+import { DEMO_DATA } from '@/config/env';
 import { canEnterConsole } from '@/domain/permissions';
 import { loginSchema, parseValues, type FieldErrors, type LoginInput } from '@/domain/schemas';
 import { SESSION_KEY, useLogout } from '@/features/auth/session';
 import { Button, Chips, GUTTER, TextField, Txt, space, useTheme } from '~/ds';
 import { notify } from '~/shared/dialogs';
 
-/** 데모(mock) 모드에서만 노출하는 동아리 담당자·직원·관리자 계정 (웹 관리자 로그인과 같은 목록) */
+/** 데모 데이터가 활성화된 환경에서만 노출하는 동아리 담당자·직원·관리자 계정 (웹 관리자 로그인과 같은 목록) */
 const STAFF_DEMOS = DEMO_ACCOUNTS.filter((a) =>
   ['leader@demo.test', 'staff@demo.test', 'admin@demo.test', 'developer@demo.test'].includes(a.email),
 );
@@ -101,7 +101,7 @@ export default function Login() {
           </View>
         </View>
 
-        {IS_MOCK && (
+        {DEMO_DATA && (
           <View style={[styles.demo, { borderTopColor: t.line }]}>
             <Txt variant="captionStrong" color="textTertiary" style={{ paddingHorizontal: space.lg }}>
               데모 계정 (개발용) · 눌러서 채우기

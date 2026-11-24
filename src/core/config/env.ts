@@ -8,6 +8,9 @@ export type ApiMode = 'mock' | 'http';
 export const API_MODE: ApiMode =
   (process.env.NEXT_PUBLIC_API_MODE ?? process.env.EXPO_PUBLIC_API_MODE) === 'http' ? 'http' : 'mock';
 export const IS_MOCK = API_MODE === 'mock';
+/** 샘플 데이터로 운영하는 시연 서버 — 실서버(http)라도 데모임을 화면에 계속 표시한다 */
+export const DEMO_DATA =
+  IS_MOCK || (process.env.NEXT_PUBLIC_DEMO_DATA ?? process.env.EXPO_PUBLIC_DEMO_DATA) === '1';
 export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   process.env.EXPO_PUBLIC_API_BASE_URL ??
