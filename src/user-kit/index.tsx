@@ -3,8 +3,9 @@ import { openScreen } from '~/shared/navigation';
  * 사용자 앱 화면 공통 조합 — ~/ds 컴포넌트를 묶은 것만 둔다 (라우트 아님).
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { Stack, router, type Href } from 'expo-router';
-import { Children, Fragment, type ReactNode } from 'react';
+import { Children, Fragment, useState, type ReactNode } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import { RECRUIT_STATUS, type Tone } from '@/domain/labels';
@@ -65,16 +66,25 @@ export function Rows({ children, inset = GUTTER }: { children: ReactNode; inset?
 const monthDay = (iso: string) => formatShortDate(iso).split(' ')[0] ?? '';
 
 /** 왼쪽 일정 열: 모집 중이면 D-day, 예정이면 접수 시작일, 그 외 상태 */
-function DateColumn({ p }: { p: Program }) {
+function DateColumn({ p, photo }: { p: Program; photo?: number | string }) {
+  const [failed, setFailed] = useState<number | string>();
+  const hasPhoto = photo !== undefined && failed !== photo;
   const t = useTheme();
   if (p.recruitStatus === 'open') {
     const d = daysUntil(p.recruitEndsAt);
     return (
-      <View style={[styles.dateCol, { borderColor: t.line }]}>
-        <Txt variant="title2" color="action">
+      <View style={[styles.dateCol, { borderColor: t.line }, hasPhoto && styles.photoDate]}>
+        {hasPhoto && (
+          <>
+            <Image source={photo} contentFit="cover" blurRadius={2} accessible={false}
+              recyclingKey={String(photo)} style={StyleSheet.absoluteFill} onError={() => setFailed(photo)} />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.dateShade]} />
+          </>
+        )}
+        <Txt variant="title2" color={hasPhoto ? '#fff' : 'action'}>
           {d <= 0 ? 'D-Day' : `D-${d}`}
         </Txt>
-        <Txt variant="small" color="textTertiary">
+        <Txt variant="small" color={hasPhoto ? '#fff' : 'textTertiary'}>
           {monthDay(p.recruitEndsAt)} 마감
         </Txt>
       </View>
@@ -102,16 +112,16 @@ function DateColumn({ p }: { p: Program }) {
 }
 
 /** 프로그램 목록 행 — 왼쪽 D-day 열 + 제목·분류·잔여석 (웹 ProgramRow 와 같은 구성) */
-export function ProgramRow({ p, category }: { p: Program; category: string }) {
+export function ProgramRow({ p, category, photo }: { p: Program; category: string; photo?: number | string }) {
   const left = remainingSeats(p);
   const muted = p.recruitStatus === 'closed' || p.recruitStatus === 'full';
   return (
     <Tap
       onPress={() => openScreen(`/programs/${p.id}`)}
-      accessibilityLabel={`${p.title}, ${RECRUIT_STATUS[p.recruitStatus].text}`}
+      accessibilityLabel={[p.title, RECRUIT_STATUS[p.recruitStatus].text, p.recruitStatus === 'open' && formatDate(p.recruitEndsAt) + ' 마감'].filter(Boolean).join(', ')}
       style={styles.programRow}
     >
-      <DateColumn p={p} />
+      <DateColumn p={p} photo={photo} />
       <View style={{ flex: 1, gap: 4 }}>
         <Txt variant="bodyStrong" numberOfLines={2} color={muted ? 'textSecondary' : 'text'}>
           {p.title}
@@ -333,6 +343,11 @@ const styles = StyleSheet.create({
     borderRightWidth: StyleSheet.hairlineWidth,
     paddingRight: space.sm,
   },
+  photoDate: {
+    width: 76, minHeight: 64, borderRadius: 8, overflow: 'hidden',
+    paddingRight: 0, borderRightWidth: 0, backgroundColor: '#322c29',
+  },
+  dateShade: { backgroundColor: 'rgba(17,14,12,0.56)' },
   callout: { borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, gap: 2 },
   article: { lineHeight: 27 },
   promptAction: { alignSelf: 'stretch', marginTop: space.lg },
