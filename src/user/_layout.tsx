@@ -30,6 +30,7 @@ export default function UserRootLayout() {
           name="programs/calendar"
           options={{ title: "프로그램 캘린더" }}
         />
+        <Stack.Screen name="my/notification-settings" options={{ title: "알림 설정" }} />
         <Stack.Screen name="notifications" options={{ title: "알림" }} />
         <Stack.Screen name="gallery" options={{ title: "센터 소식" }} />
         <Stack.Screen

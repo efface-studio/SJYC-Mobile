@@ -46,6 +46,7 @@ export interface MockMembership {
 }
 
 export interface MockDb {
+  mutedNotifications?: Record<string, Notification['kind'][]>;
   profilePhotos?: Record<string, string>;
   siteSettings?: SettingsRecord;
   version: 8;

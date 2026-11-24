@@ -41,6 +41,7 @@ import type {
   MyAttendance,
   MyClub,
   Notification,
+  NotificationKind,
   PolicyDoc,
   PolicyKey,
   Space,
@@ -105,6 +106,8 @@ export interface ApiClient {
     resetPassword(token: string, password: string): Promise<void>;
   };
   me: {
+    notificationPreferences(): Promise<{ muted: NotificationKind[] }>;
+    setNotificationPreference(input: { kind: NotificationKind; enabled: boolean }): Promise<{ muted: NotificationKind[] }>;
     profilePhoto(): Promise<{ image: string | null }>;
     setProfilePhoto(image: string | null): Promise<{ image: string | null }>;
     updateProfile(input: ProfileInput): Promise<User>;

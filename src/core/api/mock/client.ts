@@ -247,6 +247,7 @@ function audit(db: MockDb, actor: DbUser, e: Omit<AuditEvent, 'id' | 'at' | 'act
 
 /** 처리 결과를 신청자에게 알린다 (실서버에서는 서버가 같은 시점에 만든다) */
 function notify(db: MockDb, n: Pick<Notification, 'userId' | 'kind' | 'title' | 'body' | 'link'>): void {
+  if (db.mutedNotifications?.[n.userId]?.includes(n.kind)) return;
   db.notifications.unshift({ id: nextId(db, 'nt'), createdAt: new Date().toISOString(), readAt: null, ...n });
 }
 
@@ -342,6 +343,16 @@ export const mockClient: ApiClient = {
   },
 
   me: {
+    notificationPreferences: () => respond((db) => ({ muted: db.mutedNotifications?.[requireUser(db).id] ?? [] })),
+    setNotificationPreference: ({ kind, enabled }) => respond((db) => {
+      const id = requireUser(db).id;
+      const prefs = db.mutedNotifications ??= {};
+      const muted = new Set(prefs[id] ?? []);
+      if (enabled) muted.delete(kind);
+      else muted.add(kind);
+      prefs[id] = [...muted];
+      return { muted: prefs[id] };
+    }),
     profilePhoto: () => respond((db) => ({ image: db.profilePhotos?.[requireUser(db).id] ?? null })),
     setProfilePhoto: (image) => respond((db) => {
       const id = requireUser(db).id;

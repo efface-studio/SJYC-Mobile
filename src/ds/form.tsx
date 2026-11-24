@@ -242,12 +242,14 @@ export function SwitchRow({
   description,
   value,
   onValueChange,
+  disabled,
   error,
 }: {
   label: string;
   description?: string;
   value: boolean;
   onValueChange: (v: boolean) => void;
+  disabled?: boolean;
   error?: string;
 }) {
   const t = useTheme();
@@ -256,6 +258,7 @@ export function SwitchRow({
       <View style={styles.switchRow}>
         <Txt variant="label" style={{ flex: 1 }}>{label}</Txt>
         <Switch
+          disabled={disabled}
           value={value}
           onValueChange={onValueChange}
           accessibilityLabel={label}
