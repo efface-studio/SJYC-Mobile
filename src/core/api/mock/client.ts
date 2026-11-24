@@ -302,7 +302,7 @@ export const mockClient: ApiClient = {
           id: nextId(db, 'u'),
           email: input.email,
           name: input.name,
-          phone: null,
+          phone: input.phone || null,
           birthYear: input.birthYear,
           roles: ['member'],
           status: 'active',

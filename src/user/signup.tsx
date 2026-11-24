@@ -36,7 +36,7 @@ function PolicyLink({ label, href }: { label: string; href: '/policies/terms' | 
 }
 
 export default function SignupScreen() {
-  const [v, setV] = useState({ name: '', email: '', password: '', passwordConfirm: '', birthYear: '' });
+  const [v, setV] = useState({ name: '', phone: '', email: '', password: '', passwordConfirm: '', birthYear: '' });
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [marketing, setMarketing] = useState(false);
@@ -107,6 +107,15 @@ export default function SignupScreen() {
             returnKeyType="next"
             onSubmitEditing={() => emailRef.current?.focus()}
             error={errors.name}
+          />
+          <TextField
+            label="휴대전화 (선택)"
+            value={v.phone}
+            onChangeText={set('phone')}
+            placeholder="010-1234-5678"
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            error={errors.phone}
           />
           <TextField
             ref={emailRef}
