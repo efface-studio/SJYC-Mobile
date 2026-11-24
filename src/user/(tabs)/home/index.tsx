@@ -69,8 +69,15 @@ export default function HomeScreen() {
     queryFn: () => api.programs.list({ recruitStatus: 'open', pageSize: 6 }),
   });
   const settings = useQuery({ queryKey: ['site-settings'], queryFn: () => api.site.settings() });
-  const config = useMemo(() => settings.data && readBanners(settings.data.values.mobileBanners), [settings.data]);
-  const clubs = useQuery({ queryKey: ['clubs'], queryFn: () => api.clubs.list(), enabled: config?.automatic === true });
+  const config = useMemo(
+    () => settings.data && readBanners(settings.data.values.mobileBanners),
+    [settings.data],
+  );
+  const clubs = useQuery({
+    queryKey: ['clubs'],
+    queryFn: () => api.clubs.list(),
+    enabled: config?.automatic === true,
+  });
   const notices = useQuery({
     queryKey: ['notices', { pageSize: 4 }],
     queryFn: () => api.notices.list({ pageSize: 4 }),
@@ -81,7 +88,17 @@ export default function HomeScreen() {
   const photos = (media.data ?? []).filter((m) => m.kind === 'photo').slice(0, 8);
 
   return (
-    <Screen onRefresh={() => Promise.all([programs.refetch(), notices.refetch(), media.refetch(), settings.refetch(), ...(config?.automatic ? [clubs.refetch()] : [])])}>
+    <Screen
+      onRefresh={() =>
+        Promise.all([
+          programs.refetch(),
+          notices.refetch(),
+          media.refetch(),
+          settings.refetch(),
+          ...(config?.automatic ? [clubs.refetch()] : []),
+        ])
+      }
+    >
       <Gutter>
         <HomeBanner config={config} programs={programs.data?.items ?? []} clubs={clubs.data ?? []} />
         <View style={[styles.shortcutRow, { borderColor: t.line }]}>
