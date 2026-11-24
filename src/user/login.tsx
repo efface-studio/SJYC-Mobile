@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
+import { AuthReveal, LoginSubmit, useLoginMotion } from '~/shared/login-motion';
 import { Wordmark } from '~/shared/wordmark';
 import { DEMO_DATA } from '@/config/env';
 import { providerStates, type ProviderState } from '@/config/oauth';
@@ -50,19 +51,24 @@ function SocialButton({ p }: { p: ProviderState }) {
       }
       style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }]}
     >
-      <Image
-        source={marks[p.provider]}
-        tintColor={p.provider === 'google' ? undefined : fg}
-        style={{ width: 22, height: 22 }}
-      />
-      <Txt variant="label" color={fg} style={{ flex: 1 }}>
+      <View style={styles.socialSide}>
+        <Image
+          contentFit="contain"
+          source={marks[p.provider]}
+          tintColor={p.provider === 'google' ? undefined : fg}
+          style={styles.providerMark}
+        />
+      </View>
+      <Txt variant="label" color={fg} style={styles.providerLabel}>
         {p.label}로 계속하기
       </Txt>
-      {!p.enabled && (
-        <Txt variant="small" color={fg} style={styles.socialTag}>
-          설정 필요
-        </Txt>
-      )}
+      <View style={[styles.socialSide, styles.statusSide]}>
+        {!p.enabled && (
+          <Txt variant="small" color={fg} style={styles.socialTag}>
+            설정 필요
+          </Txt>
+        )}
+      </View>
     </Tap>
   );
 }
@@ -82,6 +88,8 @@ function Header({ title, description }: { title: string; description: string }) 
 }
 
 export default function LoginScreen() {
+  const motion = useLoginMotion();
+  const [loginError, setLoginError] = useState('');
   const t = useTheme();
   const qc = useQueryClient();
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
@@ -92,10 +100,15 @@ export default function LoginScreen() {
   const login = useMutation({
     mutationFn: api.auth.login,
     onSuccess: (s) => {
-      qc.setQueryData(SESSION_KEY, s);
-      closeModal('/my');
+      motion.finish(
+        () => qc.setQueryData(SESSION_KEY, s),
+        () => closeModal('/my'),
+      );
     },
-    onError: (e) => notify('로그인하지 못했습니다', errorMessage(e)),
+    onError: (e) => {
+      motion.fail();
+      setLoginError(errorMessage(e));
+    },
   });
   const forgot = useMutation({
     mutationFn: (value: string) => api.auth.requestPasswordReset(value),
@@ -107,10 +120,15 @@ export default function LoginScreen() {
 
   const passwordRef = useRef<TextInput>(null);
   const submitLogin = () => {
-    if (login.isPending) return;
+    if (login.isPending || motion.phase === 'success') return;
+    setLoginError('');
     const parsed = parseValues(loginSchema, { email, password });
-    if (!parsed.ok) return setErrors(parsed.errors);
+    if (!parsed.ok) {
+      motion.fail();
+      return setErrors(parsed.errors);
+    }
     setErrors({});
+    motion.start();
     login.mutate(parsed.data);
   };
   const submitForgot = () => {
@@ -160,47 +178,63 @@ export default function LoginScreen() {
     <>
       <ModalGuard dirty={false} fallback="/my" />
       <Screen>
-        <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
-        <Gutter style={styles.form}>
-          <TextField
-            label="이메일"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="example@email.com"
-            keyboardType="email-address"
-            autoComplete="email"
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-            error={errors.email}
-          />
-          <TextField
-            ref={passwordRef}
-            label="비밀번호"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="비밀번호"
-            secureTextEntry
-            autoComplete="password"
-            returnKeyType="go"
-            onSubmitEditing={submitLogin}
-            error={errors.password}
-          />
-          <Button label="로그인" onPress={submitLogin} loading={login.isPending} />
-          <View style={styles.links}>
-            <Tap onPress={() => switchMode('forgot')} accessibilityLabel="비밀번호 찾기" style={styles.link}>
-              <Txt variant="caption" color="textSecondary">
-                비밀번호 찾기
-              </Txt>
-            </Tap>
-            <View style={[styles.sep, { backgroundColor: t.line }]} />
-            <Tap onPress={() => router.replace('/signup')} accessibilityLabel="회원가입" style={styles.link}>
-              <Txt variant="caption" color="textSecondary">
-                회원가입
-              </Txt>
-            </Tap>
-          </View>
-        </Gutter>
-
+        <AuthReveal delay={0} reduce={motion.reduce}>
+          <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
+        </AuthReveal>
+        <AuthReveal delay={70} reduce={motion.reduce}>
+          <Gutter style={styles.form}>
+            <TextField
+              label="이메일"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="example@email.com"
+              keyboardType="email-address"
+              autoComplete="email"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              error={errors.email}
+            />
+            <TextField
+              ref={passwordRef}
+              label="비밀번호"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="비밀번호"
+              secureTextEntry
+              autoComplete="password"
+              returnKeyType="go"
+              onSubmitEditing={submitLogin}
+              error={errors.password}
+            />
+            {!!loginError && (
+              <View accessibilityLiveRegion="polite">
+                <Txt color={t.tone.danger.fg}>{loginError}</Txt>
+              </View>
+            )}
+            <LoginSubmit motion={motion} onPress={submitLogin} />
+            <View style={styles.links}>
+              <Tap
+                onPress={() => switchMode('forgot')}
+                accessibilityLabel="비밀번호 찾기"
+                style={styles.link}
+              >
+                <Txt variant="caption" color="textSecondary">
+                  비밀번호 찾기
+                </Txt>
+              </Tap>
+              <View style={[styles.sep, { backgroundColor: t.line }]} />
+              <Tap
+                onPress={() => router.replace('/signup')}
+                accessibilityLabel="회원가입"
+                style={styles.link}
+              >
+                <Txt variant="caption" color="textSecondary">
+                  회원가입
+                </Txt>
+              </Tap>
+            </View>
+          </Gutter>
+        </AuthReveal>
         {/* 서버 OAuth 설정 전에는 성공을 흉내 내지 않고 "설정 필요"로 안내한다 */}
         <Gutter style={styles.socialBlock}>
           <View style={styles.orRow}>
@@ -255,13 +289,17 @@ const styles = StyleSheet.create({
   orLine: { flex: 1, height: StyleSheet.hairlineWidth },
   social: {
     minHeight: 52,
-    gap: space.md,
+    gap: 4,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: space.lg,
     borderWidth: 1,
   },
-  socialTag: { opacity: 0.84 },
+  socialSide: { flex: 1, minWidth: 46 },
+  statusSide: { alignItems: 'flex-end' },
+  providerMark: { width: 22, height: 22 },
+  providerLabel: { flexShrink: 1, textAlign: 'center' },
+  socialTag: { textAlign: 'right', opacity: 0.84 },
   demo: { paddingTop: space.xxl, gap: space.sm },
   demoChips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   demoChip: { height: 44, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1 },
