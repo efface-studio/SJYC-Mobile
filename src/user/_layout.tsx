@@ -1,9 +1,11 @@
 import { Stack } from 'expo-router';
+import { useStartupCameraPermission } from '~/user-kit/startup-camera';
 import { AppProviders } from '~/shared/providers';
 import { useHeaderOptions } from '~/user-kit';
 
 /** 사용자 앱 루트 — 탭 위에 상세·폼 화면을 쌓는다. 로그인·작성 폼은 OS 기본 모달 시트로 연다. */
 export default function UserRootLayout() {
+  useStartupCameraPermission();
   const header = useHeaderOptions();
   return (
     <AppProviders>
