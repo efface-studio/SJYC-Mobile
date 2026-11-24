@@ -98,6 +98,8 @@ export type Decision = 'approved' | 'rejected';
 
 export interface ApiClient {
   auth: {
+    startNativeApple(link: boolean): Promise<{ state: string; nonce: string }>;
+    finishNativeApple(input: { state: string; identityToken: string }): Promise<{ signedIn: boolean }>;
     socialProviders(): Promise<OAuthProvider[]>;
     startSocial(provider: OAuthProvider, link: boolean): Promise<{ url: string; claim: string }>;
     completeSocial(proof: { receipt: string; claim: string }): Promise<{ signedIn: boolean }>;

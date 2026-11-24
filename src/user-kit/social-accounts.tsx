@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { Linking, View } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { Linking, Platform, View } from 'react-native';
 import { api } from '@/api';
 import type { OAuthProvider } from '@/domain/types';
 import { useTheme } from '~/ds';
@@ -56,8 +57,27 @@ export function SocialMark({
   );
 }
 
+export const useAppleAvailable = () => useQuery({
+  queryKey: ['apple-sign-in-available'], queryFn: AppleAuthentication.isAvailableAsync,
+  enabled: Platform.OS === 'ios', staleTime: Infinity,
+});
+
 let pending: { claim: string; link: boolean } | null = null;
 export async function beginSocial(provider: OAuthProvider, link: boolean) {
+  if (provider === 'apple' && Platform.OS === 'ios') {
+    const challenge = await api.auth.startNativeApple(link);
+    try {
+      const credential = await AppleAuthentication.signInAsync(challenge);
+      if (!credential.identityToken || credential.state !== challenge.state) {
+        throw new Error('Apple 인증을 확인할 수 없습니다. 다시 시도해 주세요.');
+      }
+      await api.auth.finishNativeApple({ state: challenge.state, identityToken: credential.identityToken });
+      return 'native' as const;
+    } catch (err) {
+      if (err instanceof Error && 'code' in err && err.code === 'ERR_REQUEST_CANCELED') return 'cancelled' as const;
+      throw err;
+    }
+  }
   const { url, claim } = await api.auth.startSocial(provider, link);
   pending = { claim, link };
   try {

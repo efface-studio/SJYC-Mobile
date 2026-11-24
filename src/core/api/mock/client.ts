@@ -268,6 +268,8 @@ let lastResetToken: { token: string; userId: string } | null = null;
 
 export const mockClient: ApiClient = {
   auth: {
+    startNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
+    finishNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
     socialProviders: () => respond(() => []),
     startSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),
     completeSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),

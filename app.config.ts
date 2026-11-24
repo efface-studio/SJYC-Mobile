@@ -35,6 +35,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: f.bundleId,
+    usesAppleSignIn: FLAVOR === "user",
     supportsTablet: FLAVOR === "admin",
     config: { usesNonExemptEncryption: false },
     infoPlist: { CFBundleAllowMixedLocalizations: true },
@@ -48,6 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   },
   plugins: [
+    ...(FLAVOR === "user" ? ["expo-apple-authentication"] : []),
     [
       "expo-router",
       { root: FLAVOR === "admin" ? "./src/admin" : "./src/user" },

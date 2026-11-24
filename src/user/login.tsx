@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
+import { Platform, StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { AuthReveal, LoginSubmit, useLoginMotion } from '~/shared/login-motion';
@@ -14,7 +15,7 @@ import { forgotPasswordSchema, loginSchema, parseValues, type FieldErrors } from
 import { SESSION_KEY } from '@/features/auth/session';
 import { Button, Gutter, Screen, Tap, TextField, Txt, radius, space, useTheme } from '~/ds';
 import { ModalGuard, closeModal } from '~/user-kit';
-import { beginSocial, socialMarks } from '~/user-kit/social-accounts';
+import { beginSocial, socialMarks, useAppleAvailable } from '~/user-kit/social-accounts';
 import { notify } from '~/shared/dialogs';
 
 /** 각 공급자 브랜드 가이드 색 */
@@ -33,14 +34,35 @@ function SocialButton({ p }: { p: ProviderState }) {
   const c = SOCIAL[p.provider];
   const bg = dark && c.darkBg ? c.darkBg : c.bg;
   const fg = dark && c.darkFg ? c.darkFg : c.fg;
-  const start = useMutation({ mutationFn: () => beginSocial(p.provider, false), onError: (err) => notify('소셜 로그인', errorMessage(err)) });
+  const cache = useQueryClient();
+  const start = useMutation({
+    mutationFn: async () => {
+      if (await beginSocial(p.provider, false) === 'native') {
+        const session = await api.auth.me();
+        if (!session) throw new Error('로그인 상태를 확인할 수 없습니다.');
+        cache.setQueryData(SESSION_KEY, session);
+        closeModal('/my');
+      }
+    },
+    onError: (err) => notify('소셜 로그인', errorMessage(err)),
+  });
+  if (p.provider === 'apple' && Platform.OS === 'ios' && p.enabled) {
+    return <AppleAuthentication.AppleAuthenticationButton
+      buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+      buttonStyle={dark ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+      cornerRadius={radius.md}
+      style={{ height: 52 }}
+      onPress={() => { if (!start.isPending) start.mutate(); }}
+    />;
+  }
+  const unavailableLabel = p.provider === 'google' ? '준비 중' : '설정 필요';
   return (
     <Tap
       rounded={radius.md}
-      accessibilityLabel={`${p.label}로 계속하기${p.enabled ? '' : ', 설정 필요'}`}
+      accessibilityLabel={`${p.label}로 계속하기${p.enabled ? '' : ', ' + unavailableLabel}`}
       disabled={!p.enabled || start.isPending}
       onPress={() => start.mutate()}
-      style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }]}
+      style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }, p.provider === 'google' && styles.unavailable]}
     >
       <View style={styles.socialSide}>
         <Image
@@ -56,7 +78,7 @@ function SocialButton({ p }: { p: ProviderState }) {
       <View style={[styles.socialSide, styles.statusSide]}>
         {!p.enabled && (
           <Txt variant="small" color={fg} style={styles.socialTag}>
-            설정 필요
+            {unavailableLabel}
           </Txt>
         )}
       </View>
@@ -82,6 +104,7 @@ export default function LoginScreen() {
   const motion = useLoginMotion();
   const [loginError, setLoginError] = useState('');
   const t = useTheme();
+  const apple = useAppleAvailable();
   const providers = useQuery({ queryKey: ['available-social-providers'], queryFn: api.auth.socialProviders, staleTime: 60_000 });
   const qc = useQueryClient();
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
@@ -237,7 +260,7 @@ export default function LoginScreen() {
             <View style={[styles.orLine, { backgroundColor: t.line }]} />
           </View>
           {providerStates().map((p) => (
-            <SocialButton key={p.provider} p={{ ...p, enabled: providers.data?.includes(p.provider) ?? false }} />
+            <SocialButton key={p.provider} p={{ ...p, enabled: p.provider !== 'google' && !!providers.data?.includes(p.provider) && (p.provider !== 'apple' || Platform.OS !== 'ios' || !!apple.data) }} />
           ))}
         </Gutter>
 
@@ -287,6 +310,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderWidth: 1,
   },
+  unavailable: { opacity: 0.55 },
   socialSide: { flex: 1, minWidth: 46 },
   statusSide: { alignItems: 'flex-end' },
   providerMark: { width: 22, height: 22 },
