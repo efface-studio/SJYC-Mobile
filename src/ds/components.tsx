@@ -1,5 +1,7 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
+import { ScrollBackdrop } from './scroll-backdrop';
 import { type ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -46,6 +48,8 @@ export function Screen({
   const [refreshing, setRefreshing] = useState(false);
   const bg = subtle ? t.bgSubtle : t.bg;
   const keyboardOverlap = useKeyboardOverlap(footer != null);
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
+  const topInset = Platform.OS === 'android' ? headerHeight : 0;
   const scroll = (
     <ScrollView
       // iOS 큰 제목은 화면의 첫 하위 뷰가 ScrollView 여야 스크롤에 맞춰 접힌다 — 감싸는 View 를 두지 않는다
@@ -55,10 +59,11 @@ export function Screen({
       automaticallyAdjustKeyboardInsets={keyboardInsets}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentContainerStyle={{ paddingBottom: 48 }}
+      contentContainerStyle={{ paddingBottom: 48, paddingTop: topInset }}
       refreshControl={
         onRefresh ? (
           <RefreshControl
+            progressViewOffset={topInset}
             refreshing={refreshing}
             tintColor={t.textTertiary}
             colors={[t.action]}
@@ -77,11 +82,12 @@ export function Screen({
       {children}
     </ScrollView>
   );
-  if (!footer) return scroll;
+  const content = topInset > 0 ? <ScrollBackdrop height={topInset}>{scroll}</ScrollBackdrop> : scroll;
+  if (!footer) return content;
   // 하단 고정 영역은 스크롤 아래에 두고, iOS 에서는 키보드가 올라오면 함께 올린다 (입력 중에도 제출 버튼이 보이게)
   return (
     <View style={{ flex: 1, backgroundColor: bg, paddingBottom: keyboardOverlap }}>
-      {scroll}
+      {content}
       {footer}
     </View>
   );
@@ -150,9 +156,7 @@ export function StickyFooter({ children }: { children: ReactNode }) {
     ? space.md
     : Math.max(insets.bottom, space.lg) + (overTabBar ? TAB_BAR_HEIGHT + space.sm : 0);
   return (
-    <View
-      style={[styles.sticky, { backgroundColor: t.bg, borderTopColor: t.line, paddingBottom: bottom }]}
-    >
+    <View style={[styles.sticky, { backgroundColor: t.bg, borderTopColor: t.line, paddingBottom: bottom }]}>
       {children}
     </View>
   );
@@ -171,9 +175,8 @@ export function SectionHeader({
   action?: string;
   onAction?: () => void;
 }) {
-  const t = useTheme();
   return (
-    <View style={[styles.sectionHeader, { borderTopColor: t.text }]}>
+    <View style={styles.sectionHeader}>
       <Txt variant="title2" accessibilityRole="header">
         {title}
       </Txt>
@@ -222,7 +225,7 @@ export function Tap({
       style={({ pressed }) => [
         style,
         rounded !== undefined && { borderRadius: rounded, overflow: 'hidden' },
-        Platform.OS === 'ios' && pressed && { backgroundColor: t.pressed },
+        Platform.OS === 'ios' && pressed && { opacity: 0.72 },
       ]}
     >
       {children}
@@ -430,7 +433,7 @@ export function Chips<T extends string>({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={[styles.tabs, { borderBottomColor: t.line }]}
+      style={styles.tabs}
       contentContainerStyle={styles.tabsContent}
     >
       {options.map((o) => {
@@ -440,9 +443,9 @@ export function Chips<T extends string>({
             key={o.value}
             onPress={() => onChange(o.value)}
             accessibilityLabel={`${o.label}${active ? ', 선택됨' : ''}`}
-            style={[styles.tab, { borderBottomColor: active ? t.text : 'transparent' }]}
+            style={[styles.tab, { borderBottomColor: active ? t.action : 'transparent' }]}
           >
-            <Txt variant="label" color={active ? 'text' : 'textTertiary'}>
+            <Txt variant={active ? 'bodyStrong' : 'label'} color={active ? 'action' : 'textSecondary'}>
               {o.label}
             </Txt>
           </Tap>
@@ -479,9 +482,28 @@ export function EmptyState({
 }
 
 export function LoadingState() {
+  const t = useTheme();
   return (
-    <View style={styles.state}>
-      <ActivityIndicator accessibilityLabel="불러오는 중" />
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel="불러오는 중"
+      accessibilityLiveRegion="polite"
+      style={styles.loadingRows}
+    >
+      {[0, 1, 2].map((row) => (
+        <View
+          key={row}
+          style={[styles.loadingRow, { borderBottomColor: t.line }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <View
+            style={[styles.loadingTitle, { backgroundColor: t.line, width: row === 1 ? '53%' : '66%' }]}
+          />
+          <View style={[styles.loadingCaption, { backgroundColor: t.bgSubtle }]} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -516,6 +538,15 @@ export function QueryBoundary<T>({
 }
 
 const styles = StyleSheet.create({
+  loadingRows: { paddingHorizontal: GUTTER },
+  loadingRow: {
+    height: 72,
+    justifyContent: 'center',
+    gap: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  loadingTitle: { height: 15, borderRadius: 4 },
+  loadingCaption: { width: '37%', height: 11, borderRadius: 4 },
   sticky: {
     paddingHorizontal: GUTTER,
     paddingTop: space.md,
@@ -527,8 +558,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginHorizontal: GUTTER,
     marginTop: space.xxxl,
-    borderTopWidth: 2,
-    paddingTop: space.md,
+    gap: space.sm,
+    paddingTop: space.xs,
     paddingBottom: space.sm,
   },
   sectionAction: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
@@ -542,7 +573,7 @@ const styles = StyleSheet.create({
   },
   infoRow: { flexDirection: 'row', gap: space.md, paddingVertical: 10 },
   badge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6 },
-  badgeMark: { width: 3, height: 12 },
+  badgeMark: { width: 6, height: 6, borderRadius: 3 },
   block: {
     paddingVertical: space.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -550,9 +581,16 @@ const styles = StyleSheet.create({
   },
   callout: { padding: space.lg },
   button: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg },
-  tabs: { flexGrow: 0, borderBottomWidth: StyleSheet.hairlineWidth },
-  tabsContent: { paddingHorizontal: GUTTER - space.md },
-  tab: { height: 44, justifyContent: 'center', paddingHorizontal: space.md, borderBottomWidth: 2 },
+  tabs: { flexGrow: 0 },
+  tabsContent: { paddingHorizontal: GUTTER, gap: 14, alignItems: 'center' },
+  tab: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+    borderBottomWidth: 2,
+  },
   state: {
     alignItems: 'center',
     justifyContent: 'center',

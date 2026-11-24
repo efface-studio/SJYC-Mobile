@@ -1,19 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CreateSession } from '~/shared/attendance-controls';
+import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { api, errorMessage } from '@/api';
+import { api } from '@/api';
 import { attendanceTargetKey, sessionCounts } from '@/domain/attendance';
 import { ATTENDANCE_STATUS, ATTENDANCE_TARGET_LABEL } from '@/domain/labels';
 import { canManageAttendance } from '@/domain/permissions';
-import { attendanceSessionSchema, parseValues, type FieldErrors } from '@/domain/schemas';
 import type { AttendanceSession, AttendanceTargetSummary } from '@/domain/types';
 import { useSession } from '@/features/auth/session';
-import { todayKst } from '@/lib/format';
 import { NoPermission, Rows } from '~/admin-kit/components';
 import {
   Badge,
-  Button,
-  DateField,
   EmptyState,
   FormSection,
   ListRow,
@@ -21,9 +18,7 @@ import {
   Screen,
   SectionHeader,
   SelectField,
-  TextField,
 } from '~/ds';
-import { notify } from '~/shared/dialogs';
 
 const STATUSES = ['present', 'late', 'absent', 'excused'] as const;
 
@@ -33,43 +28,6 @@ const summary = (s: AttendanceSession) => {
     ' · ',
   );
 };
-
-function CreateSession({ target, count }: { target: AttendanceTargetSummary; count: number }) {
-  const qc = useQueryClient();
-  const [date, setDate] = useState(todayKst());
-  const [title, setTitle] = useState(target.type === 'program' ? `${count + 1}회차` : '정기 모임');
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const create = useMutation({
-    mutationFn: () => api.attendance.create(target, { date, title }),
-    onSuccess: (s) => {
-      void qc.invalidateQueries({ queryKey: ['attendance'] });
-      router.push(`/attendance/${s.id}`);
-    },
-    onError: (e) => notify('출석부를 만들지 못했습니다', errorMessage(e)),
-  });
-  const submit = () => {
-    const parsed = parseValues(attendanceSessionSchema, { date, title });
-    if (!parsed.ok) {
-      setErrors(parsed.errors);
-      return;
-    }
-    setErrors({});
-    create.mutate();
-  };
-  return (
-    <FormSection title="새 출석부">
-      <DateField label="날짜" value={date} onChange={setDate} />
-      <TextField
-        label="회차 이름"
-        value={title}
-        onChangeText={setTitle}
-        maxLength={50}
-        error={errors.title}
-      />
-      <Button label="출석부 만들기" loading={create.isPending} onPress={submit} />
-    </FormSection>
-  );
-}
 
 function TargetPanel({ target }: { target: AttendanceTargetSummary }) {
   const sessions = useQuery({
@@ -84,7 +42,11 @@ function TargetPanel({ target }: { target: AttendanceTargetSummary }) {
     <QueryBoundary query={sessions}>
       {(list) => (
         <>
-          <CreateSession target={target} count={list.length} />
+          <CreateSession
+            target={target}
+            count={list.length}
+            onCreated={(s) => router.push(`/attendance/${s.id}`)}
+          />
           <SectionHeader title={`출석부 ${list.length}개 · 명단 ${target.rosterCount}명`} />
           {list.length === 0 ? (
             <EmptyState title="아직 출석부가 없습니다" />

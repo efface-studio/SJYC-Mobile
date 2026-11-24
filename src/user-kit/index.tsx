@@ -13,6 +13,7 @@ import { useSession } from '@/features/auth/session';
 import { daysUntil, formatDate, formatShortDate } from '@/lib/format';
 import { confirm } from '~/shared/dialogs';
 import { Icon } from '~/shared/icon';
+import { translucentHeader } from '~/shared/header';
 import {
   Button,
   Divider,
@@ -68,7 +69,7 @@ function DateColumn({ p }: { p: Program }) {
   if (p.recruitStatus === 'open') {
     const d = daysUntil(p.recruitEndsAt);
     return (
-      <View style={styles.dateCol}>
+      <View style={[styles.dateCol, { borderColor: t.line }]}>
         <Txt variant="title2" color="action">
           {d <= 0 ? 'D-Day' : `D-${d}`}
         </Txt>
@@ -80,7 +81,7 @@ function DateColumn({ p }: { p: Program }) {
   }
   if (p.recruitStatus === 'upcoming') {
     return (
-      <View style={styles.dateCol}>
+      <View style={[styles.dateCol, { borderColor: t.line }]}>
         <Txt variant="title3" color={t.tone.info.fg}>
           {monthDay(p.recruitStartsAt)}
         </Txt>
@@ -91,7 +92,7 @@ function DateColumn({ p }: { p: Program }) {
     );
   }
   return (
-    <View style={styles.dateCol}>
+    <View style={[styles.dateCol, { borderColor: t.line }]}>
       <Txt variant="captionStrong" color="textTertiary">
         {RECRUIT_STATUS[p.recruitStatus].text}
       </Txt>
@@ -293,6 +294,7 @@ export function BellButton() {
 export function useHeaderOptions(largeTitle = false) {
   const t = useTheme();
   return {
+    ...translucentHeader,
     headerTitleStyle: { fontFamily: FONT.semibold, color: t.text },
     headerLargeTitle: largeTitle,
     headerLargeTitleStyle: { fontFamily: FONT.bold, color: t.text },
@@ -303,15 +305,24 @@ export function useHeaderOptions(largeTitle = false) {
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingTop: space.xl, paddingBottom: space.xxl, gap: space.sm },
+  hero: { paddingTop: space.sm, paddingBottom: space.xxl, gap: space.sm },
   programRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.lg,
     paddingHorizontal: GUTTER,
-    paddingVertical: 18,
+    paddingVertical: 12,
   },
-  dateCol: { width: 64, alignItems: 'center', gap: 2 },
+  dateCol: {
+    width: 68,
+    minHeight: 48,
+    paddingVertical: 7,
+    gap: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    paddingRight: space.sm,
+  },
   callout: { borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, gap: 2 },
   article: { lineHeight: 27 },
   promptAction: { alignSelf: 'stretch', marginTop: space.lg },

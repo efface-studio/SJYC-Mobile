@@ -1,3 +1,4 @@
+import { useTheme } from '~/ds/tokens';
 import { Platform, PlatformColor, useColorScheme, type ColorValue } from 'react-native';
 
 /**
@@ -75,7 +76,9 @@ const android = (dark: boolean): Colors =>
 
 export function useColors(): Colors {
   const dark = useColorScheme() === 'dark';
-  return Platform.OS === 'ios' ? ios(dark) : android(dark);
+  const t = useTheme();
+  const system = Platform.OS === 'ios' ? ios(dark) : android(dark);
+  return { ...system, tint: t.action, onTint: t.onAction };
 }
 
 export const IS_IOS = Platform.OS === 'ios';
