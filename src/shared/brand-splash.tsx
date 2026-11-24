@@ -13,6 +13,7 @@ export function BrandSplash({ onFinish }: { onFinish: () => void }) {
   const width = Math.min(useWindowDimensions().width - 48, 288);
   const height = width * 114 / 720;
   const mark = width * 84 / 720;
+  const wordWidth = width - mark;
   const reveal = useRef(new Animated.Value(0)).current;
   const cover = useRef(new Animated.Value(1)).current;
   const [layoutReady, setLayoutReady] = useState(false);
@@ -45,22 +46,46 @@ export function BrandSplash({ onFinish }: { onFinish: () => void }) {
     return () => { active = false; animation?.stop(); };
   }, [layoutReady, markReady, wordReady, cover, reveal, onFinish]);
 
+  const slide = reveal.interpolate({ inputRange: [0, 1], outputRange: [wordWidth / 2, 0] });
+  // Move the clipping edge while keeping the wordmark aligned with the symbol.
+  const clipLeft = reveal.interpolate({ inputRange: [0, 1], outputRange: [-wordWidth, 0] });
+  const wordOffset = reveal.interpolate({ inputRange: [0, 1], outputRange: [wordWidth, 0] });
+
   return (
-    <Animated.View accessible accessibilityLabel="중구청소년센터" onLayout={() => setLayoutReady(true)}
-      style={[styles.cover, { opacity: cover, backgroundColor: dark ? '#1A1716' : '#FFFEFC' }]}>
-      <Animated.View style={{ width, height, flexDirection: 'row', transform: [{
-        translateX: reveal.interpolate({ inputRange: [0,1], outputRange: [(width-mark)/2,0] }),
-      }] }}>
-        <Image source={symbol} resizeMode="contain" fadeDuration={0} onLoadEnd={() => setMarkReady(true)} style={{width:mark,height}} />
-        <View style={{width:width-mark,height,overflow:'hidden'}}>
-          <Animated.View style={{opacity:reveal.interpolate({inputRange:[0,0.12,0.82,1],outputRange:[0,0,1,1]}),
-            transform:[{translateX:reveal.interpolate({inputRange:[0,1],outputRange:[-6,0]})}]}}>
-            <Image source={dark ? inverse : logo} resizeMode="contain" fadeDuration={0} onLoadEnd={() => setWordReady(true)}
-              style={{width,height,marginLeft:-mark}} />
+    <Animated.View
+      accessible
+      accessibilityLabel="중구청소년센터"
+      onLayout={() => setLayoutReady(true)}
+      style={[styles.cover, { opacity: cover, backgroundColor: dark ? '#1A1716' : '#FFFEFC' }]}
+    >
+      <Animated.View style={[styles.row, { width, height, transform: [{ translateX: slide }] }]}>
+        <Image
+          source={symbol}
+          resizeMode="contain"
+          fadeDuration={0}
+          onLoadEnd={() => setMarkReady(true)}
+          style={{ width: mark, height }}
+        />
+        <View style={[styles.clip, { width: wordWidth, height }]}>
+          <Animated.View style={[styles.clip, { width: wordWidth, height, transform: [{ translateX: clipLeft }] }]}>
+            <Animated.View style={{ transform: [{ translateX: wordOffset }] }}>
+              <Image
+                source={dark ? inverse : logo}
+                resizeMode="contain"
+                fadeDuration={0}
+                onLoadEnd={() => setWordReady(true)}
+                style={{ width, height, marginLeft: -mark }}
+              />
+            </Animated.View>
           </Animated.View>
         </View>
       </Animated.View>
     </Animated.View>
   );
 }
-const styles=StyleSheet.create({cover:{...StyleSheet.absoluteFill,alignItems:'center',justifyContent:'center',zIndex:100}});
+
+const styles = StyleSheet.create({
+  cover: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  row: { flexDirection: 'row' },
+  clip: { overflow: 'hidden' },
+});
