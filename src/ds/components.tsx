@@ -22,7 +22,7 @@ import { errorMessage } from '@/api/errors';
 import type { Tone } from '@/domain/labels';
 import { Icon } from '~/shared/icon';
 import { Txt } from './text';
-import { GUTTER, radius, space, useTheme } from './tokens';
+import { CENTER_RED, GUTTER, radius, space, useTheme } from './tokens';
 
 /* ---------- 레이아웃 ---------- */
 
@@ -65,8 +65,8 @@ export function Screen({
           <RefreshControl
             progressViewOffset={topInset}
             refreshing={refreshing}
-            tintColor={t.textTertiary}
-            colors={[t.action]}
+            tintColor={CENTER_RED}
+            colors={[CENTER_RED]}
             onRefresh={async () => {
               setRefreshing(true);
               try {
