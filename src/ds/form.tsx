@@ -1,6 +1,6 @@
 import { editMobilePhone, formatMobilePhone } from '@/lib/phone';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useState, type Ref } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -67,6 +67,7 @@ export function TextField({
   autoFocus,
   returnKeyType,
   onSubmitEditing,
+  trailing,
   ref,
 }: {
   label?: string;
@@ -85,6 +86,7 @@ export function TextField({
   autoFocus?: boolean;
   returnKeyType?: TextInputProps['returnKeyType'];
   onSubmitEditing?: () => void;
+  trailing?: ReactNode;
   /** 다음 입력칸으로 포커스를 옮길 때 사용 (React 19 ref prop) */
   ref?: Ref<TextInput>;
 }) {
@@ -92,40 +94,61 @@ export function TextField({
   const [focused, setFocused] = useState(false);
   const phone = keyboardType === 'phone-pad' || autoComplete === 'tel';
   const displayed = phone ? formatMobilePhone(value) : value;
+  const input = (
+    <TextInput
+      ref={ref}
+      value={displayed}
+      onChangeText={phone ? (next) => onChangeText(editMobilePhone(displayed, next)) : onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={t.textTertiary}
+      multiline={multiline}
+      keyboardType={keyboardType}
+      secureTextEntry={secureTextEntry}
+      maxLength={maxLength}
+      autoComplete={autoComplete}
+      autoCapitalize={autoCapitalize}
+      autoCorrect={autoCorrect}
+      autoFocus={autoFocus}
+      returnKeyType={returnKeyType}
+      onSubmitEditing={onSubmitEditing ? () => onSubmitEditing() : undefined}
+      submitBehavior={multiline ? 'newline' : undefined}
+      accessibilityLabel={label ?? placeholder}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      textAlignVertical={multiline ? 'top' : 'center'}
+      style={[
+        styles.input,
+        {
+          color: t.text,
+          backgroundColor: t.bgSubtle,
+          borderColor: error ? t.tone.danger.fg : focused ? t.action : 'transparent',
+          minHeight: multiline ? 120 : 52,
+          paddingTop: multiline ? 14 : 0,
+        },
+        trailing ? { flex: 1, minWidth: 0, borderWidth: 0, paddingRight: 2 } : undefined,
+      ]}
+    />
+  );
   return (
     <FieldShell label={label} error={error} hint={hint}>
-      <TextInput
-        ref={ref}
-        value={displayed}
-        onChangeText={phone ? (next) => onChangeText(editMobilePhone(displayed, next)) : onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={t.textTertiary}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        maxLength={maxLength}
-        autoComplete={autoComplete}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={autoCorrect}
-        autoFocus={autoFocus}
-        returnKeyType={returnKeyType}
-        onSubmitEditing={onSubmitEditing ? () => onSubmitEditing() : undefined}
-        submitBehavior={multiline ? 'newline' : undefined}
-        accessibilityLabel={label ?? placeholder}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        textAlignVertical={multiline ? 'top' : 'center'}
-        style={[
-          styles.input,
-          {
-            color: t.text,
+      {trailing ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderRadius: radius.md,
+            borderWidth: 1.5,
+            paddingRight: 4,
             backgroundColor: t.bgSubtle,
             borderColor: error ? t.tone.danger.fg : focused ? t.action : 'transparent',
-            minHeight: multiline ? 120 : 52,
-            paddingTop: multiline ? 14 : 0,
-          },
-        ]}
-      />
+          }}
+        >
+          {input}
+          {trailing}
+        </View>
+      ) : (
+        input
+      )}
     </FieldShell>
   );
 }
