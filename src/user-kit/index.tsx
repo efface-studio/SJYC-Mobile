@@ -2,7 +2,7 @@
  * 사용자 앱 화면 공통 조합 — ~/ds 컴포넌트를 묶은 것만 둔다 (라우트 아님).
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { router, type Href } from 'expo-router';
+import { Stack, router, type Href } from 'expo-router';
 import { Children, Fragment, type ReactNode } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { api } from '@/api';
@@ -11,7 +11,9 @@ import { remainingSeats } from '@/domain/program';
 import type { Program } from '@/domain/types';
 import { useSession } from '@/features/auth/session';
 import { daysUntil, formatDate, formatShortDate } from '@/lib/format';
+import { confirm } from '~/shared/dialogs';
 import { Icon } from '~/shared/icon';
+import { translucentHeader } from '~/shared/header';
 import {
   Button,
   Divider,
@@ -67,7 +69,7 @@ function DateColumn({ p }: { p: Program }) {
   if (p.recruitStatus === 'open') {
     const d = daysUntil(p.recruitEndsAt);
     return (
-      <View style={styles.dateCol}>
+      <View style={[styles.dateCol, { borderColor: t.line }]}>
         <Txt variant="title2" color="action">
           {d <= 0 ? 'D-Day' : `D-${d}`}
         </Txt>
@@ -79,7 +81,7 @@ function DateColumn({ p }: { p: Program }) {
   }
   if (p.recruitStatus === 'upcoming') {
     return (
-      <View style={styles.dateCol}>
+      <View style={[styles.dateCol, { borderColor: t.line }]}>
         <Txt variant="title3" color={t.tone.info.fg}>
           {monthDay(p.recruitStartsAt)}
         </Txt>
@@ -90,7 +92,7 @@ function DateColumn({ p }: { p: Program }) {
     );
   }
   return (
-    <View style={styles.dateCol}>
+    <View style={[styles.dateCol, { borderColor: t.line }]}>
       <Txt variant="captionStrong" color="textTertiary">
         {RECRUIT_STATUS[p.recruitStatus].text}
       </Txt>
@@ -292,6 +294,7 @@ export function BellButton() {
 export function useHeaderOptions(largeTitle = false) {
   const t = useTheme();
   return {
+    ...translucentHeader,
     headerTitleStyle: { fontFamily: FONT.semibold, color: t.text },
     headerLargeTitle: largeTitle,
     headerLargeTitleStyle: { fontFamily: FONT.bold, color: t.text },
@@ -302,15 +305,24 @@ export function useHeaderOptions(largeTitle = false) {
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingTop: space.xl, paddingBottom: space.xxl, gap: space.sm },
+  hero: { paddingTop: space.sm, paddingBottom: space.xxl, gap: space.sm },
   programRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.lg,
     paddingHorizontal: GUTTER,
-    paddingVertical: 18,
+    paddingVertical: 12,
   },
-  dateCol: { width: 64, alignItems: 'center', gap: 2 },
+  dateCol: {
+    width: 68,
+    minHeight: 48,
+    paddingVertical: 7,
+    gap: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    paddingRight: space.sm,
+  },
   callout: { borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, gap: 2 },
   article: { lineHeight: 27 },
   promptAction: { alignSelf: 'stretch', marginTop: space.lg },
@@ -328,6 +340,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bellCount: { fontSize: 10, lineHeight: 12 },
+  headerCancel: { minHeight: 44, paddingHorizontal: space.sm, justifyContent: 'center' },
 });
 
 /** 모달 닫기 — 딥링크로 열려 닫을 화면이 없으면 뒤로 가거나 fallback 으로 이동한다 */
@@ -335,4 +348,39 @@ export function closeModal(fallback: Href): void {
   if (router.canDismiss()) router.dismiss();
   else if (router.canGoBack()) router.back();
   else router.replace(fallback);
+}
+
+/**
+ * 모달 폼의 닫기 — 헤더에 '취소' 버튼을 두고, 입력 중(dirty)이면 아래로 밀어 닫기를 막고
+ * 취소할 때 입력을 버릴지 확인한다 (iOS 기본 앱과 같은 동작).
+ */
+export function ModalGuard({ dirty, fallback }: { dirty: boolean; fallback: Href }) {
+  const t = useTheme();
+  const cancel = async () => {
+    if (dirty) {
+      const ok = await confirm({
+        title: '작성을 그만둘까요?',
+        message: '입력한 내용은 저장되지 않습니다.',
+        confirmLabel: '그만두기',
+        cancelLabel: '계속 작성',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    closeModal(fallback);
+  };
+  return (
+    <Stack.Screen
+      options={{
+        gestureEnabled: !dirty,
+        headerLeft: () => (
+          <Tap onPress={() => void cancel()} accessibilityLabel="취소" style={styles.headerCancel}>
+            <Txt variant="body" color={t.action}>
+              취소
+            </Txt>
+          </Tap>
+        ),
+      }}
+    />
+  );
 }

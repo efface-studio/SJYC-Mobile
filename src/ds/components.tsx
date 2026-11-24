@@ -1,8 +1,13 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { type ReactNode, useState } from 'react';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
+import { ScrollBackdrop } from './scroll-backdrop';
+import { type ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
+  Keyboard,
+  LayoutAnimation,
   Platform,
   Pressable,
   RefreshControl,
@@ -27,62 +32,131 @@ export function Screen({
   onRefresh,
   subtle = false,
   footer,
-  bottomInset,
+  keyboardInsets = true,
 }: {
   children: ReactNode;
   onRefresh?: () => Promise<unknown>;
   subtle?: boolean;
   footer?: ReactNode;
-  /** 하단 고정 영역 높이에 맞춘 스크롤 여백 (기본: footer 가 있으면 140) */
-  bottomInset?: number;
+  /**
+   * 키보드에 맞춰 스크롤 인셋을 조정한다 (입력 폼). 입력칸이 없는 화면은 끈다 —
+   * iOS 입력 알림(Alert.prompt)의 키보드에도 반응해, 닫은 뒤 목록이 위로 밀린 채 남는다.
+   */
+  keyboardInsets?: boolean;
 }) {
   const t = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const bg = subtle ? t.bgSubtle : t.bg;
+  const keyboardOverlap = useKeyboardOverlap(footer != null);
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
+  const topInset = Platform.OS === 'android' ? headerHeight : 0;
+  const scroll = (
+    <ScrollView
+      // iOS 큰 제목은 화면의 첫 하위 뷰가 ScrollView 여야 스크롤에 맞춰 접힌다 — 감싸는 View 를 두지 않는다
+      style={{ flex: 1, backgroundColor: bg }}
+      contentInsetAdjustmentBehavior="automatic"
+      // iOS: 키보드가 올라오면 스크롤 인셋을 자동 조정해 입력칸·버튼이 가려지지 않게 한다
+      automaticallyAdjustKeyboardInsets={keyboardInsets}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      contentContainerStyle={{ paddingBottom: 48, paddingTop: topInset }}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            progressViewOffset={topInset}
+            refreshing={refreshing}
+            tintColor={t.textTertiary}
+            colors={[t.action]}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try {
+                await onRefresh();
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+          />
+        ) : undefined
+      }
+    >
+      {children}
+    </ScrollView>
+  );
+  const content = topInset > 0 ? <ScrollBackdrop height={topInset}>{scroll}</ScrollBackdrop> : scroll;
+  if (!footer) return content;
+  // 하단 고정 영역은 스크롤 아래에 두고, iOS 에서는 키보드가 올라오면 함께 올린다 (입력 중에도 제출 버튼이 보이게)
   return (
-    <View style={{ flex: 1, backgroundColor: subtle ? t.bgSubtle : t.bg }}>
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        // iOS: 키보드가 올라오면 스크롤 인셋을 자동 조정해 입력칸·버튼이 가려지지 않게 한다
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-        contentContainerStyle={{ paddingBottom: bottomInset ?? (footer ? 140 : 48) }}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing}
-              tintColor={t.textTertiary}
-              colors={[t.action]}
-              onRefresh={async () => {
-                setRefreshing(true);
-                try {
-                  await onRefresh();
-                } finally {
-                  setRefreshing(false);
-                }
-              }}
-            />
-          ) : undefined
-        }
-      >
-        {children}
-      </ScrollView>
+    <View style={{ flex: 1, backgroundColor: bg, paddingBottom: keyboardOverlap }}>
+      {content}
       {footer}
     </View>
   );
 }
 
-/** 화면 하단 고정 행동 영역 (신청하기 등) */
+/**
+ * iOS 키보드가 화면 아래쪽을 가리는 높이. 하단 고정 영역이 있는 화면은 모두 화면(시트) 맨 아래까지
+ * 닿으므로 키보드 윗변과 화면 높이로 잰다 (KeyboardAvoidingView·measureInWindow 는 모달 시트 안에서
+ * 시트 기준 좌표를 써서 덜 올라간다).
+ */
+function useKeyboardOverlap(enabled: boolean): number {
+  const [overlap, setOverlap] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !enabled) return;
+    const apply = (duration: number, value: number) => {
+      if (duration > 0) {
+        LayoutAnimation.configureNext({
+          duration,
+          update: { duration, type: LayoutAnimation.Types.keyboard },
+        });
+      }
+      setOverlap(value);
+    };
+    const change = Keyboard.addListener('keyboardWillChangeFrame', (e) =>
+      apply(e.duration, Math.max(0, Dimensions.get('screen').height - e.endCoordinates.screenY)),
+    );
+    const hide = Keyboard.addListener('keyboardWillHide', (e) => apply(e.duration, 0));
+    return () => {
+      change.remove();
+      hide.remove();
+    };
+  }, [enabled]);
+  return overlap;
+}
+
+/** iOS 키보드가 떠 있는지 (하단 고정 영역의 홈 인디케이터 여백을 줄이는 데 쓴다) */
+function useKeyboardShown(): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const show = Keyboard.addListener('keyboardWillShow', () => setShown(true));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setShown(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return shown;
+}
+
+/**
+ * 떠 있는 하단 탭 바 위에 그려지는 스택인지 (탭 안에서 쌓이는 화면). iOS 네이티브 탭 바는 RN 안전 영역에
+ * 잡히지 않아 하단 고정 영역이 가려지므로, 탭 스택이 이 값을 true 로 내려 준다.
+ */
+export const OverTabBarContext = createContext(false);
+/** iPhone 하단 탭 바 높이 (홈 인디케이터 안전 영역 위). iPad 탭 바는 위쪽, Android 는 내용이 탭 바 위에서 끝난다 */
+const TAB_BAR_HEIGHT = Platform.OS === 'ios' && !Platform.isPad ? 49 : 0;
+
+/** 화면 하단 고정 행동 영역 (신청하기 등). 키보드가 떠 있으면 키보드 바로 위에 붙인다 */
 export function StickyFooter({ children }: { children: ReactNode }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const keyboard = useKeyboardShown();
+  const overTabBar = useContext(OverTabBarContext);
+  const bottom = keyboard
+    ? space.md
+    : Math.max(insets.bottom, space.lg) + (overTabBar ? TAB_BAR_HEIGHT + space.sm : 0);
   return (
-    <View
-      style={[
-        styles.sticky,
-        { backgroundColor: t.bg, borderTopColor: t.line, paddingBottom: Math.max(insets.bottom, space.lg) },
-      ]}
-    >
+    <View style={[styles.sticky, { backgroundColor: t.bg, borderTopColor: t.line, paddingBottom: bottom }]}>
       {children}
     </View>
   );
@@ -101,9 +175,8 @@ export function SectionHeader({
   action?: string;
   onAction?: () => void;
 }) {
-  const t = useTheme();
   return (
-    <View style={[styles.sectionHeader, { borderTopColor: t.text }]}>
+    <View style={styles.sectionHeader}>
       <Txt variant="title2" accessibilityRole="header">
         {title}
       </Txt>
@@ -152,7 +225,7 @@ export function Tap({
       style={({ pressed }) => [
         style,
         rounded !== undefined && { borderRadius: rounded, overflow: 'hidden' },
-        Platform.OS === 'ios' && pressed && { backgroundColor: t.pressed },
+        Platform.OS === 'ios' && pressed && { opacity: 0.72 },
       ]}
     >
       {children}
@@ -360,7 +433,7 @@ export function Chips<T extends string>({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={[styles.tabs, { borderBottomColor: t.line }]}
+      style={styles.tabs}
       contentContainerStyle={styles.tabsContent}
     >
       {options.map((o) => {
@@ -370,9 +443,9 @@ export function Chips<T extends string>({
             key={o.value}
             onPress={() => onChange(o.value)}
             accessibilityLabel={`${o.label}${active ? ', 선택됨' : ''}`}
-            style={[styles.tab, { borderBottomColor: active ? t.text : 'transparent' }]}
+            style={[styles.tab, { borderBottomColor: active ? t.action : 'transparent' }]}
           >
-            <Txt variant="label" color={active ? 'text' : 'textTertiary'}>
+            <Txt variant={active ? 'bodyStrong' : 'label'} color={active ? 'action' : 'textSecondary'}>
               {o.label}
             </Txt>
           </Tap>
@@ -409,9 +482,28 @@ export function EmptyState({
 }
 
 export function LoadingState() {
+  const t = useTheme();
   return (
-    <View style={styles.state}>
-      <ActivityIndicator accessibilityLabel="불러오는 중" />
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel="불러오는 중"
+      accessibilityLiveRegion="polite"
+      style={styles.loadingRows}
+    >
+      {[0, 1, 2].map((row) => (
+        <View
+          key={row}
+          style={[styles.loadingRow, { borderBottomColor: t.line }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <View
+            style={[styles.loadingTitle, { backgroundColor: t.line, width: row === 1 ? '53%' : '66%' }]}
+          />
+          <View style={[styles.loadingCaption, { backgroundColor: t.bgSubtle }]} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -446,11 +538,16 @@ export function QueryBoundary<T>({
 }
 
 const styles = StyleSheet.create({
+  loadingRows: { paddingHorizontal: GUTTER },
+  loadingRow: {
+    height: 72,
+    justifyContent: 'center',
+    gap: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  loadingTitle: { height: 15, borderRadius: 4 },
+  loadingCaption: { width: '37%', height: 11, borderRadius: 4 },
   sticky: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     paddingHorizontal: GUTTER,
     paddingTop: space.md,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -461,8 +558,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginHorizontal: GUTTER,
     marginTop: space.xxxl,
-    borderTopWidth: 2,
-    paddingTop: space.md,
+    gap: space.sm,
+    paddingTop: space.xs,
     paddingBottom: space.sm,
   },
   sectionAction: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
@@ -476,7 +573,7 @@ const styles = StyleSheet.create({
   },
   infoRow: { flexDirection: 'row', gap: space.md, paddingVertical: 10 },
   badge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6 },
-  badgeMark: { width: 3, height: 12 },
+  badgeMark: { width: 6, height: 6, borderRadius: 3 },
   block: {
     paddingVertical: space.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -484,9 +581,16 @@ const styles = StyleSheet.create({
   },
   callout: { padding: space.lg },
   button: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg },
-  tabs: { flexGrow: 0, borderBottomWidth: StyleSheet.hairlineWidth },
-  tabsContent: { paddingHorizontal: GUTTER - space.md },
-  tab: { height: 44, justifyContent: 'center', paddingHorizontal: space.md, borderBottomWidth: 2 },
+  tabs: { flexGrow: 0 },
+  tabsContent: { paddingHorizontal: GUTTER, gap: 14, alignItems: 'center' },
+  tab: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+    borderBottomWidth: 2,
+  },
   state: {
     alignItems: 'center',
     justifyContent: 'center',

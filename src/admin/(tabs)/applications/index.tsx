@@ -129,7 +129,6 @@ export default function Applications() {
             </View>
           ) : undefined
         }
-        bottomInset={selecting ? 180 : undefined}
         footer={
           selecting ? (
             <StickyFooter>

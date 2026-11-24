@@ -1,26 +1,24 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Image } from 'expo-image';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, View, useColorScheme } from 'react-native';
+import { Wordmark } from '~/shared/wordmark';
+import { useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
-import { CENTER } from '@/config/center';
 import { DEMO_DATA } from '@/config/env';
-import { can } from '@/domain/permissions';
+import { canEnterConsole } from '@/domain/permissions';
 import { loginSchema, parseValues, type FieldErrors, type LoginInput } from '@/domain/schemas';
 import { SESSION_KEY, useLogout } from '@/features/auth/session';
-import { Badge, Button, Chips, GUTTER, TextField, Txt, radius, space, useTheme } from '~/ds';
+import { Button, Chips, GUTTER, TextField, Txt, space, useTheme } from '~/ds';
 import { notify } from '~/shared/dialogs';
 
-/** 데모 데이터(mock·시연 서버)에서만 노출하는 직원·관리자 계정 */
+/** 데모 데이터가 활성화된 환경에서만 노출하는 동아리 담당자·직원·관리자 계정 (웹 관리자 로그인과 같은 목록) */
 const STAFF_DEMOS = DEMO_ACCOUNTS.filter((a) =>
-  ['staff@demo.test', 'admin@demo.test', 'developer@demo.test'].includes(a.email),
+  ['leader@demo.test', 'staff@demo.test', 'admin@demo.test', 'developer@demo.test'].includes(a.email),
 );
 const DEMO_OPTIONS = STAFF_DEMOS.map((a) => ({ value: a.email as string, label: a.label as string }));
 
 export default function Login() {
   const t = useTheme();
-  const dark = useColorScheme() === 'dark';
   const qc = useQueryClient();
   const logout = useLogout();
   const [email, setEmail] = useState('');
@@ -30,9 +28,10 @@ export default function Login() {
   const login = useMutation({
     mutationFn: (input: LoginInput) => api.auth.login(input),
     onSuccess: (session) => {
-      if (!can(session.user, 'admin.access')) {
+      // 루트 게이트와 같은 기준 — 운영자 또는 동아리 담당자
+      if (!canEnterConsole(session.user)) {
         logout.mutate();
-        notify('관리자 권한이 없는 계정입니다', '센터 직원 계정으로 로그인해 주세요.');
+        notify('관리자 권한이 없는 계정입니다', '센터 직원 또는 동아리 담당자 계정으로 로그인해 주세요.');
         return;
       }
       // 세션이 바뀌면 루트 게이트가 관리자 화면으로 전환한다
@@ -42,6 +41,7 @@ export default function Login() {
   });
   const busy = login.isPending || logout.isPending;
 
+  const passwordRef = useRef<TextInput>(null);
   const submit = () => {
     const parsed = parseValues(loginSchema, { email, password });
     if (!parsed.ok) {
@@ -61,23 +61,12 @@ export default function Login() {
     >
       <View style={styles.inner}>
         <View style={styles.brand}>
-          {dark ? (
-            <Txt variant="title2" style={{ textAlign: 'center' }}>
-              {CENTER.formalName}
-            </Txt>
-          ) : (
-            <Image
-              source={require('../../assets/logo-horizontal.jpg')}
-              accessibilityLabel={CENTER.formalName}
-              style={styles.logo}
-              contentFit="contain"
-            />
-          )}
-          <View style={{ alignSelf: 'center' }}>
-            <Badge text="관리자" tone="brand" />
-          </View>
-          <Txt variant="label" color="textSecondary" style={{ textAlign: 'center' }}>
-            센터 직원 계정으로 로그인해 주세요
+          <Wordmark width={165} />
+          <Txt variant="display" accessibilityRole="header">
+            관리자 로그인
+          </Txt>
+          <Txt variant="label" color="textSecondary">
+            센터 직원·동아리 담당자 계정으로 로그인해 주세요
           </Txt>
         </View>
 
@@ -91,9 +80,11 @@ export default function Login() {
             autoComplete="email"
             autoCorrect={false}
             returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
             error={errors.email}
           />
           <TextField
+            ref={passwordRef}
             label="비밀번호"
             value={password}
             onChangeText={setPassword}
@@ -101,7 +92,7 @@ export default function Login() {
             secureTextEntry
             autoComplete="current-password"
             autoCorrect={false}
-            returnKeyType="done"
+            returnKeyType="go"
             onSubmitEditing={submit}
             error={errors.password}
           />
@@ -111,8 +102,8 @@ export default function Login() {
         </View>
 
         {DEMO_DATA && (
-          <View style={[styles.demo, { backgroundColor: t.tone.warning.bg }]}>
-            <Txt variant="captionStrong" color={t.tone.warning.fg} style={{ paddingHorizontal: space.lg }}>
+          <View style={[styles.demo, { borderTopColor: t.line }]}>
+            <Txt variant="captionStrong" color="textTertiary" style={{ paddingHorizontal: space.lg }}>
               데모 계정 (개발용) · 눌러서 채우기
             </Txt>
             <View style={{ marginHorizontal: -(GUTTER - space.lg) }}>
@@ -135,7 +126,6 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: GUTTER, paddingVertical: 64 },
   inner: { width: '100%', maxWidth: 420, alignSelf: 'center', gap: space.xxxl },
-  brand: { alignItems: 'center', gap: space.md },
-  logo: { width: 216, height: 36 },
-  demo: { borderRadius: radius.md, paddingTop: space.md, paddingBottom: space.xs },
+  brand: { alignItems: 'flex-start', gap: space.sm },
+  demo: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.md, paddingBottom: space.xs },
 });

@@ -1,18 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, View, useColorScheme } from 'react-native';
+import { useRef, useState } from 'react';
+import { StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
-import { CENTER } from '@/config/center';
+import { Wordmark } from '~/shared/wordmark';
 import { DEMO_DATA } from '@/config/env';
 import { providerStates, type ProviderState } from '@/config/oauth';
 import type { OAuthProvider } from '@/domain/types';
 import { forgotPasswordSchema, loginSchema, parseValues, type FieldErrors } from '@/domain/schemas';
 import { SESSION_KEY } from '@/features/auth/session';
 import { Button, Gutter, Screen, Tap, TextField, Txt, radius, space, useTheme } from '~/ds';
-import { closeModal } from '~/user-kit';
+import { ModalGuard, closeModal } from '~/user-kit';
 import { notify } from '~/shared/dialogs';
 
 /** 각 공급자 브랜드 가이드 색 */
@@ -24,6 +24,13 @@ const SOCIAL: Record<
   naver: { bg: '#03C75A', fg: '#FFFFFF' },
   apple: { bg: '#000000', fg: '#FFFFFF', darkBg: '#FFFFFF', darkFg: '#000000' },
   google: { bg: '#FFFFFF', fg: '#1F1F1F', border: '#DADCE0' },
+};
+
+const marks = {
+  kakao: require('../../assets/brand/kakao.png'),
+  naver: require('../../assets/brand/naver.png'),
+  apple: require('../../assets/brand/apple.png'),
+  google: require('../../assets/brand/google.png'),
 };
 
 function SocialButton({ p }: { p: ProviderState }) {
@@ -43,7 +50,12 @@ function SocialButton({ p }: { p: ProviderState }) {
       }
       style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }]}
     >
-      <Txt variant="label" color={fg} style={{ flex: 1, textAlign: 'center' }}>
+      <Image
+        source={marks[p.provider]}
+        tintColor={p.provider === 'google' ? undefined : fg}
+        style={{ width: 22, height: 22 }}
+      />
+      <Txt variant="label" color={fg} style={{ flex: 1 }}>
         {p.label}로 계속하기
       </Txt>
       {!p.enabled && (
@@ -56,21 +68,9 @@ function SocialButton({ p }: { p: ProviderState }) {
 }
 
 function Header({ title, description }: { title: string; description: string }) {
-  const dark = useColorScheme() === 'dark';
   return (
     <Gutter style={styles.header}>
-      {dark ? (
-        <Txt variant="captionStrong" color="action">
-          {CENTER.formalName}
-        </Txt>
-      ) : (
-        <Image
-          source={require('../../assets/logo-horizontal.jpg')}
-          accessibilityLabel={CENTER.formalName}
-          style={{ width: 144, height: 24 }}
-          contentFit="contain"
-        />
-      )}
+      <Wordmark width={165} />
       <Txt variant="title1" accessibilityRole="header">
         {title}
       </Txt>
@@ -105,6 +105,7 @@ export default function LoginScreen() {
     onError: (e) => notify('요청하지 못했습니다', errorMessage(e)),
   });
 
+  const passwordRef = useRef<TextInput>(null);
   const submitLogin = () => {
     if (login.isPending) return;
     const parsed = parseValues(loginSchema, { email, password });
@@ -126,8 +127,40 @@ export default function LoginScreen() {
 
   if (mode === 'forgot') {
     return (
+      <>
+        <ModalGuard dirty={false} fallback="/my" />
+        <Screen>
+          <Header title="비밀번호 찾기" description="가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다." />
+          <Gutter style={styles.form}>
+            <TextField
+              label="이메일"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="example@email.com"
+              keyboardType="email-address"
+              autoComplete="email"
+              returnKeyType="send"
+              onSubmitEditing={submitForgot}
+              error={errors.email}
+            />
+            <Button label="재설정 링크 받기" onPress={submitForgot} loading={forgot.isPending} />
+            <Button
+              label="로그인으로 돌아가기"
+              variant="text"
+              size="md"
+              onPress={() => switchMode('login')}
+            />
+          </Gutter>
+        </Screen>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <ModalGuard dirty={false} fallback="/my" />
       <Screen>
-        <Header title="비밀번호 찾기" description="가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다." />
+        <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
         <Gutter style={styles.form}>
           <TextField
             label="이메일"
@@ -136,97 +169,83 @@ export default function LoginScreen() {
             placeholder="example@email.com"
             keyboardType="email-address"
             autoComplete="email"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
             error={errors.email}
           />
-          <Button label="재설정 링크 받기" onPress={submitForgot} loading={forgot.isPending} />
-          <Button label="로그인으로 돌아가기" variant="text" size="md" onPress={() => switchMode('login')} />
-        </Gutter>
-      </Screen>
-    );
-  }
-
-  return (
-    <Screen>
-      <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
-      <Gutter style={styles.form}>
-        <TextField
-          label="이메일"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="example@email.com"
-          keyboardType="email-address"
-          autoComplete="email"
-          error={errors.email}
-        />
-        <TextField
-          label="비밀번호"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="비밀번호"
-          secureTextEntry
-          autoComplete="password"
-          error={errors.password}
-        />
-        <Button label="로그인" onPress={submitLogin} loading={login.isPending} />
-        <View style={styles.links}>
-          <Tap onPress={() => switchMode('forgot')} accessibilityLabel="비밀번호 찾기" style={styles.link}>
-            <Txt variant="caption" color="textSecondary">
-              비밀번호 찾기
-            </Txt>
-          </Tap>
-          <View style={[styles.sep, { backgroundColor: t.line }]} />
-          <Tap onPress={() => router.replace('/signup')} accessibilityLabel="회원가입" style={styles.link}>
-            <Txt variant="caption" color="textSecondary">
-              회원가입
-            </Txt>
-          </Tap>
-        </View>
-      </Gutter>
-
-      {/* 서버 OAuth 설정 전에는 성공을 흉내 내지 않고 "설정 필요"로 안내한다 */}
-      <Gutter style={styles.socialBlock}>
-        <View style={styles.orRow}>
-          <View style={[styles.orLine, { backgroundColor: t.line }]} />
-          <Txt variant="small" color="textTertiary">
-            간편 로그인
-          </Txt>
-          <View style={[styles.orLine, { backgroundColor: t.line }]} />
-        </View>
-        {providerStates().map((p) => (
-          <SocialButton key={p.provider} p={p} />
-        ))}
-      </Gutter>
-
-      {DEMO_DATA && (
-        <Gutter style={styles.demo}>
-          <Txt variant="captionStrong" color="textTertiary">
-            개발용 데모 계정으로 바로 로그인
-          </Txt>
-          <View style={styles.demoChips}>
-            {DEMO_ACCOUNTS.filter(
-              (a) => a.email === 'member@demo.test' || a.email === 'leader@demo.test',
-            ).map((a) => (
-              <Tap
-                key={a.email}
-                rounded={radius.md}
-                accessibilityLabel={`${a.label} 데모 계정으로 로그인`}
-                onPress={() => login.mutate({ email: a.email, password: DEMO_PASSWORD })}
-                style={[styles.demoChip, { borderColor: t.tone.warning.fg }]}
-              >
-                <Txt variant="label" color={t.tone.warning.fg}>
-                  {a.label}
-                </Txt>
-              </Tap>
-            ))}
+          <TextField
+            ref={passwordRef}
+            label="비밀번호"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="비밀번호"
+            secureTextEntry
+            autoComplete="password"
+            returnKeyType="go"
+            onSubmitEditing={submitLogin}
+            error={errors.password}
+          />
+          <Button label="로그인" onPress={submitLogin} loading={login.isPending} />
+          <View style={styles.links}>
+            <Tap onPress={() => switchMode('forgot')} accessibilityLabel="비밀번호 찾기" style={styles.link}>
+              <Txt variant="caption" color="textSecondary">
+                비밀번호 찾기
+              </Txt>
+            </Tap>
+            <View style={[styles.sep, { backgroundColor: t.line }]} />
+            <Tap onPress={() => router.replace('/signup')} accessibilityLabel="회원가입" style={styles.link}>
+              <Txt variant="caption" color="textSecondary">
+                회원가입
+              </Txt>
+            </Tap>
           </View>
         </Gutter>
-      )}
-    </Screen>
+
+        {/* 서버 OAuth 설정 전에는 성공을 흉내 내지 않고 "설정 필요"로 안내한다 */}
+        <Gutter style={styles.socialBlock}>
+          <View style={styles.orRow}>
+            <View style={[styles.orLine, { backgroundColor: t.line }]} />
+            <Txt variant="small" color="textTertiary">
+              간편 로그인
+            </Txt>
+            <View style={[styles.orLine, { backgroundColor: t.line }]} />
+          </View>
+          {providerStates().map((p) => (
+            <SocialButton key={p.provider} p={p} />
+          ))}
+        </Gutter>
+
+        {DEMO_DATA && (
+          <Gutter style={styles.demo}>
+            <Txt variant="captionStrong" color="textTertiary">
+              개발용 데모 계정으로 바로 로그인
+            </Txt>
+            <View style={styles.demoChips}>
+              {DEMO_ACCOUNTS.filter(
+                (a) => a.email === 'member@demo.test' || a.email === 'leader@demo.test',
+              ).map((a) => (
+                <Tap
+                  key={a.email}
+                  rounded={radius.md}
+                  accessibilityLabel={`${a.label} 데모 계정으로 로그인`}
+                  onPress={() => login.mutate({ email: a.email, password: DEMO_PASSWORD })}
+                  style={[styles.demoChip, { borderColor: t.tone.warning.fg }]}
+                >
+                  <Txt variant="label" color={t.tone.warning.fg}>
+                    {a.label}
+                  </Txt>
+                </Tap>
+              ))}
+            </View>
+          </Gutter>
+        )}
+      </Screen>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { paddingTop: space.xxl, paddingBottom: space.xl, gap: space.sm },
+  header: { paddingTop: space.sm, paddingBottom: space.xl, gap: space.sm },
   form: { gap: space.lg },
   links: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   link: { paddingHorizontal: space.md, paddingVertical: 12 },
@@ -235,13 +254,14 @@ const styles = StyleSheet.create({
   orRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginBottom: space.xs },
   orLine: { flex: 1, height: StyleSheet.hairlineWidth },
   social: {
-    height: 50,
+    minHeight: 52,
+    gap: space.md,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: space.lg,
     borderWidth: 1,
   },
-  socialTag: { position: 'absolute', right: space.lg, opacity: 0.8 },
+  socialTag: { opacity: 0.84 },
   demo: { paddingTop: space.xxl, gap: space.sm },
   demoChips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   demoChip: { height: 44, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1 },

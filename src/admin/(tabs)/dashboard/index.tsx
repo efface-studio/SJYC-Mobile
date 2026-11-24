@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { router, Stack, type Href } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -9,9 +10,9 @@ import { useSession } from '@/features/auth/session';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { Rows, StatusBadge, useCan } from '~/admin-kit/components';
 import { dashboardQuery } from '~/admin-kit/queries';
+import { wordmarkHeader } from '~/shared/wordmark';
 import {
-  Badge,
-  Chips,
+  Divider,
   EmptyState,
   GUTTER,
   Gutter,
@@ -102,6 +103,9 @@ function Context() {
   if (!user) return null;
   return (
     <Gutter style={styles.context}>
+      <Txt variant="title1" accessibilityRole="header">
+        업무 현황
+      </Txt>
       <Txt variant="caption" color="textTertiary">
         {ROLE_LABEL[primaryRole(user)]} · {today}
       </Txt>
@@ -120,118 +124,153 @@ export default function Dashboard() {
 
   return (
     <>
-      <Stack.Screen options={{ title: '대시보드' }} />
+      <Stack.Screen
+        options={{
+          title: '업무 요약',
+          ...wordmarkHeader,
+        }}
+      />
       <Screen onRefresh={() => query.refetch()}>
         <Context />
-        <Chips options={PERIODS} value={String(days)} onChange={(v) => setDays(Number(v))} />
         <QueryBoundary query={query}>
-          {(d) => (
-            <>
-              {/* 웹과 같은 얇은 선 격자 — 칸 사이를 선으로만 나눈다 */}
-              <View style={[styles.grid, { borderColor: t.line }]}>
-                {KPIS.map((k) => (
-                  <Tap
-                    key={k.key}
-                    onPress={open(k.link)}
-                    accessibilityLabel={`${k.label(days)} ${d[k.key].toLocaleString('ko-KR')}${k.unit}`}
-                    style={[styles.kpi, { borderColor: t.line }]}
-                  >
-                    <Txt variant="caption" color="textTertiary" numberOfLines={1}>
-                      {k.label(days)}
-                    </Txt>
-                    <View style={styles.kpiValue}>
-                      <Txt variant="title1">{d[k.key].toLocaleString('ko-KR')}</Txt>
-                      <Txt variant="caption" color="textTertiary">
+          {(d) => {
+            const inbox = pending.filter((p) => d[p.key] > 0);
+            const total = inbox.reduce((sum, p) => sum + d[p.key], 0);
+            return (
+              <>
+                {pending.length > 0 && (
+                  <View>
+                    <Gutter style={[styles.inboxHead, { borderColor: t.line }]}>
+                      <Txt variant="title3" accessibilityRole="header">
+                        처리할 업무
+                      </Txt>
+                      <Txt variant="label" color="textSecondary">
+                        총 {total.toLocaleString('ko-KR')}건
+                      </Txt>
+                    </Gutter>
+                    {inbox.length > 0 ? (
+                      <Rows
+                        items={inbox}
+                        rowKey={(p) => p.key}
+                        render={(p) => (
+                          <ListRow
+                            title={p.title}
+                            trailing={
+                              <Txt variant="bodyStrong" color="action">
+                                {d[p.key]}건
+                              </Txt>
+                            }
+                            onPress={() => router.navigate(p.link.href)}
+                          />
+                        )}
+                      />
+                    ) : (
+                      <Gutter style={{ paddingVertical: space.lg }}>
+                        <Txt color="textSecondary">현재 처리할 업무가 없습니다.</Txt>
+                      </Gutter>
+                    )}
+                  </View>
+                )}
+                <Divider />
+                <Gutter style={styles.period}>
+                  <Txt variant="title3" accessibilityRole="header">
+                    운영 현황
+                  </Txt>
+                  <View style={styles.segment}>
+                    <SegmentedControl
+                      values={PERIODS.map((p) => p.label)}
+                      selectedIndex={days === 7 ? 0 : 1}
+                      onChange={(e) => setDays(e.nativeEvent.selectedSegmentIndex === 0 ? 7 : 30)}
+                    />
+                  </View>
+                </Gutter>
+                <View style={styles.grid}>
+                  {KPIS.map((k, i) => (
+                    <Tap
+                      key={k.key}
+                      onPress={open(k.link)}
+                      accessibilityLabel={`${k.label(days)} ${d[k.key]}${k.unit}`}
+                      style={[
+                        styles.kpi,
+                        i > 0 && {
+                          borderLeftWidth: StyleSheet.hairlineWidth,
+                          borderColor: t.line,
+                          paddingLeft: space.xl,
+                        },
+                      ]}
+                    >
+                      <Txt variant="caption" color="textSecondary">
+                        {k.label(days)}
+                      </Txt>
+                      <Txt variant="title1">
+                        {d[k.key].toLocaleString('ko-KR')}
                         {k.unit}
                       </Txt>
-                    </View>
-                  </Tap>
-                ))}
-              </View>
-
-              {pending.length > 0 && (
-                <>
-                  <SectionHeader title="처리 대기" />
-                  <Rows
-                    items={pending}
-                    rowKey={(p) => p.key}
-                    render={(p) => {
-                      const n = d[p.key];
-                      return (
-                        <ListRow
-                          title={p.title}
-                          subtitle={n > 0 ? `대기 ${n.toLocaleString('ko-KR')}건` : '대기 없음'}
-                          onPress={() => router.navigate(p.link.href)}
-                        />
-                      );
-                    }}
-                  />
-                </>
-              )}
-
-              <SectionHeader
-                title="최근 신청"
-                action={allowed('application.decide') ? '전체 보기' : undefined}
-                onAction={() => router.navigate({ pathname: '/applications', params: { status: 'all' } })}
-              />
-              {d.recentApplications.length === 0 ? (
-                <EmptyState title="최근 신청이 없습니다" />
-              ) : (
-                <Rows
-                  items={d.recentApplications}
-                  rowKey={(a) => a.id}
-                  render={(a) => (
-                    <ListRow
-                      meta={a.programTitle}
-                      title={a.applicantName}
-                      subtitle={formatDateTime(a.createdAt)}
-                      trailing={<StatusBadge {...APPLICATION_STATUS[a.status]} />}
-                      onPress={
-                        allowed('application.decide')
-                          ? () => router.push({ pathname: '/applications/[id]', params: { id: a.id } })
-                          : undefined
-                      }
-                    />
-                  )}
-                />
-              )}
-
-              <SectionHeader
-                title="최근 수정된 공지"
-                action={allowed('notice.write') ? '전체 보기' : undefined}
-                onAction={() => router.navigate('/more/notices')}
-              />
-              {d.recentNotices.length === 0 ? (
-                <EmptyState title="공지가 없습니다" />
-              ) : (
-                <Rows
-                  items={d.recentNotices}
-                  rowKey={(n) => n.id}
-                  render={(n) => (
-                    <ListRow
-                      meta={`${formatDate(n.updatedAt)} 수정`}
-                      title={n.title}
-                      trailing={<StatusBadge {...PUBLISH_STATUS[n.status]} />}
-                      onPress={
-                        allowed('notice.write')
-                          ? () => router.navigate({ pathname: '/more/notice/[id]', params: { id: n.id } })
-                          : undefined
-                      }
-                    />
-                  )}
-                />
-              )}
-
-              <Gutter style={styles.updated}>
-                <View>
-                  <Badge text={`${formatDateTime(d.generatedAt)} 기준`} />
+                    </Tap>
+                  ))}
                 </View>
-                <Txt variant="caption" color="textTertiary">
-                  화면을 아래로 당기면 새로고침됩니다
-                </Txt>
-              </Gutter>
-            </>
-          )}
+
+                <SectionHeader
+                  title="최근 신청"
+                  action={allowed('application.decide') ? '전체 보기' : undefined}
+                  onAction={() => router.navigate({ pathname: '/applications', params: { status: 'all' } })}
+                />
+                {d.recentApplications.length === 0 ? (
+                  <EmptyState title="최근 신청이 없습니다" />
+                ) : (
+                  <Rows
+                    items={d.recentApplications}
+                    rowKey={(a) => a.id}
+                    render={(a) => (
+                      <ListRow
+                        meta={a.programTitle}
+                        title={a.applicantName}
+                        subtitle={formatDateTime(a.createdAt)}
+                        trailing={<StatusBadge {...APPLICATION_STATUS[a.status]} />}
+                        onPress={
+                          allowed('application.decide')
+                            ? () => router.push({ pathname: '/applications/[id]', params: { id: a.id } })
+                            : undefined
+                        }
+                      />
+                    )}
+                  />
+                )}
+
+                <SectionHeader
+                  title="최근 수정된 공지"
+                  action={allowed('notice.write') ? '전체 보기' : undefined}
+                  onAction={() => router.navigate('/more/notices')}
+                />
+                {d.recentNotices.length === 0 ? (
+                  <EmptyState title="공지가 없습니다" />
+                ) : (
+                  <Rows
+                    items={d.recentNotices}
+                    rowKey={(n) => n.id}
+                    render={(n) => (
+                      <ListRow
+                        meta={`${formatDate(n.updatedAt)} 수정`}
+                        title={n.title}
+                        trailing={<StatusBadge {...PUBLISH_STATUS[n.status]} />}
+                        onPress={
+                          allowed('notice.write')
+                            ? () => router.navigate({ pathname: '/more/notice/[id]', params: { id: n.id } })
+                            : undefined
+                        }
+                      />
+                    )}
+                  />
+                )}
+
+                <Gutter style={styles.updated}>
+                  <Txt variant="caption" color="textTertiary">
+                    {formatDateTime(d.generatedAt)} 기준
+                  </Txt>
+                </Gutter>
+              </>
+            );
+          }}
         </QueryBoundary>
       </Screen>
     </>
@@ -239,22 +278,24 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  context: { paddingTop: space.sm, paddingBottom: space.xs },
-  grid: {
+  context: { paddingTop: space.xs, paddingBottom: space.lg, gap: 2 },
+  inboxHead: {
     flexDirection: 'row',
-    marginHorizontal: GUTTER,
-    marginTop: space.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-  },
-  kpi: {
-    flex: 1,
-    gap: space.xs,
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
-    borderRightWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  kpiValue: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  updated: { alignItems: 'center', gap: space.sm, paddingTop: space.xxxl },
+  period: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: space.md,
+    gap: 8,
+  },
+  segment: { width: 156 },
+  grid: { flexDirection: 'row', marginHorizontal: GUTTER },
+  kpi: { flex: 1, paddingVertical: space.sm, gap: 2 },
+  updated: { alignItems: 'center', paddingTop: space.xxl },
 });

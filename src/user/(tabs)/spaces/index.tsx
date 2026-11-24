@@ -1,3 +1,4 @@
+import { SpacePhoto } from '~/user-kit/space-photo';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { api } from '@/api';
@@ -24,6 +25,7 @@ export default function SpacesScreen() {
             {data.map((s) => (
               <ListRow
                 key={s.id}
+                leading={<SpacePhoto space={s} compact />}
                 meta={`${s.floor} · 최대 ${s.capacity}명`}
                 title={s.name}
                 subtitle={s.description}

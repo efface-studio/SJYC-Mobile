@@ -22,9 +22,12 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => api.auth.logout(),
     onSettled: () => {
-      // 다른 사용자 데이터가 캐시에 남지 않도록 전부 비운다
-      qc.clear();
+      // 세션 쿼리는 지우지 않고 값만 null 로 바꾼다 — 지우면 세션만 구독하는 화면(앱 루트 게이트 등)이
+      // 지워진 옛 쿼리를 계속 보고 있어 로그아웃 상태를 받지 못한다
       qc.setQueryData(SESSION_KEY, null);
+      // 다른 사용자 데이터가 캐시에 남지 않도록 세션 외 캐시는 전부 비운다
+      qc.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_KEY[0] });
+      qc.getMutationCache().clear();
     },
   });
 }

@@ -43,6 +43,10 @@ npm run export:admin
 ```
 
 - iOS 빌드는 Xcode 26 이 있는 macOS 또는 EAS Build(`eas build -p ios --profile development`) 가 필요하다. Liquid Glass 탭 바는 iOS 26 SDK 로 빌드해야 나타난다.
+- 로컬 서버에 붙여 iOS 시뮬레이터로 확인: 시뮬레이터는 Mac 의 `localhost` 에 그대로 닿는다.
+  `EXPO_PUBLIC_API_MODE=http EXPO_PUBLIC_API_BASE_URL=http://localhost:4000/api/v1 EXPO_PUBLIC_DEMO_DATA=1 npm run ios` (관리자 앱은 `ios:admin`)
+- 저장소 경로에 한글 등 ASCII 가 아닌 문자가 있으면 `pod install` 이 Ruby 인코딩 오류(`incompatible character encodings: BINARY (ASCII-8BIT) and UTF-8`, hermes-engine.podspec)로 실패한다.
+  ASCII 경로에 두는 것이 가장 간단하고, 그대로 쓸 때는 `LANG=en_US.UTF-8` 과 함께 `HERMES_ENGINE_TARBALL_PATH` 에 React Native 가 받아 둔 Hermes tarball(`~/Library/Caches/ReactNative/hermes-ios-<버전>-debug.tar.gz`)을 지정한 뒤 `cd ios && pod install` 한다.
 - Android: `npm run android` (에뮬레이터 또는 기기 필요), 빌드만 확인하려면 `npx expo prebuild -p android` 후 `cd android && ./gradlew assembleDebug`.
 
 ## 범위 메모
