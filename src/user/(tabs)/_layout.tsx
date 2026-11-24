@@ -40,7 +40,18 @@ const tabs = [
   },
 ] as const;
 
+// Older installations can receive this JS update before they receive the iOS asset catalog.
+const hasTabCatalog = Platform.OS === 'ios'
+  ? Image.getSize('sjyc-tab-home').then(() => true, () => false)
+  : Promise.resolve(false);
+
 function TabNavigator() {
+  const [useCatalog, setUseCatalog] = useState<boolean>();
+  useEffect(() => {
+    let mounted = true;
+    void hasTabCatalog.then((available) => { if (mounted) setUseCatalog(available); });
+    return () => { mounted = false; };
+  }, []);
   const t = useTheme();
   // Android Material의 네이티브 탭은 비트맵까지 단색으로 칠한다.
   if (Platform.OS === 'android') {
@@ -70,12 +81,22 @@ function TabNavigator() {
       </Tabs>
     );
   }
+  if (Platform.OS === 'ios' && useCatalog === undefined) return null;
   return (
-    <NativeTabs tintColor={t.action} labelVisibilityMode="labeled" minimizeBehavior="never">
+    <NativeTabs
+      tintColor={t.action}
+      labelStyle={{ fontFamily: FONT.semibold, fontSize: 11 }}
+      labelVisibilityMode="labeled"
+      minimizeBehavior="never"
+    >
       {tabs.map(({ name, label, art, rest }) => (
         <NativeTabs.Trigger key={name} name={name}>
           <NativeTabs.Trigger.Label>{label}</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={{ default: rest, selected: art }} renderingMode="original" />
+          {useCatalog ? (
+            <NativeTabs.Trigger.Icon xcasset={{ default: 'sjyc-tab-' + name + '-rest', selected: 'sjyc-tab-' + name }} />
+          ) : (
+            <NativeTabs.Trigger.Icon src={{ default: rest, selected: art }} renderingMode="original" />
+          )}
         </NativeTabs.Trigger>
       ))}
     </NativeTabs>

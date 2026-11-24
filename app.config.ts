@@ -56,6 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     ...(FLAVOR === "user"
       ? [
+          './scripts/with-ios-tab-icons.cjs',
           [
             "expo-camera",
             {
