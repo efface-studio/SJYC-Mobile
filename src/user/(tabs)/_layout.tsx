@@ -1,4 +1,5 @@
-import { router, Tabs } from 'expo-router';
+import { openScreen } from '~/shared/navigation';
+import { Tabs } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { Image, Keyboard, Platform, StyleSheet, View } from 'react-native';
 import { useEffect, useState } from 'react';
@@ -99,7 +100,7 @@ export default function UserTabsLayout() {
       {!keyboard && (
         <Tap
           accessibilityLabel="출석 QR 스캔"
-          onPress={() => router.push('/my/check-in')}
+          onPress={() => openScreen('/my/check-in')}
           rounded={24}
           style={[
             styles.scan,

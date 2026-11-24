@@ -1,4 +1,5 @@
-import { router, Stack } from 'expo-router';
+import { openScreen } from '~/shared/navigation';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/api';
 import { PUBLISH_STATUS, RECRUIT_STATUS } from '@/domain/labels';
@@ -17,7 +18,7 @@ import { Chips, ListRow } from '~/ds';
 
 const SORTS = sortOptions('프로그램명순');
 
-const open = (id: string) => router.push({ pathname: '/more/program/[id]', params: { id } });
+const open = (id: string) => openScreen({ pathname: '/more/program/[id]', params: { id } });
 
 export default function Programs() {
   const allowed = useCan()('program.write');

@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { openScreen } from '~/shared/navigation';
 import { View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { useSession } from '@/features/auth/session';
@@ -38,7 +38,7 @@ export default function Settings() {
     <Screen>
       <SectionHeader title="계정" />
       <Rows>
-        <ListRow title="프로필" onPress={() => router.push('/my/profile')} />
+        <ListRow title="프로필" onPress={() => openScreen('/my/profile')} />
         <ListRow
           title="이메일 인증"
           subtitle={user.email}
@@ -50,7 +50,7 @@ export default function Settings() {
           onPress={
             user.emailVerified
               ? undefined
-              : () => router.push({ pathname: '/verify-email', params: { email: user.email } })
+              : () => openScreen({ pathname: '/verify-email', params: { email: user.email } })
           }
         />
       </Rows>
@@ -59,7 +59,7 @@ export default function Settings() {
         <ListRow title="비밀번호" onPress={() => void reset()} />
         <ListRow
           title="연결된 소셜 계정"
-          onPress={() => router.push('/my/social-accounts')}
+          onPress={() => openScreen('/my/social-accounts')}
           trailing={
             social.data && (
               <View
@@ -73,15 +73,15 @@ export default function Settings() {
             )
           }
         />
-        <ListRow title="로그인 기기" onPress={() => router.push('/my/devices')} />
+        <ListRow title="로그인 기기" onPress={() => openScreen('/my/devices')} />
       </Rows>
       <SectionHeader title="알림" />
       <Rows>
-        <ListRow title="알림 설정" onPress={() => router.push('/my/notification-settings')} />
+        <ListRow title="알림 설정" onPress={() => openScreen('/my/notification-settings')} />
       </Rows>
       <SectionHeader title="계정 관리" />
       <Rows>
-        <ListRow title="회원 탈퇴" onPress={() => router.push('/my/withdraw')} />
+        <ListRow title="회원 탈퇴" onPress={() => openScreen('/my/withdraw')} />
       </Rows>
     </Screen>
   );

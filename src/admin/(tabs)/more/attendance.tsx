@@ -1,6 +1,7 @@
+import { openScreen } from '~/shared/navigation';
 import { CreateSession } from '~/shared/attendance-controls';
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/api';
 import { attendanceTargetKey, sessionCounts } from '@/domain/attendance';
@@ -45,7 +46,7 @@ function TargetPanel({ target }: { target: AttendanceTargetSummary }) {
           <CreateSession
             target={target}
             count={list.length}
-            onCreated={(s) => router.push(`/attendance/${s.id}`)}
+            onCreated={(s) => openScreen(`/attendance/${s.id}`)}
           />
           <SectionHeader title={`출석부 ${list.length}개 · 명단 ${target.rosterCount}명`} />
           {list.length === 0 ? (
@@ -60,7 +61,7 @@ function TargetPanel({ target }: { target: AttendanceTargetSummary }) {
                   title={s.title}
                   subtitle={summary(s)}
                   trailing={s.checkInCode ? <Badge text="코드 진행 중" tone="brand" /> : undefined}
-                  onPress={() => router.push(`/attendance/${s.id}`)}
+                  onPress={() => openScreen(`/attendance/${s.id}`)}
                 />
               )}
             />

@@ -1,6 +1,7 @@
+import { openScreen } from '~/shared/navigation';
 import { SpacePhoto } from '~/user-kit/space-photo';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { api } from '@/api';
 import { RESERVATION_MAX_DAYS_AHEAD, RESERVATION_MAX_HOURS } from '@/domain/space';
 import { Badge, Gutter, ListRow, QueryBoundary, Screen, space } from '~/ds';
@@ -30,7 +31,7 @@ export default function SpacesScreen() {
                 title={s.name}
                 subtitle={s.description}
                 trailing={s.reservable ? undefined : <Badge text="예약 중지" tone="warning" />}
-                onPress={() => router.push(`/spaces/${s.id}`)}
+                onPress={() => openScreen(`/spaces/${s.id}`)}
               />
             ))}
           </Rows>

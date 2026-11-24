@@ -1,3 +1,4 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useIsFocused } from 'expo-router';
@@ -57,7 +58,7 @@ export default function CheckInScreen() {
       <Screen>
         {session.isPending ? null : !session.data?.user ? (
           <FormSection title="로그인 후 출석할 수 있습니다">
-            <Button label="로그인" onPress={() => router.push('/login')} />
+            <Button label="로그인" onPress={() => openScreen('/login')} />
           </FormSection>
         ) : check.isSuccess ? (
           <FormSection title="출석했습니다">

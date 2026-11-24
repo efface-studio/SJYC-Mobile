@@ -1,3 +1,4 @@
+import { editMobilePhone, formatMobilePhone } from '@/lib/phone';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useState, type Ref } from 'react';
 import {
@@ -89,12 +90,14 @@ export function TextField({
 }) {
   const t = useTheme();
   const [focused, setFocused] = useState(false);
+  const phone = keyboardType === 'phone-pad' || autoComplete === 'tel';
+  const displayed = phone ? formatMobilePhone(value) : value;
   return (
     <FieldShell label={label} error={error} hint={hint}>
       <TextInput
         ref={ref}
-        value={value}
-        onChangeText={onChangeText}
+        value={displayed}
+        onChangeText={phone ? (next) => onChangeText(editMobilePhone(displayed, next)) : onChangeText}
         placeholder={placeholder}
         placeholderTextColor={t.textTertiary}
         multiline={multiline}
