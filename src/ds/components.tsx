@@ -482,9 +482,28 @@ export function EmptyState({
 }
 
 export function LoadingState() {
+  const t = useTheme();
   return (
-    <View style={styles.state}>
-      <ActivityIndicator accessibilityLabel="불러오는 중" />
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel="불러오는 중"
+      accessibilityLiveRegion="polite"
+      style={styles.loadingRows}
+    >
+      {[0, 1, 2].map((row) => (
+        <View
+          key={row}
+          style={[styles.loadingRow, { borderBottomColor: t.line }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <View
+            style={[styles.loadingTitle, { backgroundColor: t.line, width: row === 1 ? '53%' : '66%' }]}
+          />
+          <View style={[styles.loadingCaption, { backgroundColor: t.bgSubtle }]} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -519,6 +538,15 @@ export function QueryBoundary<T>({
 }
 
 const styles = StyleSheet.create({
+  loadingRows: { paddingHorizontal: GUTTER },
+  loadingRow: {
+    height: 72,
+    justifyContent: 'center',
+    gap: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  loadingTitle: { height: 15, borderRadius: 4 },
+  loadingCaption: { width: '37%', height: 11, borderRadius: 4 },
   sticky: {
     paddingHorizontal: GUTTER,
     paddingTop: space.md,
