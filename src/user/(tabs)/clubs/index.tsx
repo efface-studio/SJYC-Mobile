@@ -31,7 +31,7 @@ function ClubRow({ c }: { c: Club }) {
     >
       <View style={styles.copy}>
         <View style={styles.badges}>
-          <Txt variant="caption" color="textTertiary" numberOfLines={1}>
+          <Txt variant="caption" color="textTertiary" numberOfLines={1} style={styles.field}>
             {c.field}
           </Txt>
           {c.recruiting && <Badge text="모집 중" tone="brand" />}
@@ -91,8 +91,9 @@ export default function ClubsScreen() {
 }
 
 const styles = StyleSheet.create({
-  copy: { flex: 1, gap: 3 },
-  thumb: { width: 80, borderRadius: radius.sm },
+  copy: { flex: 1, minWidth: 0, gap: 3 },
+  field: { minWidth: 0, flexShrink: 1 },
+  thumb: { width: 80, flexShrink: 0, borderRadius: radius.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
