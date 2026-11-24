@@ -1,3 +1,4 @@
+import type { SettingsRecord, ServerLogSnapshot } from '../domain/site-settings';
 import type {
   AttendanceSessionInput,
   CheckInInput,
@@ -201,7 +202,10 @@ export interface ApiClient {
     posts(id: string): Promise<ClubPost[]>;
     apply(id: string, input: ClubApplyInput): Promise<ClubApplication>;
   };
+  site: { settings(): Promise<SettingsRecord> };
   admin: {
+    updateSettings(input: SettingsRecord): Promise<SettingsRecord>;
+    serverLogs(): Promise<ServerLogSnapshot>;
     dashboard(periodDays: number): Promise<DashboardSummary>;
     notices: {
       list(query: AdminListQuery): Promise<Page<Notice>>;

@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
+import { useMemo } from 'react';
+import { readBanners } from '@/domain/mobile-banners';
+import { HomeBanner } from '~/user-kit/home-banner';
 import { router } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '@/api';
@@ -66,6 +68,9 @@ export default function HomeScreen() {
     queryKey: ['programs', { recruitStatus: 'open', pageSize: 6 }],
     queryFn: () => api.programs.list({ recruitStatus: 'open', pageSize: 6 }),
   });
+  const settings = useQuery({ queryKey: ['site-settings'], queryFn: () => api.site.settings() });
+  const config = useMemo(() => settings.data && readBanners(settings.data.values.mobileBanners), [settings.data]);
+  const clubs = useQuery({ queryKey: ['clubs'], queryFn: () => api.clubs.list(), enabled: config?.automatic === true });
   const notices = useQuery({
     queryKey: ['notices', { pageSize: 4 }],
     queryFn: () => api.notices.list({ pageSize: 4 }),
@@ -76,24 +81,9 @@ export default function HomeScreen() {
   const photos = (media.data ?? []).filter((m) => m.kind === 'photo').slice(0, 8);
 
   return (
-    <Screen onRefresh={() => Promise.all([programs.refetch(), notices.refetch(), media.refetch()])}>
+    <Screen onRefresh={() => Promise.all([programs.refetch(), notices.refetch(), media.refetch(), settings.refetch(), ...(config?.automatic ? [clubs.refetch()] : [])])}>
       <Gutter>
-        <Tap
-          rounded={12}
-          onPress={() => router.navigate('/programs')}
-          accessibilityLabel="프로그램 찾아보기"
-          style={{ backgroundColor: t.card }}
-        >
-          <Image
-            source={require('../../../../assets/center/program-studio.webp')}
-            contentFit="cover"
-            style={{ width: '100%', aspectRatio: 2.35, borderRadius: 12 }}
-          />
-          <View style={styles.featureLink}>
-            <Txt variant="title2">프로그램 찾아보기</Txt>
-            <Icon ios="arrow.up.right" android="north_east" color={t.action} size={20} />
-          </View>
-        </Tap>
+        <HomeBanner config={config} programs={programs.data?.items ?? []} clubs={clubs.data ?? []} />
         <View style={[styles.shortcutRow, { borderColor: t.line }]}>
           <Tap
             rounded={6}
@@ -205,13 +195,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  featureLink: {
-    paddingHorizontal: 2,
-    paddingVertical: 11,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   shortcutRow: {
     flexDirection: 'row',
     paddingVertical: 3,

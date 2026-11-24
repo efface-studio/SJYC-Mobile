@@ -188,7 +188,10 @@ export const httpClient: ApiClient = {
     posts: (id) => request('GET', `/clubs/${enc(id)}/posts`),
     apply: (id, input) => request('POST', `/clubs/${enc(id)}/applications`, { body: input }),
   },
+  site: { settings: () => request('GET', '/site/settings') },
   admin: {
+    updateSettings: (input) => request('PUT', '/admin/site-settings', { body: input }),
+    serverLogs: () => request('GET', '/admin/server-logs'),
     dashboard: (periodDays) => request('GET', '/admin/dashboard', { query: { periodDays } }),
     notices: {
       list: (query) => request('GET', '/admin/notices', { query: { ...query } }),

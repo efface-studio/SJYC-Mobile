@@ -1,3 +1,4 @@
+import { settingsWriteSchema } from '@/domain/site-settings';
 /**
  * 개발용 mock adapter — 서버가 준비되기 전 UI 흐름을 검증하기 위한 구현이다.
  * 서버가 해야 할 검증(세션, 권한, 중복 신청, 정원, 취소 기한)을 같은 규칙으로 흉내 내지만
@@ -1009,7 +1010,30 @@ export const mockClient: ApiClient = {
       }),
   },
 
+  site: { settings: () => respond((db) => db.siteSettings ?? { version: 0, values: {} }) },
   admin: {
+    serverLogs: () =>
+      respond((db) => {
+        requirePermission(db, 'developer.access');
+        return { source: 'mock', startedAt: null, capacity: 0, entries: [] };
+      }),
+    updateSettings: (input) =>
+      respond((db) => {
+        const actor = requirePermission(db, 'site.manage');
+        const result = settingsWriteSchema.safeParse(input);
+        if (!result.success)
+          throw new ApiError('VALIDATION', result.error.issues[0]?.message ?? '설정을 확인해 주세요.');
+        if (input.version !== (db.siteSettings?.version ?? 0))
+          throw new ApiError('CONFLICT', '다른 관리자가 수정했습니다. 최신 설정을 불러와 주세요.');
+        db.siteSettings = { version: input.version + 1, values: result.data.values };
+        audit(db, actor, {
+          action: 'site.settings.update',
+          targetType: 'site_settings',
+          targetId: 'site',
+          summary: '사이트 설정 변경',
+        });
+        return db.siteSettings;
+      }),
     dashboard: (periodDays) =>
       respond((db) => {
         requirePermission(db, 'admin.access');

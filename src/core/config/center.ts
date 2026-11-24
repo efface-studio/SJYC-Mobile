@@ -110,6 +110,22 @@ const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
  * 공휴일·임시 휴관은 반영하지 못하므로 화면에 공지 확인 안내를 함께 표시한다.
  */
 export function hoursOn(now: Date): TodayHours {
+  return homeHoursOn(now, {
+    weekdayHours: '06:00-22:00',
+    saturdayHours: '06:00-21:00',
+    sundayHours: '06:00-18:00',
+    closedSunday: 'second',
+  });
+}
+export function homeHoursOn(
+  now: Date,
+  settings: {
+    weekdayHours: string;
+    saturdayHours: string;
+    sundayHours: string;
+    closedSunday: 'second' | 'none';
+  },
+): TodayHours {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Seoul',
     weekday: 'short',
@@ -120,9 +136,9 @@ export function hoursOn(now: Date): TodayHours {
     parts.find((p) => p.type === 'weekday')?.value ?? '',
   );
   const weekday = WEEKDAY[idx] ?? '';
-  if (idx === 0 && day >= 8 && day <= 14)
+  if (settings.closedSunday === 'second' && idx === 0 && day >= 8 && day <= 14)
     return { weekday, open: false, hours: '휴관 (매월 둘째 주 일요일)' };
-  if (idx === 0) return { weekday, open: true, hours: '06:00 – 18:00' };
-  if (idx === 6) return { weekday, open: true, hours: '06:00 – 21:00' };
-  return { weekday, open: true, hours: '06:00 – 22:00' };
+  if (idx === 0) return { weekday, open: true, hours: settings.sundayHours.replace('-', ' – ') };
+  if (idx === 6) return { weekday, open: true, hours: settings.saturdayHours.replace('-', ' – ') };
+  return { weekday, open: true, hours: settings.weekdayHours.replace('-', ' – ') };
 }
