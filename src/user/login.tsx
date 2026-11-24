@@ -73,20 +73,6 @@ function SocialButton({ p }: { p: ProviderState }) {
   );
 }
 
-function Header({ title, description }: { title: string; description: string }) {
-  return (
-    <Gutter style={styles.header}>
-      <Wordmark width={165} />
-      <Txt variant="title1" accessibilityRole="header">
-        {title}
-      </Txt>
-      <Txt variant="caption" color="textTertiary">
-        {description}
-      </Txt>
-    </Gutter>
-  );
-}
-
 export default function LoginScreen() {
   const motion = useLoginMotion();
   const [loginError, setLoginError] = useState('');
@@ -148,7 +134,13 @@ export default function LoginScreen() {
       <>
         <ModalGuard dirty={false} fallback="/my" />
         <Screen>
-          <Header title="비밀번호 찾기" description="가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다." />
+          <Gutter style={styles.header}>
+            <Wordmark width={165} />
+            <Txt variant="title1" accessibilityRole="header">비밀번호 찾기</Txt>
+            <Txt variant="caption" color="textTertiary">
+              가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다.
+            </Txt>
+          </Gutter>
           <Gutter style={styles.form}>
             <TextField
               label="이메일"
@@ -179,7 +171,9 @@ export default function LoginScreen() {
       <ModalGuard dirty={false} fallback="/my" />
       <Screen>
         <AuthReveal delay={0} reduce={motion.reduce}>
-          <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
+          <Gutter style={styles.header}>
+            <Wordmark width={248} />
+          </Gutter>
         </AuthReveal>
         <AuthReveal delay={70} reduce={motion.reduce}>
           <Gutter style={styles.form}>
