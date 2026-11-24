@@ -172,7 +172,7 @@ export default function LoginScreen() {
       <Screen>
         <AuthReveal delay={0} reduce={motion.reduce}>
           <Gutter style={styles.header}>
-            <Wordmark width={248} />
+            <Wordmark width={165} />
           </Gutter>
         </AuthReveal>
         <AuthReveal delay={70} reduce={motion.reduce}>
