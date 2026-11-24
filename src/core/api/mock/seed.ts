@@ -46,6 +46,7 @@ export interface MockMembership {
 }
 
 export interface MockDb {
+  profilePhotos?: Record<string, string>;
   siteSettings?: SettingsRecord;
   version: 8;
   notifications: Notification[];

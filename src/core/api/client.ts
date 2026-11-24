@@ -105,6 +105,8 @@ export interface ApiClient {
     resetPassword(token: string, password: string): Promise<void>;
   };
   me: {
+    profilePhoto(): Promise<{ image: string | null }>;
+    setProfilePhoto(image: string | null): Promise<{ image: string | null }>;
     updateProfile(input: ProfileInput): Promise<User>;
     withdraw(): Promise<void>;
     applications(): Promise<ProgramApplication[]>;

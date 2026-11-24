@@ -342,6 +342,14 @@ export const mockClient: ApiClient = {
   },
 
   me: {
+    profilePhoto: () => respond((db) => ({ image: db.profilePhotos?.[requireUser(db).id] ?? null })),
+    setProfilePhoto: (image) => respond((db) => {
+      const id = requireUser(db).id;
+      const photos = db.profilePhotos ??= {};
+      if (image === null) delete photos[id];
+      else photos[id] = image;
+      return { image };
+    }),
     updateProfile: (input) =>
       respond((db) => {
         const u = requireUser(db);
