@@ -57,7 +57,7 @@ export default function NoticesScreen() {
                   key={n.id}
                   meta={`${NOTICE_CATEGORY_LABEL[n.category]} · ${n.publishedAt ? formatDate(n.publishedAt) : ''}`}
                   title={n.title}
-                  trailing={n.pinned ? <Badge text="중요" tone="brand" /> : undefined}
+                  titlePrefix={n.pinned ? <Badge text="중요" tone="brand" /> : undefined}
                   onPress={() => router.push(`/notices/${n.id}`)}
                 />
               ))}
