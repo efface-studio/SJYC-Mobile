@@ -20,16 +20,9 @@ export function confirmFeedback(password: string, confirmation: string) {
   if (confirmation.length >= password.length) return '비밀번호가 일치하지 않습니다.';
 }
 
-const emailDomains = ['naver.com', 'gmail.com', 'kakao.com', 'daum.net', 'hanmail.net', 'icloud.com'];
+export const emailDomains = ['naver.com', 'gmail.com', 'kakao.com', 'daum.net', 'hanmail.net', 'icloud.com'];
 
-export function suggestedEmails(input: string) {
-  const parts = input.trim().split('@');
-  const [local, domain = ''] = parts;
-  if (!local || parts.length !== 2 || /\s/.test(input.trim())) return [];
-  const prefix = domain.toLowerCase();
-  if (emailDomains.includes(prefix)) return [];
-  return emailDomains
-    .filter((item) => item.startsWith(prefix))
-    .slice(0, 3)
-    .map((item) => local + '@' + item);
+export function emailWithDomain(value: string, domain: string) {
+  const local = value.split('@')[0]?.trim();
+  return local && emailDomains.includes(domain) ? local + '@' + domain : value;
 }
