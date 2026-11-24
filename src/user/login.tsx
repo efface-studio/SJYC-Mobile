@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -14,6 +14,7 @@ import { forgotPasswordSchema, loginSchema, parseValues, type FieldErrors } from
 import { SESSION_KEY } from '@/features/auth/session';
 import { Button, Gutter, Screen, Tap, TextField, Txt, radius, space, useTheme } from '~/ds';
 import { ModalGuard, closeModal } from '~/user-kit';
+import { beginSocial, socialMarks } from '~/user-kit/social-accounts';
 import { notify } from '~/shared/dialogs';
 
 /** 각 공급자 브랜드 가이드 색 */
@@ -27,34 +28,24 @@ const SOCIAL: Record<
   google: { bg: '#FFFFFF', fg: '#1F1F1F', border: '#DADCE0' },
 };
 
-const marks = {
-  kakao: require('../../assets/brand/kakao.png'),
-  naver: require('../../assets/brand/naver.png'),
-  apple: require('../../assets/brand/apple.png'),
-  google: require('../../assets/brand/google.png'),
-};
-
 function SocialButton({ p }: { p: ProviderState }) {
   const dark = useColorScheme() === 'dark';
   const c = SOCIAL[p.provider];
   const bg = dark && c.darkBg ? c.darkBg : c.bg;
   const fg = dark && c.darkFg ? c.darkFg : c.fg;
+  const start = useMutation({ mutationFn: () => beginSocial(p.provider, false), onError: (err) => notify('소셜 로그인', errorMessage(err)) });
   return (
     <Tap
       rounded={radius.md}
       accessibilityLabel={`${p.label}로 계속하기${p.enabled ? '' : ', 설정 필요'}`}
-      onPress={() =>
-        notify(
-          `${p.label} 로그인`,
-          '서버 연동 설정이 끝나지 않아 아직 사용할 수 없습니다. 이메일로 로그인해 주세요.',
-        )
-      }
+      disabled={!p.enabled || start.isPending}
+      onPress={() => start.mutate()}
       style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }]}
     >
       <View style={styles.socialSide}>
         <Image
           contentFit="contain"
-          source={marks[p.provider]}
+          source={socialMarks[p.provider]}
           tintColor={p.provider === 'google' ? undefined : fg}
           style={styles.providerMark}
         />
@@ -91,6 +82,7 @@ export default function LoginScreen() {
   const motion = useLoginMotion();
   const [loginError, setLoginError] = useState('');
   const t = useTheme();
+  const providers = useQuery({ queryKey: ['available-social-providers'], queryFn: api.auth.socialProviders, staleTime: 60_000 });
   const qc = useQueryClient();
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [email, setEmail] = useState('');
@@ -245,7 +237,7 @@ export default function LoginScreen() {
             <View style={[styles.orLine, { backgroundColor: t.line }]} />
           </View>
           {providerStates().map((p) => (
-            <SocialButton key={p.provider} p={p} />
+            <SocialButton key={p.provider} p={{ ...p, enabled: providers.data?.includes(p.provider) ?? false }} />
           ))}
         </Gutter>
 

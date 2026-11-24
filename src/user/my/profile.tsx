@@ -4,8 +4,6 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api, errorMessage, isApiError } from '@/api';
-import { OAUTH_PROVIDERS, providerStates } from '@/config/oauth';
-import { OAUTH_PROVIDER_LABEL } from '@/domain/labels';
 import { parseValues, profileSchema, type FieldErrors } from '@/domain/schemas';
 import type { ConsentRecord, Session } from '@/domain/types';
 import { SESSION_KEY, useSession } from '@/features/auth/session';
@@ -43,12 +41,6 @@ function ProfileForm({ session }: { session: Session }) {
     user.consents.find((c) => c.key === 'marketing')?.agreed ?? false,
   );
   const [errors, setErrors] = useState<FieldErrors>({});
-  const enabled = new Set(
-    providerStates()
-      .filter((p) => p.enabled)
-      .map((p) => p.provider),
-  );
-
   const update = useMutation({
     mutationFn: api.me.updateProfile,
     onSuccess: (u) => {
@@ -134,29 +126,6 @@ function ProfileForm({ session }: { session: Session }) {
           </View>
         ))}
       </Rows>
-
-      <SectionHeader title="소셜 계정 연결" />
-      <Rows>
-        {OAUTH_PROVIDERS.map((p) => (
-          <View key={p} style={styles.row}>
-            <Txt variant="label" style={{ flex: 1 }}>
-              {OAUTH_PROVIDER_LABEL[p]}
-            </Txt>
-            {user.providers.includes(p) ? (
-              <Badge text="연결됨" tone="success" />
-            ) : enabled.has(p) ? (
-              <Badge text="연결 안 됨" />
-            ) : (
-              <Badge text="설정 필요" tone="warning" />
-            )}
-          </View>
-        ))}
-      </Rows>
-      <Gutter style={{ paddingTop: space.sm }}>
-        <Txt variant="caption" color="textTertiary">
-          소셜 계정 연결·해제는 서버 OAuth 설정이 끝난 뒤 제공됩니다.
-        </Txt>
-      </Gutter>
 
       <Gutter style={{ paddingTop: space.xxl, alignItems: 'flex-start' }}>
         <Button label="회원 탈퇴" variant="text" size="md" onPress={() => router.push('/my/withdraw')} />
