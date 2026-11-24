@@ -43,6 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ['expo-router', { root: FLAVOR === 'admin' ? './src/admin' : './src/user' }],
     ...(FLAVOR === 'user'
       ? [
+          './scripts/with-ios-tab-icons.cjs',
           [
             'expo-camera',
             {

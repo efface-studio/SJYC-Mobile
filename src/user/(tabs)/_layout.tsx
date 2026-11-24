@@ -1,6 +1,5 @@
 import { router, Tabs } from 'expo-router';
-import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
-import { BlurView } from 'expo-blur';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { Image, Keyboard, Platform, StyleSheet, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -40,47 +39,66 @@ const tabs = [
   },
 ] as const;
 
-function TabGlass() {
-  if (isLiquidGlassAvailable() && isGlassEffectAPIAvailable())
-    return <GlassView pointerEvents="none" glassEffectStyle="regular" style={styles.glass} />;
-  return <BlurView pointerEvents="none" tint="systemMaterial" intensity={80} style={styles.glass} />;
-}
+// Older installations can receive this JS update before they receive the iOS asset catalog.
+const hasTabCatalog = Platform.OS === 'ios'
+  ? Image.getSize('sjyc-tab-home').then(() => true, () => false)
+  : Promise.resolve(false);
 
 function TabNavigator() {
+  const [useCatalog, setUseCatalog] = useState<boolean>();
+  useEffect(() => {
+    let mounted = true;
+    void hasTabCatalog.then((available) => { if (mounted) setUseCatalog(available); });
+    return () => { mounted = false; };
+  }, []);
   const t = useTheme();
-  const insets = useSafeAreaInsets();
-  const ios = Platform.OS === 'ios';
+  // Android Material의 네이티브 탭은 비트맵까지 단색으로 칠한다.
+  if (Platform.OS === 'android') {
+    return (
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarHideOnKeyboard: true,
+          tabBarActiveTintColor: t.action,
+          tabBarInactiveTintColor: t.textSecondary,
+          tabBarStyle: { backgroundColor: t.card, borderTopColor: t.line },
+          tabBarLabelStyle: { fontFamily: FONT.semibold, fontSize: 11 },
+        }}
+      >
+        {tabs.map(({ name, label, art, rest }) => (
+          <Tabs.Screen
+            key={name}
+            name={name}
+            options={{
+              title: label,
+              tabBarIcon: ({ focused }) => (
+                <Image source={focused ? art : rest} resizeMode="contain" style={{ width: 24, height: 24 }} />
+              ),
+            }}
+          />
+        ))}
+      </Tabs>
+    );
+  }
+  if (Platform.OS === 'ios' && useCatalog === undefined) return null;
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: t.action,
-        tabBarInactiveTintColor: t.textSecondary,
-        tabBarLabelStyle: { fontFamily: FONT.semibold, fontSize: 11, lineHeight: 15 },
-        tabBarLabelPosition: 'below-icon',
-        tabBarItemStyle: ios ? styles.tabItem : undefined,
-        tabBarActiveBackgroundColor: ios ? t.pressed : undefined,
-        tabBarBackground: ios ? TabGlass : undefined,
-        tabBarStyle: ios
-          ? [styles.iosBar, { marginBottom: Math.max(6, insets.bottom - 16) }]
-          : { backgroundColor: t.card, borderTopColor: t.line },
-      }}
+    <NativeTabs
+      tintColor={t.action}
+      labelStyle={{ fontFamily: FONT.semibold, fontSize: 11 }}
+      labelVisibilityMode="labeled"
+      minimizeBehavior="never"
     >
       {tabs.map(({ name, label, art, rest }) => (
-        <Tabs.Screen
-          key={name}
-          name={name}
-          options={{
-            title: label,
-            tabBarAccessibilityLabel: label,
-            tabBarIcon: ({ focused }) => (
-              <Image source={focused ? art : rest} resizeMode="contain" style={styles.tabIcon} />
-            ),
-          }}
-        />
+        <NativeTabs.Trigger key={name} name={name}>
+          <NativeTabs.Trigger.Label>{label}</NativeTabs.Trigger.Label>
+          {useCatalog ? (
+            <NativeTabs.Trigger.Icon xcasset={{ default: 'sjyc-tab-' + name + '-rest', selected: 'sjyc-tab-' + name }} />
+          ) : (
+            <NativeTabs.Trigger.Icon src={{ default: rest, selected: art }} renderingMode="original" />
+          )}
+        </NativeTabs.Trigger>
       ))}
-    </Tabs>
+    </NativeTabs>
   );
 }
 
@@ -117,20 +135,6 @@ export default function UserTabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  // 각 탭이 같은 폭을 쓰므로 선택/해제와 글꼴 전환 때 한글 레이블의 기준선이 유지된다.
-  iosBar: {
-    height: 60,
-    marginHorizontal: 12,
-    padding: 4,
-    paddingBottom: 4,
-    borderTopWidth: 0,
-    borderRadius: 30,
-    backgroundColor: 'transparent',
-    elevation: 0,
-  },
-  tabItem: { flex: 1, minWidth: 0, borderRadius: 26, overflow: 'hidden', paddingVertical: 2 },
-  glass: { ...StyleSheet.absoluteFill, borderRadius: 30, overflow: 'hidden' },
-  tabIcon: { width: 24, height: 24 },
   scan: {
     position: 'absolute',
     width: 48,
