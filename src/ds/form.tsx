@@ -66,6 +66,8 @@ export function TextField({
   autoFocus,
   returnKeyType,
   onSubmitEditing,
+  onFocus,
+  onBlur,
   ref,
 }: {
   label?: string;
@@ -84,6 +86,8 @@ export function TextField({
   autoFocus?: boolean;
   returnKeyType?: TextInputProps['returnKeyType'];
   onSubmitEditing?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   /** 다음 입력칸으로 포커스를 옮길 때 사용 (React 19 ref prop) */
   ref?: Ref<TextInput>;
 }) {
@@ -109,8 +113,14 @@ export function TextField({
         onSubmitEditing={onSubmitEditing ? () => onSubmitEditing() : undefined}
         submitBehavior={multiline ? 'newline' : undefined}
         accessibilityLabel={label ?? placeholder}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onFocus={() => {
+          setFocused(true);
+          onFocus?.();
+        }}
+        onBlur={() => {
+          setFocused(false);
+          onBlur?.();
+        }}
         textAlignVertical={multiline ? 'top' : 'center'}
         style={[
           styles.input,
