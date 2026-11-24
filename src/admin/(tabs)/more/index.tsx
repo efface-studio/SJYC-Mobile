@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import Constants from 'expo-constants';
-import { router, Stack, type Href } from 'expo-router';
+import { Stack, type Href } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { can, canManageAttendance, managesAnyClub, ROLE_LABEL, type Permission } from '@/domain/permissions';
 import type { User } from '@/domain/types';
@@ -199,7 +200,7 @@ export default function More() {
                       leading={<Icon {...m.icon} size={19} color={t.textTertiary} />}
                       title={m.title}
                       subtitle={m.subtitle}
-                      onPress={() => router.push(m.href)}
+                      onPress={() => openScreen(m.href)}
                     />
                   )}
                 />

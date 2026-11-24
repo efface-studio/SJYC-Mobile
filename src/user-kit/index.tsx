@@ -1,3 +1,4 @@
+import { openScreen } from '~/shared/navigation';
 /**
  * 사용자 앱 화면 공통 조합 — ~/ds 컴포넌트를 묶은 것만 둔다 (라우트 아님).
  */
@@ -106,7 +107,7 @@ export function ProgramRow({ p, category }: { p: Program; category: string }) {
   const muted = p.recruitStatus === 'closed' || p.recruitStatus === 'full';
   return (
     <Tap
-      onPress={() => router.push(`/programs/${p.id}`)}
+      onPress={() => openScreen(`/programs/${p.id}`)}
       accessibilityLabel={`${p.title}, ${RECRUIT_STATUS[p.recruitStatus].text}`}
       style={styles.programRow}
     >
@@ -223,7 +224,7 @@ export function SignInPrompt({
           <View style={styles.promptAction}>
             <Button
               label="로그인"
-              onPress={() => (replace ? router.replace('/login') : router.push('/login'))}
+              onPress={() => (replace ? router.replace('/login') : openScreen('/login'))}
             />
           </View>
         }
@@ -263,13 +264,13 @@ export function useNotifications() {
 export function openInternal(link: string): void {
   const path = link.split(/[?#]/)[0] ?? '';
   if (!path.startsWith('/') || path.startsWith('//')) return;
-  router.push(path as Href);
+  openScreen(path as Href);
 }
 
 export function SettingsButton() {
   const t = useTheme();
   return (
-    <Tap rounded={22} accessibilityLabel="설정" onPress={() => router.push('/my/settings')} style={styles.bell}>
+    <Tap rounded={22} accessibilityLabel="설정" onPress={() => openScreen('/my/settings')} style={styles.bell}>
       <Icon ios="gearshape" android="settings" color={t.text} size={22} />
     </Tap>
   );
@@ -282,7 +283,7 @@ export function BellButton() {
   const unread = list.data?.filter((n) => n.readAt === null).length ?? 0;
   return (
     <Tap
-      onPress={() => router.push('/notifications')}
+      onPress={() => openScreen('/notifications')}
       rounded={22}
       accessibilityLabel={unread > 0 ? `알림, 읽지 않은 알림 ${unread}개` : '알림'}
       style={styles.bell}

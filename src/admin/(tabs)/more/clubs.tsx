@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/api';
 import type { Club } from '@/domain/types';
@@ -14,7 +15,7 @@ import {
 } from '~/admin-kit/components';
 import { Chips, Divider, EmptyState, ListRow, QueryBoundary, Screen } from '~/ds';
 
-const open = (id: string) => router.push({ pathname: '/more/club/[id]', params: { id } });
+const open = (id: string) => openScreen({ pathname: '/more/club/[id]', params: { id } });
 
 const STATES: { value: '' | Club['status']; label: string }[] = [
   { value: '', label: '전체' },

@@ -1,6 +1,7 @@
+import { openScreen } from '~/shared/navigation';
 import { ProfilePhoto } from '~/user-kit/profile-photo';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api, errorMessage, isApiError } from '@/api';
@@ -128,7 +129,7 @@ function ProfileForm({ session }: { session: Session }) {
       </Rows>
 
       <Gutter style={{ paddingTop: space.xxl, alignItems: 'flex-start' }}>
-        <Button label="회원 탈퇴" variant="text" size="md" onPress={() => router.push('/my/withdraw')} />
+        <Button label="회원 탈퇴" variant="text" size="md" onPress={() => openScreen('/my/withdraw')} />
       </Gutter>
     </Screen>
   );

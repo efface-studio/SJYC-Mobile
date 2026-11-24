@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { POLICY_TITLE } from '@/domain/labels';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { NoPermission, Rows, StatusBadge, useCan } from '~/admin-kit/components';
@@ -42,7 +43,7 @@ export default function Policies() {
                           : { text: '확정본 미등록', tone: 'warning' as const })}
                       />
                     }
-                    onPress={() => router.push({ pathname: '/more/policy/[key]', params: { key: d.key } })}
+                    onPress={() => openScreen({ pathname: '/more/policy/[key]', params: { key: d.key } })}
                   />
                 )}
               />

@@ -1,3 +1,4 @@
+import { openScreen } from '~/shared/navigation';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { router, Stack, type Href } from 'expo-router';
@@ -229,7 +230,7 @@ export default function Dashboard() {
                         trailing={<StatusBadge {...APPLICATION_STATUS[a.status]} />}
                         onPress={
                           allowed('application.decide')
-                            ? () => router.push({ pathname: '/applications/[id]', params: { id: a.id } })
+                            ? () => openScreen({ pathname: '/applications/[id]', params: { id: a.id } })
                             : undefined
                         }
                       />

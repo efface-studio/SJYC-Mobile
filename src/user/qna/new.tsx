@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { useState } from 'react';
 import { api, errorMessage, isApiError } from '@/api';
 import { INQUIRY_CATEGORY_LABEL } from '@/domain/labels';
@@ -39,7 +40,7 @@ export default function NewInquiryScreen() {
     onSuccess: (q) => {
       void qc.invalidateQueries({ queryKey: ['my-inquiries'] });
       closeModal('/qna');
-      router.push(`/qna/${q.id}`);
+      openScreen(`/qna/${q.id}`);
     },
     onError: (e) => {
       if (isApiError(e) && e.fieldErrors) setErrors(e.fieldErrors);
