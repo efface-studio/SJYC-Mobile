@@ -33,6 +33,7 @@ export default function UserRootLayout() {
         <Stack.Screen name="my/settings" options={{ title: "설정" }} />
         <Stack.Screen name="my/social-accounts" options={{ title: "연결된 소셜 계정" }} />
         <Stack.Screen name="my/devices" options={{ title: "로그인 기기" }} />
+        <Stack.Screen name="oauth-profile" options={{ title: "회원 정보 확인" }} />
         <Stack.Screen name="oauth-return" options={{ title: "소셜 계정 인증" }} />
         <Stack.Screen name="my/notification-settings" options={{ title: "알림 설정" }} />
         <Stack.Screen name="notifications" options={{ title: "알림" }} />

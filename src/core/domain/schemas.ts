@@ -58,7 +58,8 @@ export const signupSchema = z
     email,
     password,
     passwordConfirm: z.string(),
-    phone: z.union([z.literal(''), phone]).optional(),
+    phone,
+    birthDate: z.iso.date().refine(d => d >= '1920-01-01' && d <= new Date().toLocaleDateString('sv-SE', {timeZone: 'Asia/Seoul'}), '생년월일을 확인해 주세요.').optional(),
     birthYear: z.coerce
       .number({ error: '출생 연도를 입력해 주세요.' })
       .int()
@@ -68,6 +69,7 @@ export const signupSchema = z
     agreePrivacy: checked,
     agreeMarketing: optionalChecked,
   })
+  .refine(v => !v.birthDate || Number(v.birthDate.slice(0, 4)) === v.birthYear, {path: ['birthDate'], message: '생년월일을 확인해 주세요.'})
   .refine((v) => v.password === v.passwordConfirm, passwordMatch);
 
 export const forgotPasswordSchema = z.object({ email });
@@ -78,7 +80,7 @@ export const resetPasswordSchema = z
 
 export const profileSchema = z.object({
   name,
-  phone: z.union([z.literal(''), phone]),
+  phone,
   agreeMarketing: optionalChecked,
 });
 

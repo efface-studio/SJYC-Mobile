@@ -19,10 +19,3 @@ export function confirmFeedback(password: string, confirmation: string) {
   if (password === confirmation) return '일치합니다.';
   if (confirmation.length >= password.length) return '비밀번호가 일치하지 않습니다.';
 }
-
-export const emailDomains = ['naver.com', 'gmail.com', 'kakao.com', 'daum.net', 'hanmail.net', 'icloud.com'];
-
-export function emailWithDomain(value: string, domain: string) {
-  const local = value.split('@')[0]?.trim();
-  return local && emailDomains.includes(domain) ? local + '@' + domain : value;
-}

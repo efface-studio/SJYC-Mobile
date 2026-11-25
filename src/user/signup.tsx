@@ -12,8 +12,6 @@ import { SignupEmailField } from '~/shared/signup-email-field';
 import { parseValues, signupSchema, type FieldErrors } from '@/domain/schemas';
 import {
   Button,
-  Card,
-  Divider,
   FormSection,
   Gutter,
   Screen,
@@ -62,7 +60,7 @@ export default function SignupScreen() {
   const signup = useMutation({
     mutationFn: api.auth.signup,
     // 웹과 같은 흐름: 가입 → 이메일 인증 안내 (mock 모드는 그 화면에서 개발용 인증 처리)
-    onSuccess: (_r, input) => router.replace({ pathname: '/verify-email', params: { email: input.email } }),
+    onSuccess: (result, input) => router.replace({ pathname: '/verify-email', params: { email: input.email, mode: result.verificationMode } }),
     onError: (e) => {
       if (isApiError(e) && e.fieldErrors) setErrors(e.fieldErrors);
       notify('가입하지 못했습니다', errorMessage(e));
@@ -153,7 +151,7 @@ export default function SignupScreen() {
           />
           <BirthDateField value={v.birthDate} onChange={set('birthDate')} error={errors.birthYear} />
           <TextField
-            label="휴대전화 (선택)"
+            label="휴대전화 (필수)"
             value={v.phone}
             onChangeText={set('phone')}
             placeholder="010-1234-5678"
@@ -164,7 +162,7 @@ export default function SignupScreen() {
         </FormSection>
 
         <FormSection title="약관 동의">
-          <Card style={{ paddingVertical: space.xs }}>
+          <View>
             <SwitchRow
               label="전체 동의"
               description="필수 및 선택 항목에 모두 동의합니다."
@@ -175,8 +173,8 @@ export default function SignupScreen() {
                 setMarketing(on);
               }}
             />
-          </Card>
-          <View style={{ gap: space.xs }}>
+          </View>
+          <View>
             <SwitchRow
               label="[필수] 이용약관 동의"
               value={terms}
@@ -185,8 +183,8 @@ export default function SignupScreen() {
             />
             <PolicyLink label="이용약관 보기" href="/policies/terms" />
           </View>
-          <Divider />
-          <View style={{ gap: space.xs }}>
+
+          <View>
             <SwitchRow
               label="[필수] 개인정보 수집·이용 동의"
               value={privacy}
@@ -195,7 +193,7 @@ export default function SignupScreen() {
             />
             <PolicyLink label="개인정보처리방침 보기" href="/policies/privacy" />
           </View>
-          <Divider />
+
           <SwitchRow
             label="[선택] 프로그램 소식 안내 수신"
             description="새 프로그램 모집 소식을 알려 드립니다."
@@ -210,5 +208,5 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   head: { paddingTop: space.xl, gap: space.sm },
-  policyLink: { alignSelf: 'flex-start', paddingVertical: 8 },
+  policyLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
 });
