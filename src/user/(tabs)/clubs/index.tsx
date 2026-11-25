@@ -5,8 +5,6 @@ import { Stack, useFocusEffect } from 'expo-router';
 import { api } from '@/api';
 import { useSession } from '@/features/auth/session';
 import {
-  Button,
-  EmptyState,
   Gutter,
   InfoRow,
   Photo,
@@ -20,6 +18,7 @@ import {
 } from '~/ds';
 import { Icon } from '~/shared/icon';
 import { openScreen } from '~/shared/navigation';
+import { ClubRecruitment } from '~/user-kit/club-recruitment';
 import { MemberSections } from '~/user-kit/club-member-sections';
 
 function openRecruitment() {
@@ -67,15 +66,24 @@ export default function MyClubsScreen() {
           ].map((queryKey) => cache.invalidateQueries({ queryKey }))
         : []),
     ]);
+  if (memberships.isSuccess && all.length === 0) {
+    return (
+      <>
+        <Stack.Screen options={{ title: '동아리 모집', headerRight: () => null }} />
+        <ClubRecruitment onRefreshMembership={memberships.refetch} />
+      </>
+    );
+  }
   return (
     <>
       <Stack.Screen
         options={{
-          headerRight: () => (
+          title: '내 동아리',
+          headerRight: () => club ? (
             <Tap onPress={openRecruitment} accessibilityLabel="동아리 모집 보기" style={styles.action}>
               <Icon ios="person.2.badge.plus" android="group_add" size={22} color={t.text} />
             </Tap>
-          ),
+          ) : null,
         }}
       />
       <Screen key={club?.id} onRefresh={refresh}>
@@ -123,13 +131,7 @@ export default function MyClubsScreen() {
                 </Gutter>
                 <MemberSections clubId={club.id} />
               </>
-            ) : (
-              <EmptyState
-                title="아직 소속 동아리가 없어요"
-                description="모집 중인 동아리를 보고 가입을 신청해 보세요."
-                action={<Button label="모집 중인 동아리 보기" onPress={openRecruitment} />}
-              />
-            )
+            ) : null
           }
         </QueryBoundary>
       </Screen>
