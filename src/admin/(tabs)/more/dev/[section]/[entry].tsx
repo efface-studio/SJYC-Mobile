@@ -100,7 +100,9 @@ function ActionForm({ form, done }: { form: DevForm; done: () => void }) {
 
 export default function DeveloperDetail() {
   const params = useLocalSearchParams<{ section: string; entry: string; search?: string }>();
-  const allowed = useCan()('developer.access'),
+  const can = useCan();
+  const allowed = can('developer.view'),
+    writable = can('developer.access'),
     focused = useIsFocused();
   const section = Object.hasOwn(developerSections, params.section)
     ? (params.section as DevSection)
@@ -130,7 +132,7 @@ export default function DeveloperDetail() {
     session = useSession(),
     logout = useLogout();
   const query = useQuery({
-    queryKey: ['admin', 'dev-console', section, item, search, page],
+    queryKey: ['admin', 'dev-console', section, session.data?.user.id, writable, item, search, page],
     enabled: allowed && !!section && focused,
     queryFn: () =>
       api.admin.developerView({ section: section!, item, search: roleList ? undefined : search, page }),
@@ -164,7 +166,7 @@ export default function DeveloperDetail() {
                 },
               }
             : {}),
-          ...(roleList
+          ...(roleList && writable
             ? {
                 headerRight: () => (
                   <Pressable
@@ -206,8 +208,8 @@ export default function DeveloperDetail() {
         <QueryBoundary layout="settings" query={query}>
           {(view) => (
             <>
-              <DevGroups section={section} item={item} view={view} go={go} filter={roleList ? draft : ''} />
-              {view.forms?.map((f) => (
+              <DevGroups writable={writable} section={section} item={item} view={view} go={go} filter={roleList ? draft : ''} />
+              {writable && view.forms?.map((f) => (
                 <ActionForm
                   key={[item, f.command, f.version].join('/')}
                   form={f}
