@@ -102,7 +102,7 @@ function UserNavigator() {
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen
           name="login"
-          options={{ title: '로그인', headerBackVisible: false, gestureEnabled: false }}
+          options={{ title: '로그인', headerShown: false, headerBackVisible: false, gestureEnabled: false }}
         />
         <Stack.Screen name="signup" options={{ presentation: 'modal', title: '회원가입' }} />
         <Stack.Screen name="verify-email" options={{ title: '휴대전화 인증' }} />

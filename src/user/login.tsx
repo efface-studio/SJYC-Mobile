@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Image } from 'expo-image';
@@ -143,8 +144,7 @@ export default function LoginScreen() {
 
   if (mode === 'forgot') {
     return (
-      <>
-
+      <SafeAreaView edges={['top']} style={{flex:1,backgroundColor:t.bg}}>
         <Screen>
           <Gutter style={styles.header}>
             <Wordmark width={165} />
@@ -174,17 +174,17 @@ export default function LoginScreen() {
             />
           </Gutter>
         </Screen>
-      </>
+      </SafeAreaView>
     );
   }
 
   return (
-    <>
-
+    <SafeAreaView edges={['top']} style={{flex:1,backgroundColor:t.bg}}>
       <Screen>
         <AuthReveal delay={0} reduce={motion.reduce}>
           <Gutter style={styles.header}>
             <Wordmark width={165} />
+            <Txt variant="display" accessibilityRole="header">로그인</Txt>
           </Gutter>
         </AuthReveal>
         <AuthReveal delay={70} reduce={motion.reduce}>
@@ -280,12 +280,12 @@ export default function LoginScreen() {
           </Gutter>
         )}
       </Screen>
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { paddingTop: space.sm, paddingBottom: space.xl, gap: space.sm },
+  header: { paddingTop: space.xl, paddingBottom: space.xl, gap: space.lg },
   form: { gap: space.lg },
   links: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   link: { paddingHorizontal: space.md, paddingVertical: 12 },
