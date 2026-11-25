@@ -39,5 +39,9 @@
         "APP_FLAVOR": "admin"
       }
     }
+  },
+  "submit": {
+    "production": { "ios": { "ascAppId": "6838997324" } },
+    "production-admin": { "ios": { "ascAppId": "6838997461" } }
   }
 }
