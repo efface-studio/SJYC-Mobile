@@ -17,23 +17,12 @@ import {
   Screen,
   StickyFooter,
   SwitchRow,
-  Tap,
   TextField,
   Txt,
   space,
 } from '~/ds';
 import { notify } from '~/shared/dialogs';
 import { ModalGuard } from '~/user-kit';
-
-function PolicyLink({ label, href }: { label: string; href: '/policies/terms' | '/policies/privacy' }) {
-  return (
-    <Tap onPress={() => openScreen(href)} accessibilityLabel={label} style={styles.policyLink}>
-      <Txt variant="caption" color="action">
-        {label}
-      </Txt>
-    </Tap>
-  );
-}
 
 export default function SignupScreen() {
   const [v, setV] = useState({ name: '', email: '', password: '', passwordConfirm: '', birthDate: '', phone: '' });
@@ -179,8 +168,8 @@ export default function SignupScreen() {
               value={terms}
               onValueChange={setTerms}
               error={errors.agreeTerms}
+              link={{ label: '이용약관 보기', onPress: () => openScreen('/policies/terms') }}
             />
-            <PolicyLink label="이용약관 보기" href="/policies/terms" />
           </View>
 
           <View>
@@ -189,8 +178,8 @@ export default function SignupScreen() {
               value={privacy}
               onValueChange={setPrivacy}
               error={errors.agreePrivacy}
+              link={{ label: '개인정보처리방침 보기', onPress: () => openScreen('/policies/privacy') }}
             />
-            <PolicyLink label="개인정보처리방침 보기" href="/policies/privacy" />
           </View>
 
           <SwitchRow
@@ -207,5 +196,4 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   head: { paddingTop: space.xl, gap: space.sm },
-  policyLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
 });
