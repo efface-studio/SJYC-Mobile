@@ -1,3 +1,4 @@
+import { AttendanceCodeEntry } from '~/shared/attendance-code-entry';
 import { openScreen } from '~/shared/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -6,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, Linking, StyleSheet, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { useSession } from '@/features/auth/session';
-import { Button, Chips, FormSection, Gutter, Screen, TextField, Txt } from '~/ds';
+import { Button, Chips, FormSection, Gutter, Screen, Txt } from '~/ds';
 import { closeModal, ModalGuard } from '~/user-kit';
 
 export default function CheckInScreen() {
@@ -16,7 +17,6 @@ export default function CheckInScreen() {
   const [active, setActive] = useState(AppState.currentState === 'active');
   const [permission, request, refreshPermission] = useCameraPermissions();
   const [mode, setMode] = useState<'scan' | 'manual'>('scan');
-  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [unavailable, setUnavailable] = useState(false);
   const locked = useRef(false);
@@ -48,7 +48,7 @@ export default function CheckInScreen() {
     check.mutate(value);
   };
   const change = (next: 'scan' | 'manual') => {
-    if (check.isPending) return;
+    if (check.isPending || client.isMutating({ mutationKey: ['me', 'attendance', 'check-in'] })) return;
     setError('');
     setMode(next);
   };
@@ -79,17 +79,12 @@ export default function CheckInScreen() {
               onChange={change}
             />
             {mode === 'manual' ? (
-              <FormSection title="출석 코드 입력">
-                <TextField
-                  label="숫자 4자리"
-                  value={code}
-                  maxLength={4}
-                  keyboardType="number-pad"
-                  onChangeText={(v) => setCode(v.replace(/\D/g, ''))}
-                  onSubmitEditing={() => submit(code)}
-                />
-                <Button label="출석하기" loading={check.isPending} onPress={() => submit(code)} />
-              </FormSection>
+              <AttendanceCodeEntry successActions={
+                <>
+                  <Button label="내 출석 기록" onPress={() => router.replace('/my/attendance')} />
+                  <Button label="닫기" variant="text" onPress={() => closeModal('/home')} />
+                </>
+              } />
             ) : (
               <FormSection title="출석 QR을 비춰 주세요">
                 {permission?.granted && !unavailable ? (

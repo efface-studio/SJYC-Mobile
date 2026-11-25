@@ -1,31 +1,27 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSession } from '@/features/auth/session';
 import { ClubCheckIn } from '~/user-kit/club-check-in';
-import { api, errorMessage } from '@/api';
+import { api } from '@/api';
 import { attendanceRate } from '@/domain/attendance';
 import { ATTENDANCE_STATUS, ATTENDANCE_TARGET_LABEL } from '@/domain/labels';
-import { checkInSchema, parseValues } from '@/domain/schemas';
 import type { MyAttendance } from '@/domain/types';
 import { formatDate } from '@/lib/format';
 import {
   Badge,
-  Button,
   Chips,
   Divider,
   EmptyState,
-  FormSection,
   Gutter,
   ListRow,
   QueryBoundary,
   Screen,
-  TextField,
   Txt,
   space,
 } from '~/ds';
-import { notify } from '~/shared/dialogs';
+import { AttendanceCodeEntry } from '~/shared/attendance-code-entry';
 import { Rows } from '~/user-kit';
 
 function groupByTarget(items: MyAttendance[]) {
@@ -48,33 +44,10 @@ function rateOf(items: MyAttendance[]) {
 }
 
 export default function MyAttendanceScreen() {
-  const qc = useQueryClient();
   const user = useSession().data?.user;
   const manager = user?.status === 'active' && !!user.managedClubIds?.length;
   const [tab, setTab] = useState<'mine' | 'club'>('mine');
-  const [code, setCode] = useState('');
-  const [error, setError] = useState<string | undefined>();
   const list = useQuery({ queryKey: ['me', 'attendance'], queryFn: () => api.me.attendance() });
-  const checkIn = useMutation({
-    mutationFn: (value: string) => api.me.checkIn({ code: value }),
-    onSuccess: (a) => {
-      setCode('');
-      setError(undefined);
-      void qc.invalidateQueries({ queryKey: ['me', 'attendance'] });
-      notify('출석이 확인되었습니다', `${a.targetName} · ${a.title}`);
-    },
-    onError: (e) => setError(errorMessage(e)),
-  });
-
-  const submit = () => {
-    if (checkIn.isPending) return;
-    const parsed = parseValues(checkInSchema, { code });
-    if (!parsed.ok) {
-      setError(parsed.errors.code);
-      return;
-    }
-    checkIn.mutate(parsed.data.code);
-  };
 
   return (
     <>
@@ -94,24 +67,7 @@ export default function MyAttendanceScreen() {
           <ClubCheckIn key={user.id} user={user} />
         ) : (
           <>
-            <FormSection title="출석 코드 입력">
-              <Txt variant="caption" color="textTertiary">
-                담당 선생님이 알려준 4자리 숫자를 입력하세요. 코드는 연 뒤 10분 동안만 쓸 수 있습니다.
-              </Txt>
-              <TextField
-                label="출석 코드"
-                value={code}
-                onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 4))}
-                keyboardType="number-pad"
-                maxLength={4}
-                autoComplete="one-time-code"
-                placeholder="0000"
-                error={error}
-                returnKeyType="done"
-                onSubmitEditing={submit}
-              />
-              <Button label="출석하기" loading={checkIn.isPending} onPress={submit} />
-            </FormSection>
+            <AttendanceCodeEntry />
             <Divider />
             <QueryBoundary query={list}>
               {(items) =>
