@@ -46,19 +46,11 @@ function Fields({ draft }: { draft: SocialDraft }) {
       />
       {draft.needsConsent && (
         <>
-          <SwitchRow label="[필수] 이용약관 동의" value={terms} onValueChange={setTerms} />
-          <Button
-            size="md"
-            variant="text"
-            label="이용약관 보기"
-            onPress={() => openScreen('/policies/terms')}
+          <SwitchRow label="[필수] 이용약관 동의" value={terms} onValueChange={setTerms}
+            link={{ label: '이용약관 보기', onPress: () => openScreen('/policies/terms') }}
           />
-          <SwitchRow label="[필수] 개인정보 수집·이용 동의" value={privacy} onValueChange={setPrivacy} />
-          <Button
-            size="md"
-            variant="text"
-            label="개인정보 처리방침 보기"
-            onPress={() => openScreen('/policies/privacy')}
+          <SwitchRow label="[필수] 개인정보 수집·이용 동의" value={privacy} onValueChange={setPrivacy}
+            link={{ label: '개인정보 처리방침 보기', onPress: () => openScreen('/policies/privacy') }}
           />
           <SwitchRow label="[선택] 프로그램 소식 수신" value={marketing} onValueChange={setMarketing} />
         </>

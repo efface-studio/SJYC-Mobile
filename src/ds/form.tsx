@@ -3,6 +3,7 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import { useState, type ReactNode, type Ref } from 'react';
 import {
   Platform,
+  Pressable,
   StyleSheet,
   Switch,
   TextInput,
@@ -281,6 +282,7 @@ export function DateField({
 export function SwitchRow({
   label,
   description,
+  link,
   value,
   onValueChange,
   disabled,
@@ -288,6 +290,7 @@ export function SwitchRow({
 }: {
   label: string;
   description?: string;
+  link?: { label: string; onPress: () => void };
   value: boolean;
   onValueChange: (v: boolean) => void;
   disabled?: boolean;
@@ -300,6 +303,11 @@ export function SwitchRow({
         <View style={styles.switchCopy}>
           <Txt variant="label">{label}</Txt>
           {description && <Txt variant="caption" color="textTertiary">{description}</Txt>}
+          {link && (
+            <Pressable accessibilityRole="link" accessibilityLabel={link.label} onPress={link.onPress} style={styles.switchLink}>
+              <Txt variant="caption" color="action">{link.label}</Txt>
+            </Pressable>
+          )}
         </View>
         <Switch
           disabled={disabled}
@@ -350,5 +358,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 },
+  switchLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
   switchCopy: { flex: 1, minWidth: 0, gap: space.xs },
 });
