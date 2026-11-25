@@ -1,39 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { api, errorMessage } from '@/api';
 import type { SocialDraft } from '@/domain/social-profile';
-import { SESSION_KEY } from '@/features/auth/session';
 import { Button, Gutter, LoadingState, Screen, SwitchRow, TextField, Txt, space } from '~/ds';
 import { BirthDateField } from '~/shared/birth-date-field';
 import { openScreen } from '~/shared/navigation';
 
 function Fields({ draft }: { draft: SocialDraft }) {
-  const cache = useQueryClient();
   const [name, setName] = useState(draft.name),
     [email, setEmail] = useState(draft.email),
     [phone, setPhone] = useState(draft.phone),
     [date, setDate] = useState(draft.birthDate);
-  const [code, setCode] = useState(''),
-    [sent, setSent] = useState('');
   const [terms, setTerms] = useState(false),
     [privacy, setPrivacy] = useState(false),
     [marketing, setMarketing] = useState(false);
-  const address = email.trim().toLowerCase(),
-    needsCode = address !== draft.verifiedEmail;
-  const send = useMutation({
-    mutationFn: api.auth.requestSocialCode,
-    onSuccess: (_, requested) => {
-      setSent(requested);
-      setCode('');
-    },
-  });
+  const address = email.trim().toLowerCase();
   const save = useMutation({
     mutationFn: api.auth.saveSocialProfile,
-    onSuccess: async () => {
-      await cache.invalidateQueries({ queryKey: SESSION_KEY });
-      router.replace('/my');
-    },
+    onSuccess: () => router.replace('/verify-phone'),
   });
   return (
     <Gutter style={{ paddingVertical: space.xl, gap: space.lg }}>
@@ -57,36 +42,8 @@ function Fields({ draft }: { draft: SocialDraft }) {
         value={email}
         onChangeText={(v) => {
           setEmail(v);
-          setSent('');
-          setCode('');
         }}
       />
-      {needsCode && (
-        <>
-          <Button
-            variant="secondary"
-            label={sent === address && sent ? '코드 다시 요청' : '이메일 코드 요청'}
-            disabled={!address}
-            loading={send.isPending}
-            onPress={() => send.mutate(address)}
-          />
-          {!!sent && sent === address && (
-            <TextField
-              label="이메일 확인 코드"
-              value={code}
-              keyboardType="number-pad"
-              maxLength={6}
-              autoComplete="one-time-code"
-              hint={
-                draft.previewCode
-                  ? '테스트 코드 284600을 입력해 주세요.'
-                  : '메일에서 받은 여섯 자리 코드를 입력해 주세요.'
-              }
-              onChangeText={(v) => setCode(v.replace(/\D/g, ''))}
-            />
-          )}
-        </>
-      )}
       {draft.needsConsent && (
         <>
           <SwitchRow label="[필수] 이용약관 동의" value={terms} onValueChange={setTerms} />
@@ -106,8 +63,8 @@ function Fields({ draft }: { draft: SocialDraft }) {
           <SwitchRow label="[선택] 프로그램 소식 수신" value={marketing} onValueChange={setMarketing} />
         </>
       )}
-      {(save.isError || send.isError) && (
-        <Txt variant="caption">{errorMessage(save.error ?? send.error)}</Txt>
+      {(save.isError) && (
+        <Txt variant="caption">{errorMessage(save.error)}</Txt>
       )}
       <Button
         label="확인하고 계속하기"
@@ -117,7 +74,6 @@ function Fields({ draft }: { draft: SocialDraft }) {
           !date ||
           !phone ||
           !address ||
-          (needsCode && (!sent || sent !== address || code.length !== 6)) ||
           (draft.needsConsent && !(privacy && terms))
         }
         onPress={() =>
@@ -126,7 +82,6 @@ function Fields({ draft }: { draft: SocialDraft }) {
             email: address,
             phone,
             birthDate: date,
-            code: needsCode ? code : undefined,
             agreeTerms: terms,
             agreePrivacy: privacy,
             agreeMarketing: marketing,

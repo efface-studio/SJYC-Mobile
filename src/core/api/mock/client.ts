@@ -266,6 +266,11 @@ function toSession(db: MockDb, u: DbUser): Session {
 
 let lastResetToken: { token: string; userId: string } | null = null;
 
+function signupPhoneState(db:MockDb) {
+  const p=db.pendingSignup;
+  if(!p?.phone || p.expiresAt<=Date.now()) throw new ApiError('VALIDATION','인증 요청이 만료되었습니다. 회원가입을 다시 진행해 주세요.');
+  return {phone:p.phone,verificationMode:'preview' as const,resendAt:new Date(p.sentAt+30000).toISOString(),expiresAt:new Date(p.sentAt+300000).toISOString()};
+}
 export const mockClient: ApiClient = {
   auth: {
     startNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
@@ -284,7 +289,6 @@ export const mockClient: ApiClient = {
       throw new ApiError('NOT_CONFIGURED', '관리자 소셜 로그인을 다시 시작해 주세요.');
     },
     socialDraft: async () => {throw new ApiError('VALIDATION','소셜 로그인을 다시 시작해 주세요.');},
-    requestSocialCode: async () => {throw new ApiError('NOT_CONFIGURED','소셜 로그인을 다시 시작해 주세요.');},
     saveSocialProfile: async () => {throw new ApiError('NOT_CONFIGURED','소셜 로그인을 다시 시작해 주세요.');},
     socialProviders: () => respond(() => []),
     startSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),
@@ -298,8 +302,8 @@ export const mockClient: ApiClient = {
         }
         if (u.status === 'suspended')
           throw new ApiError('FORBIDDEN', '이용이 제한된 계정입니다. 센터에 문의해 주세요.');
-        if (!u.emailVerified)
-          throw new ApiError('FORBIDDEN', '이메일 인증을 완료한 뒤 로그인할 수 있습니다.');
+        if (!u.emailVerified && !u.signupPhoneVerifiedAt)
+          throw new ApiError('FORBIDDEN', '가입 인증을 완료한 뒤 로그인할 수 있습니다.');
         writeSession(u.id);
         return toSession(db, u);
       }),
@@ -310,14 +314,14 @@ export const mockClient: ApiClient = {
     signup: (input) =>
       respond((db) => {
         const preview = () => {
-          db.pendingSignup = {email:input.email.toLowerCase(),expiresAt:Date.now()+900000};
-          return {requiresEmailVerification:true,verificationMode:'preview' as const};
+          db.pendingSignup={email:input.email.toLowerCase(),phone:input.phone,sentAt:Date.now(),attempts:0,expiresAt:Date.now()+900000};
+          return signupPhoneState(db);
         };
         const registered = db.users.find((x) => x.email.toLowerCase() === input.email.toLowerCase());
         if (registered) {
           if (
             registered.status === 'active' &&
-            !registered.emailVerified &&
+            !registered.emailVerified && !registered.signupPhoneVerifiedAt &&
             registered.password === input.password
           )
             return preview();
@@ -352,14 +356,20 @@ export const mockClient: ApiClient = {
         });
         return preview();
       }),
-    confirmPreviewCode: (code) => respond(db => {
-      const pending = db.pendingSignup;
-      if (!pending || pending.expiresAt <= Date.now()) throw new ApiError('VALIDATION','가입을 다시 진행해 주세요.');
-      if (code !== '284600') throw new ApiError('VALIDATION','인증 코드가 일치하지 않습니다.');
-      const user = db.users.find(u => u.email.toLowerCase() === pending.email && !u.emailVerified && u.status === 'active');
-      if (!user) throw new ApiError('VALIDATION','가입 정보를 확인해 주세요.');
-      user.emailVerified = true;
-      delete db.pendingSignup;
+    signupPhone:()=>respond(db=>signupPhoneState(db)),
+    resendPhone:(phone)=>respond(db=>{
+      const state=signupPhoneState(db),p=db.pendingSignup!;
+      if ((!phone || phone===state.phone) && Date.parse(state.resendAt)>Date.now()) throw new ApiError('RATE_LIMITED','30초 후 다시 요청할 수 있습니다.');
+      if(phone && !/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone))throw new ApiError('VALIDATION','휴대전화 번호를 확인해 주세요.');
+      p.phone=phone??state.phone;p.sentAt=Date.now();p.expiresAt=Date.now()+900000;p.attempts=0;return signupPhoneState(db);
+    }),
+    confirmPhone:code=>respond(db=>{
+      const state=signupPhoneState(db),p=db.pendingSignup!;
+      if(Date.parse(state.expiresAt)<=Date.now()||p.attempts>=5)throw new ApiError('VALIDATION','새 코드를 요청해 주세요.');
+      if(code!=='284600'){p.attempts++;throw new ApiError('VALIDATION','인증 코드가 일치하지 않습니다.');}
+      const user=db.users.find(u=>u.email.toLowerCase()===p.email && u.status==='active'&&!u.emailVerified&&!u.signupPhoneVerifiedAt);
+      if(!user)throw new ApiError('VALIDATION','가입 정보를 확인해 주세요.');
+      user.signupPhoneVerifiedAt=new Date().toISOString();user.phone=p.phone;delete db.pendingSignup;return {signedIn:false};
     }),
     resendVerification: () => respond(() => undefined),
     requestPasswordReset: (email) =>

@@ -65,7 +65,8 @@ export default function UserRootLayout() {
         />
         <Stack.Screen name="my/attendance" options={{ title: "출석" }} />
         <Stack.Screen name="my/withdraw" options={{ title: "회원 탈퇴" }} />
-        <Stack.Screen name="verify-email" options={{ title: "이메일 인증" }} />
+        <Stack.Screen name="verify-email" options={{ title: "휴대전화 인증" }} />
+        <Stack.Screen name="verify-phone" options={{ title: "휴대전화 인증" }} />
         <Stack.Screen
           name="password/reset"
           options={{ title: "비밀번호 재설정" }}
