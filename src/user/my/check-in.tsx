@@ -1,3 +1,4 @@
+import { currentPosition } from '~/shared/attendance-position';
 import { openScreen } from '~/shared/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -28,7 +29,11 @@ export default function CheckInScreen() {
     return () => sub.remove();
   }, [refreshPermission]);
   const check = useMutation({
-    mutationFn: (value: string) => api.me.checkIn({ code: value }),
+    mutationFn: async (entry: { kind: 'manual' | 'program' | 'club'; value: string }) => {
+      if (entry.kind === 'manual') return api.me.checkIn({ code: entry.value });
+      if (entry.kind === 'program') return api.me.scanAttendance({ kind: 'program', code: entry.value });
+      return api.me.scanAttendance({ kind: 'club', ticket: entry.value, position: await currentPosition() });
+    },
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['me', 'attendance'] });
     },
@@ -37,15 +42,15 @@ export default function CheckInScreen() {
       locked.current = false;
     },
   });
-  const submit = (value: string) => {
+  const submit = (value: string, kind: 'manual' | 'program' | 'club' = 'manual') => {
     if (locked.current || check.isSuccess) return;
-    if (!/^\d{4}$/.test(value)) {
+    if (!(kind === 'club' ? /^\d{16}$/ : /^\d{4}$/).test(value)) {
       setError('출석 코드 네 자리를 입력해 주세요.');
       return;
     }
     locked.current = true;
     setError('');
-    check.mutate(value);
+    check.mutate({ kind, value });
   };
   const change = (next: 'scan' | 'manual') => {
     if (check.isPending) return;
@@ -102,11 +107,12 @@ export default function CheckInScreen() {
                         barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
                         onBarcodeScanned={({ type, data }) => {
                           if (locked.current || error) return;
-                          const value =
-                            type === 'qr'
-                              ? /^SJYC:ATTENDANCE:(\d{4})$/.exec(data)?.[1]
-                              : /^\d{4}$/.exec(data)?.[0];
-                          if (value) submit(value);
+                          const club = (type === 'qr' ? /^SJYC:CLUB:(\d{16})$/ : /^(\d{16})$/).exec(data);
+                          const program = (type === 'qr' ? /^SJYC:ATTENDANCE:(\d{4})$/ : /^(\d{4})$/).exec(
+                            data,
+                          );
+                          if (club) submit(club[1]!, 'club');
+                          else if (program) submit(program[1]!, 'program');
                           else setError('센터 출석용 코드가 아닙니다.');
                         }}
                       />
@@ -120,7 +126,10 @@ export default function CheckInScreen() {
                         : 'QR을 읽으려면 카메라 접근이 필요합니다.'}
                     </Txt>
                     {!unavailable && permission?.canAskAgain === false && (
-                      <Button label="설정에서 카메라 허용" onPress={() => void Linking.openSettings().catch(() => setUnavailable(true))} />
+                      <Button
+                        label="설정에서 카메라 허용"
+                        onPress={() => void Linking.openSettings().catch(() => setUnavailable(true))}
+                      />
                     )}
                     {!unavailable && permission?.canAskAgain !== false && (
                       <Button

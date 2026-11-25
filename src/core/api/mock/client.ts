@@ -1,3 +1,4 @@
+import {freshPosition,distanceMeters,CLUB_RADIUS_METERS,type AttendancePosition} from '@/domain/check-in-location';
 import { settingsWriteSchema } from '@/domain/site-settings';
 /**
  * 개발용 mock adapter — 서버가 준비되기 전 UI 흐름을 검증하기 위한 구현이다.
@@ -182,9 +183,11 @@ function decideClubApplication(
   return a;
 }
 
+const mockQr = new Map<string,{id:string;position:AttendancePosition;until:number}>();
+function pruneQr(){for(const [key,item] of mockQr)if(item.until<=Date.now())mockQr.delete(key);}
 /** 마감 시간이 지난 출석 코드는 내려주지 않는다 */
 function withCheckIn(s: AttendanceSession): AttendanceSession {
-  return isCheckInOpen(s) ? s : { ...s, checkInCode: null, checkInClosesAt: null };
+  return isCheckInOpen(s) ? s : { ...s, qrTicket:null, checkInCode: null, checkInClosesAt: null };
 }
 
 function nextId(db: MockDb, prefix: string): string {
@@ -574,6 +577,19 @@ export const mockClient: ApiClient = {
           .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
           .map((s) => toMyAttendance(s, u.id));
       }),
+    scanAttendance: (input) => respond(db=>{
+      const u=requireUser(db);pruneQr();
+      if(input.kind==='program'){
+        const program=db.attendance.find(s=>s.targetType==='program' && s.checkInCode===input.code && isCheckInOpen(s));
+        if(!program)throw new ApiError('VALIDATION','새 출석 QR을 스캔하거나 숫자를 직접 입력해 주세요.');
+        return checkIn(db,u.id,input.code);
+      }
+      const grant=mockQr.get(input.ticket);
+      const session=grant && db.attendance.find(s=>s.id===grant.id && s.qrTicket===input.ticket && isCheckInOpen(s));
+      if(!session?.checkInCode || !grant)throw new ApiError('VALIDATION','QR이 만료되었습니다.');
+      if(!freshPosition(input.position)||distanceMeters(grant.position,input.position)>CLUB_RADIUS_METERS)throw new ApiError('VALIDATION','QR 생성 위치 반경 100m 안에서 스캔해 주세요.');
+      return checkIn(db,u.id,session.checkInCode);
+    }),
     checkIn: (input) =>
       respond((db) => {
         const u = requireUser(db);
@@ -807,13 +823,21 @@ export const mockClient: ApiClient = {
         }
         return withCheckIn(s);
       }),
-    setCheckIn: (id, open) =>
+    setCheckIn: (id, open, position) =>
       respond((db) => {
         const s = findOr404(db.attendance, id);
         const actor = requireAttendanceManager(db, { type: s.targetType, id: s.targetId });
+        pruneQr();
+        if (open && position && !freshPosition(position))throw new ApiError('VALIDATION','현재 위치를 다시 확인해 주세요.');
+        if(s.qrTicket)mockQr.delete(s.qrTicket);
+        s.qrTicket=null;
         if (open) {
           s.checkInCode = issueCode(db);
           s.checkInClosesAt = new Date(Date.now() + CHECK_IN_MINUTES * 60_000).toISOString();
+          if(position && s.targetType==='club'){
+            const ticket=Array.from({length:16},()=>Math.floor(Math.random()*10)).join('');
+            mockQr.set(ticket,{id:s.id,position,until:Date.parse(s.checkInClosesAt)});s.qrTicket=ticket;
+          }
         } else {
           s.checkInCode = null;
           s.checkInClosesAt = null;

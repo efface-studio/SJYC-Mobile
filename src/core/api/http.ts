@@ -147,6 +147,7 @@ export const httpClient: ApiClient = {
     notifications: () => request('GET', '/me/notifications'),
     markNotificationsRead: (ids) => request('POST', '/me/notifications/read', { body: { ids } }),
     attendance: () => request('GET', '/me/attendance'),
+    scanAttendance: (input) => request('POST','/me/attendance/scan',{body:input}),
     checkIn: (input) => request('POST', '/me/attendance/check-in', { body: input }),
   },
   manage: {
@@ -174,7 +175,7 @@ export const httpClient: ApiClient = {
       request('POST', '/attendance/sessions', { body: { targetType: t.type, targetId: t.id, ...input } }),
     remove: (id) => request('DELETE', `/attendance/sessions/${enc(id)}`),
     mark: (id, marks) => request('PUT', `/attendance/sessions/${enc(id)}/records`, { body: { marks } }),
-    setCheckIn: (id, open) => request('POST', `/attendance/sessions/${enc(id)}/check-in`, { body: { open } }),
+    setCheckIn: (id, open, position) => request('POST', `/attendance/sessions/${enc(id)}/check-in`, { body: { open,position } }),
     stats: (t) => request('GET', '/attendance/stats', { query: { targetType: t.type, targetId: t.id } }),
   },
   media: {

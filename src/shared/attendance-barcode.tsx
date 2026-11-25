@@ -15,11 +15,15 @@ export function AttendanceBarcode({ code }: { code: string }) {
     );
   }, [code]);
   return (
-    <View accessible accessibilityLabel={`출석 바코드 ${code.split('').join(' ')}`} style={styles.background}>
+    <View accessible accessibilityLabel="회원 출석용 바코드" style={styles.background}>
       {bars.map((run, i) => (
         <View
           key={i}
-          style={{ width: run.length * 2, height: 56, backgroundColor: run[0] === '1' ? '#000' : '#FFF' }}
+          style={{
+            width: run.length * (code.length > 4 ? 1.5 : 2),
+            height: 56,
+            backgroundColor: run[0] === '1' ? '#000' : '#FFF',
+          }}
         />
       ))}
     </View>
