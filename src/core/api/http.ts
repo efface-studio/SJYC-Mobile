@@ -103,7 +103,7 @@ export const httpClient: ApiClient = {
     socialDraft: () => request('GET', '/auth/social/onboarding'),
     saveSocialProfile: (input) => request('POST','/auth/social/onboarding',{body:input}),
     socialProviders: () => request('GET', '/auth/social/providers', { query: { platform: Platform.OS } }),
-    startSocial: (provider, link) => request('POST', (link ? '/me/social/' : '/auth/social/') + provider + '/start'),
+    startSocial: (provider, link, adminLink) => request('POST', (link ? '/me/social/' : '/auth/social/') + provider + (link && adminLink ? '/start?app=admin' : '/start')),
     completeSocial: (proof) => request('POST', '/auth/social/complete', { body: proof }),
     async me() {
       try {
@@ -238,6 +238,8 @@ export const httpClient: ApiClient = {
         request('POST', '/admin/applications/decisions', { body: { ids, decision, reason } }),
     },
     members: {
+      activityOptions: (id) => request('GET', `/admin/members/${enc(id)}/activity-options`),
+      act: (id, command) => request('POST', `/admin/members/${enc(id)}/actions`, {body: command}),
       list: (query) => request('GET', '/admin/members', { query: { ...query } }),
       get: (id) => request('GET', `/admin/members/${enc(id)}`),
       update: (id, patch) => request('PATCH', `/admin/members/${enc(id)}`, { body: patch }),
