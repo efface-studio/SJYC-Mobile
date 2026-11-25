@@ -95,6 +95,11 @@ export const httpClient: ApiClient = {
   auth: {
     startNativeApple: (link) => request('POST', (link ? '/me/social' : '/auth/social') + '/apple/native/start'),
     finishNativeApple: (input) => request('POST', '/auth/social/apple/native/complete', { body: input }),
+    adminProviders: () => request('GET', '/auth/social/providers'),
+    startAdminSocial: (provider) => request('POST', '/auth/admin-social/' + provider + '/start'),
+    completeAdminSocial: (proof) => request('POST', '/auth/admin-social/complete', { body: proof }),
+    adminSocialLink: () => request('GET', '/auth/admin-social/link'),
+    linkAdminSocial: (input) => request('POST', '/auth/admin-social/link', { body: input }),
     socialDraft: () => request('GET', '/auth/social/onboarding'),
     requestSocialCode: (email) => request('POST','/auth/social/onboarding/email',{body:{email}}),
     saveSocialProfile: (input) => request('POST','/auth/social/onboarding',{body:input}),
