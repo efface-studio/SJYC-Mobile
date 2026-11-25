@@ -6,6 +6,8 @@ import { Linking, Platform, View } from 'react-native';
 import { api } from '@/api';
 import type { OAuthProvider } from '@/domain/types';
 import { useTheme } from '~/ds';
+import { useContext } from 'react';
+import { ThemeAudience } from '~/ds/tokens';
 
 export const SOCIAL_ORDER: OAuthProvider[] = ['kakao', 'naver', 'google', 'apple'];
 export const socialMarks = {
@@ -29,6 +31,11 @@ export function SocialMark({
   size?: number;
 }) {
   const t = useTheme();
+  const admin = useContext(ThemeAudience) === 'admin';
+  if (admin) {
+    const tint = muted ? t.textTertiary : provider === 'google' ? undefined : provider === 'naver' ? colors.naver : t.text;
+    return <Image accessible={false} source={socialMarks[provider]} contentFit="contain" tintColor={tint} style={{ width: size, height: size }} />;
+  }
   const tint = muted
     ? t.textTertiary
     : provider === 'naver'
