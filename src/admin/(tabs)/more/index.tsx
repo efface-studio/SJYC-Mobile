@@ -1,3 +1,4 @@
+import { DeveloperMenu } from '~/admin-kit/developer/menu';
 import { SOCIAL_ORDER, SocialMark, useSocialAccounts } from '~/user-kit/social-accounts';
 import { AppearanceRow } from '~/shared/appearance-row';
 import { openScreen } from '~/shared/navigation';
@@ -128,18 +129,7 @@ const GROUPS: { group: string; items: Menu[] }[] = [
       },
     ],
   },
-  {
-    group: '개발',
-    items: [
-      {
-        title: '개발자 도구',
-        icon: { ios: 'terminal', android: 'terminal' },
-        subtitle: '권한 관리 · 로그 · 세션 보안 · 운영 · 시스템',
-        href: '/more/developer',
-        permission: 'developer.access',
-      },
-    ],
-  },
+
 ];
 
 export default function More() {
@@ -149,7 +139,8 @@ export default function More() {
   const t = useTheme();
   const allowed = (m: Menu) =>
     typeof m.permission === 'function' ? m.permission(user) : can(user, m.permission);
-  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(allowed) })).filter(
+  const developer = can(user, 'developer.access');
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(m => allowed(m) && !(developer && (m.href === '/more/members' || m.href === '/more/app-updates'))) })).filter(
     (g) => g.items.length > 0,
   );
 
@@ -214,6 +205,7 @@ export default function More() {
             </View>
           ))
         )}
+        {developer && <DeveloperMenu/>}
         <Gutter style={styles.groupLabel}>
           <Txt variant="captionStrong" color="textTertiary" accessibilityRole="header">
             앱 설정

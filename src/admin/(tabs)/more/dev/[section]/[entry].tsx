@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, router, useIsFocused, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Segmented } from '~/admin-kit/developer/segmented';
+import { DevGroups } from '~/admin-kit/developer/rows';
+import { devHref } from '~/admin-kit/developer/menu';
+import { Icon } from '~/shared/icon';
+import { AppState, View, Pressable } from 'react-native';
 import { api, errorMessage } from '@/api';
 import {
   developerSections,
@@ -15,10 +19,9 @@ import {
   Button,
   FormSection,
   Gutter,
-  ListRow,
+  useTheme,
   QueryBoundary,
   Screen,
-  SectionHeader,
   SelectField,
   SwitchRow,
   TextField,
@@ -102,92 +105,108 @@ export default function DeveloperDetail() {
   const section = Object.hasOwn(developerSections, params.section)
     ? (params.section as DevSection)
     : undefined;
-  const item = params.entry === 'overview' ? '' : (params.entry ?? '').replace('~', '/');
+  const entry = params.entry === 'overview' ? '' : (params.entry ?? '').replace('~', '/');
+  const mainLogs = section === 'logs' && !entry;
+  const [logPanel, setPanel] = useState<'requests' | 'audit'>('requests');
+  const item = mainLogs ? logPanel : entry;
   const [page, setPage] = useState(0),
     [search, setSearch] = useState(params.search ?? ''),
-    [draft, setDraft] = useState(search);
+    [draft, setDraft] = useState(params.search ?? '');
+  const [appState, setAppState] = useState(AppState.currentState);
+  const t = useTheme();
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', setAppState);
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(draft.trim());
+      setPage(0);
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [draft]);
+  const roleList = section === 'permissions' && !item;
   const cache = useQueryClient(),
     session = useSession(),
     logout = useLogout();
   const query = useQuery({
     queryKey: ['admin', 'dev-console', section, item, search, page],
-    enabled: allowed && !!section,
-    queryFn: () => api.admin.developerView({ section: section!, item, search, page }),
-    refetchInterval: (q) => (focused ? (q.state.data?.interval ?? false) : false),
+    enabled: allowed && !!section && focused,
+    queryFn: () =>
+      api.admin.developerView({ section: section!, item, search: roleList ? undefined : search, page }),
+    refetchInterval: (q) => (focused && appState === 'active' ? (q.state.data?.interval ?? false) : false),
   });
-  const go = (loc: DevLocation) =>
-    openScreen({
-      pathname: '/more/dev/[section]/[entry]',
-      params: {
-        section: loc.section,
-        entry: loc.item?.replace('/', '~') || 'overview',
-        ...(loc.search ? { search: loc.search } : {}),
-      },
-    });
+  const go = (loc: DevLocation) => openScreen(devHref(loc.section, loc.item || 'overview', loc.search));
   if (!allowed || !section) return <NoPermission />;
+  const searchLabel = roleList
+    ? '역할 이름·코드'
+    : mainLogs
+      ? logPanel === 'audit'
+        ? '작업·실행자 검색'
+        : '상태·메서드·경로 검색'
+      : query.data?.searchLabel;
   return (
     <>
-      <Stack.Screen options={{ title: query.data?.title ?? developerSections[section] }} />
+      <Stack.Screen
+        options={{
+          title: mainLogs ? '로그' : (query.data?.title ?? developerSections[section]),
+          ...(searchLabel
+            ? {
+                headerSearchBarOptions: {
+                  placement: 'integratedButton',
+                  allowToolbarIntegration: false,
+                  hideWhenScrolling: false,
+                  placeholder: searchLabel,
+                  cancelButtonText: '취소',
+                  autoCapitalize: 'none',
+                  onChangeText: (e) => setDraft(e.nativeEvent.text),
+                  onCancelButtonPress: () => setDraft(''),
+                },
+              }
+            : {}),
+          ...(roleList
+            ? {
+                headerRight: () => (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="역할 추가"
+                    hitSlop={10}
+                    onPress={() => go({ section: 'permissions', item: 'new' })}
+                  >
+                    <Icon ios="plus" android="add" size={22} color={t.text} />
+                  </Pressable>
+                ),
+              }
+            : {}),
+          ...((section === 'logs' && item.includes('/') && !item.startsWith('top')) ||
+          item === 'new' ||
+          item === 'settings'
+            ? { presentation: 'modal' }
+            : {}),
+        }}
+      />
       <Screen onRefresh={() => query.refetch()}>
+        {mainLogs && (
+          <Segmented
+            label="로그 종류"
+            style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}
+            options={[
+              { value: 'requests', label: '서버 로그' },
+              { value: 'audit', label: '감사 로그' },
+            ]}
+            value={logPanel}
+            onChange={(tab) => {
+              setPanel(tab);
+              setPage(0);
+              setDraft('');
+              setSearch('');
+            }}
+          />
+        )}
         <QueryBoundary layout="settings" query={query}>
           {(view) => (
             <>
-              {view.searchLabel && (
-                <Gutter style={{ paddingVertical: space.md }}>
-                  <TextField
-                    label={view.searchLabel}
-                    value={draft}
-                    onChangeText={setDraft}
-                    returnKeyType="search"
-                    onSubmitEditing={() => {
-                      setPage(0);
-                      setSearch(draft.trim());
-                    }}
-                  />
-                  <Button
-                    label="검색"
-                    size="md"
-                    variant="text"
-                    onPress={() => {
-                      setPage(0);
-                      setSearch(draft.trim());
-                    }}
-                  />
-                </Gutter>
-              )}
-              {view.groups.map((group) => (
-                <View key={group.title}>
-                  <SectionHeader title={group.title} />
-                  {group.rows.length ? (
-                    group.rows.map((row, i) =>
-                      !row.next ? (
-                        <Gutter key={i} style={{ paddingVertical: space.md, gap: space.xs }}>
-                          <Txt variant="bodyStrong">{row.title}</Txt>
-                          {row.detail && (
-                            <Txt color="textSecondary">
-                              {row.detail}
-                            </Txt>
-                          )}
-                          {row.value && <Txt variant="captionStrong">{row.value}</Txt>}
-                        </Gutter>
-                      ) : (
-                        <ListRow
-                          key={i}
-                          title={row.title}
-                          subtitle={row.detail}
-                          numberOfLines={4}
-                          trailing={row.value ? <Txt variant="captionStrong">{row.value}</Txt> : undefined}
-                          onPress={row.next ? () => go(row.next!) : undefined}
-                        />
-                      ),
-                    )
-                  ) : (
-                    <Gutter>
-                      <Txt color="textSecondary">표시할 내역이 없습니다.</Txt>
-                    </Gutter>
-                  )}
-                </View>
-              ))}
+              <DevGroups section={section} item={item} view={view} go={go} filter={roleList ? draft : ''} />
               {view.forms?.map((f) => (
                 <ActionForm
                   key={[item, f.command, f.version].join('/')}
