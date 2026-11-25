@@ -6,8 +6,6 @@ import { Linking, Platform, View } from 'react-native';
 import { api } from '@/api';
 import type { OAuthProvider } from '@/domain/types';
 import { useTheme } from '~/ds';
-import { useContext } from 'react';
-import { ThemeAudience } from '~/ds/tokens';
 
 export const SOCIAL_ORDER: OAuthProvider[] = ['kakao', 'naver', 'google', 'apple'];
 export const socialMarks = {
@@ -33,28 +31,16 @@ export function SocialMark({
   plain?: boolean;
 }) {
   const t = useTheme();
-  const admin = useContext(ThemeAudience) === 'admin';
-  if (admin) {
+  if (plain) {
     const color = { kakao: t.text, naver: colors.naver, google: undefined, apple: t.text };
-    const iconSize = plain ? size : Math.round(size * 0.58);
-    const icon = (
+    return (
       <Image
         accessible={false}
         source={socialMarks[provider]}
         contentFit="contain"
         tintColor={muted ? t.textTertiary : color[provider]}
-        style={{ width: iconSize, height: iconSize }}
+        style={{ width: size, height: size }}
       />
-    );
-    if (plain) return icon;
-    return (
-      <View accessible={false} style={{
-        width: size, height: size, borderRadius: size / 2, borderWidth: 1,
-        borderColor: muted ? t.lineStrong : t.tone.brand.fg,
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        {icon}
-      </View>
     );
   }
   const tint = muted
