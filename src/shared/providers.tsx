@@ -4,28 +4,45 @@ import {
   QueryCache,
   QueryClient,
   QueryClientProvider,
-} from '@tanstack/react-query';
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, type ReactNode } from 'react';
-import { AppState, Platform, useColorScheme } from 'react-native';
-import { ApiError } from '@/api/errors';
-import { SESSION_KEY } from '@/features/auth/session';
-import { OptionSheetHost, useAppFonts, useTheme } from '~/ds';
+} from "@tanstack/react-query";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { AppState, Platform, View, useColorScheme } from "react-native";
+import { BrandSplash } from "./brand-splash";
+import { ApiError } from "@/api/errors";
+import { SESSION_KEY } from "@/features/auth/session";
+import { OptionSheetHost, useAppFonts, useTheme } from "~/ds";
 
 function shouldRetry(count: number, error: unknown): boolean {
-  if (error instanceof ApiError && error.code !== 'NETWORK' && error.code !== 'SERVER') return false;
+  if (
+    error instanceof ApiError &&
+    error.code !== "NETWORK" &&
+    error.code !== "SERVER"
+  )
+    return false;
   return count < 2;
 }
 
 /** 웹과 같은 규칙: 어떤 요청이든 401 이면 세션을 다시 확인해 재인증으로 안내 */
-export function AppProviders({ children }: { children: ReactNode }) {
+export function AppProviders({
+  children,
+  onReady,
+}: {
+  children: ReactNode;
+  onReady?: () => void;
+}) {
+  const [launching, setLaunching] = useState(true);
+  const finish = useCallback(() => {
+    setLaunching(false);
+    onReady?.();
+  }, [onReady]);
   const scheme = useColorScheme();
   const t = useTheme();
   const fontsReady = useAppFonts();
   const [client] = useState(() => {
     const onError = (error: unknown) => {
-      if (error instanceof ApiError && error.code === 'UNAUTHENTICATED') {
+      if (error instanceof ApiError && error.code === "UNAUTHENTICATED") {
         void qc.invalidateQueries({ queryKey: SESSION_KEY });
       }
     };
@@ -40,17 +57,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
     return qc;
   });
   useEffect(() => {
-    if (Platform.OS === 'web') return;
-    if (AppState.currentState != null) focusManager.setFocused(AppState.currentState === 'active');
-    const subscription = AppState.addEventListener('change', (state) =>
-      focusManager.setFocused(state === 'active'),
+    if (Platform.OS === "web") return;
+    if (AppState.currentState != null)
+      focusManager.setFocused(AppState.currentState === "active");
+    const subscription = AppState.addEventListener("change", (state) =>
+      focusManager.setFocused(state === "active"),
     );
     return () => {
       subscription.remove();
       focusManager.setFocused(undefined);
     };
   }, []);
-  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const base = scheme === "dark" ? DarkTheme : DefaultTheme;
   // 폰트가 준비될 때까지 스플래시를 유지한다 (실패 시 시스템 폰트로 진행)
   if (!fontsReady) return null;
 
@@ -70,7 +88,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
         }}
       >
         <StatusBar style="auto" />
-        {children}
+        <View style={{ flex: 1 }}>
+          <View
+            style={{ flex: 1 }}
+            accessibilityElementsHidden={launching}
+            importantForAccessibility={
+              launching ? "no-hide-descendants" : "auto"
+            }
+          >
+            {children}
+          </View>
+          {launching && <BrandSplash onFinish={finish} />}
+        </View>
         <OptionSheetHost />
       </ThemeProvider>
     </QueryClientProvider>

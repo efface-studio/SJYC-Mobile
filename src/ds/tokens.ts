@@ -2,6 +2,8 @@ import { createContext, useContext } from 'react';
 import { useColorScheme } from 'react-native';
 import type { Tone } from '@/domain/labels';
 
+export const CENTER_RED = '#E41D25';
+
 const light = {
   bg: '#FFFEFC',
   bgSubtle: '#F5F1EB',
@@ -13,7 +15,7 @@ const light = {
   lineStrong: '#91857A',
   action: '#B51E28',
   onAction: '#FFFFFF',
-  brand: '#E41D25',
+  brand: CENTER_RED,
   brandSoft: '#FFF3C6',
   pressed: 'rgba(0,0,0,0.05)',
   overlay: 'rgba(0,0,0,0.4)',
@@ -40,7 +42,7 @@ const dark: Palette = {
   lineStrong: '#555555',
   action: '#FF9E97',
   onAction: '#242120',
-  brand: '#E41D25',
+  brand: CENTER_RED,
   brandSoft: '#4A2426',
   pressed: 'rgba(255,255,255,0.08)',
   overlay: 'rgba(0,0,0,0.6)',

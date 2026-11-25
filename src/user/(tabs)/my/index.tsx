@@ -113,7 +113,7 @@ function SignedOut() {
     <Screen>
       <EmptyState
         title="로그인하고 더 편하게 이용하세요"
-        description="프로그램 신청, 공간 예약, 동아리 가입 내역을 한곳에서 확인할 수 있습니다."
+        description={'프로그램 신청, 공간 예약, 동아리 가입 내역을\n한곳에서 확인할 수 있습니다.'}
         action={
           <View style={styles.authButtons}>
             <View style={{ flex: 1 }}>

@@ -1,23 +1,23 @@
-import { Camera } from 'expo-camera';
-import { useEffect } from 'react';
-import { AppState, Platform, type AppStateStatus } from 'react-native';
+import { Camera } from "expo-camera";
+import { useEffect } from "react";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 
 /** QR 출석용 카메라 권한은 사용자 앱의 첫 활성 화면에서 OS에 요청한다. */
-export function useStartupCameraPermission() {
+export function useStartupCameraPermission(ready: boolean) {
   useEffect(() => {
-    if (Platform.OS !== 'ios' && Platform.OS !== 'android') return;
+    if (!ready || (Platform.OS !== "ios" && Platform.OS !== "android")) return;
     let mounted = true;
     let checking = false;
     let finished = false;
 
     async function onState(state: AppStateStatus | null) {
-      if (state !== 'active' || checking || finished) return;
+      if (state !== "active" || checking || finished) return;
       checking = true;
       try {
         const permission = await Camera.getCameraPermissionsAsync();
-        if (!mounted || AppState.currentState !== 'active') return;
+        if (!mounted || AppState.currentState !== "active") return;
         finished = true;
-        if (permission.status === 'undetermined' && permission.canAskAgain) {
+        if (permission.status === "undetermined" && permission.canAskAgain) {
           await Camera.requestCameraPermissionsAsync();
         }
       } catch {
@@ -27,11 +27,11 @@ export function useStartupCameraPermission() {
       }
     }
 
-    const sub = AppState.addEventListener('change', onState);
+    const sub = AppState.addEventListener("change", onState);
     void onState(AppState.currentState);
     return () => {
       mounted = false;
       sub.remove();
     };
-  }, []);
+  }, [ready]);
 }
