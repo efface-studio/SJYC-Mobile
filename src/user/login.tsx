@@ -14,7 +14,6 @@ import type { OAuthProvider } from '@/domain/types';
 import { forgotPasswordSchema, loginSchema, parseValues, type FieldErrors } from '@/domain/schemas';
 import { SESSION_KEY } from '@/features/auth/session';
 import { Button, Gutter, Screen, Tap, TextField, Txt, radius, space, useTheme } from '~/ds';
-import { ModalGuard, closeModal } from '~/user-kit';
 import { beginSocial, socialMarks, useAppleAvailable } from '~/user-kit/social-accounts';
 import { notify } from '~/shared/dialogs';
 
@@ -43,7 +42,6 @@ function SocialButton({ p }: { p: ProviderState }) {
         const session = await api.auth.me();
         if (!session) throw new Error('로그인 상태를 확인할 수 없습니다.');
         cache.setQueryData(SESSION_KEY, session);
-        closeModal('/my');
       }
     },
     onError: (err) => notify('소셜 로그인', errorMessage(err)),
@@ -103,10 +101,7 @@ export default function LoginScreen() {
   const login = useMutation({
     mutationFn: api.auth.login,
     onSuccess: (s) => {
-      motion.finish(
-        () => qc.setQueryData(SESSION_KEY, s),
-        () => closeModal('/my'),
-      );
+      motion.finish(() => qc.setQueryData(SESSION_KEY, s));
     },
     onError: (e) => {
       motion.fail();
@@ -149,7 +144,7 @@ export default function LoginScreen() {
   if (mode === 'forgot') {
     return (
       <>
-        <ModalGuard dirty={false} fallback="/my" />
+
         <Screen>
           <Gutter style={styles.header}>
             <Wordmark width={165} />
@@ -185,7 +180,7 @@ export default function LoginScreen() {
 
   return (
     <>
-      <ModalGuard dirty={false} fallback="/my" />
+
       <Screen>
         <AuthReveal delay={0} reduce={motion.reduce}>
           <Gutter style={styles.header}>
@@ -235,7 +230,7 @@ export default function LoginScreen() {
               </Tap>
               <View style={[styles.sep, { backgroundColor: t.line }]} />
               <Tap
-                onPress={() => router.replace('/signup')}
+                onPress={() => router.push('/signup')}
                 accessibilityLabel="회원가입"
                 style={styles.link}
               >
