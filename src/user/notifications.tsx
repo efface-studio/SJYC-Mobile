@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { NOTIFICATION_KIND_LABEL } from '@/domain/labels';
@@ -77,6 +77,9 @@ export default function NotificationsScreen() {
         }}
       />
       <Screen onRefresh={() => list.refetch()}>
+        <Tap accessibilityLabel="알림 설정" onPress={() => router.push('/my/notification-settings')} style={{ alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 20 }}>
+          <Txt variant="label" color="textSecondary">알림 설정</Txt>
+        </Tap>
         <QueryBoundary
           query={list}
           isEmpty={(d) => d.length === 0}

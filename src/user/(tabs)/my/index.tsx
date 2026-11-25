@@ -406,6 +406,10 @@ export default function MyScreen() {
         </Gutter>
       )}
 
+      <SectionHeader title="설정" />
+      <Rows>
+        <LinkRow title="알림 설정" ios="bell" android="notifications" onPress={() => router.push('/my/notification-settings')} />
+      </Rows>
       <InfoSections />
 
       <Divider />

@@ -109,6 +109,8 @@ export const httpClient: ApiClient = {
       request('POST', '/auth/password-reset/confirm', { body: { token, password } }),
   },
   me: {
+    notificationPreferences: () => request('GET', '/me/notifications/preferences'),
+    setNotificationPreference: (input) => request('PATCH', '/me/notifications/preferences', { body: input }),
     profilePhoto: () => request('GET', '/me/profile/photo'),
     setProfilePhoto: (image) => request('PUT', '/me/profile/photo', { body: { image } }),
     updateProfile: (input) => request('PATCH', '/me/profile', { body: input }),
