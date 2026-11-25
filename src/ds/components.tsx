@@ -23,7 +23,7 @@ import { errorMessage } from '@/api/errors';
 import type { Tone } from '@/domain/labels';
 import { Icon } from '~/shared/icon';
 import { Txt } from './text';
-import { CENTER_RED, GUTTER, radius, space, useTheme } from './tokens';
+import { GUTTER, radius, space, useTheme } from './tokens';
 
 /* ---------- 레이아웃 ---------- */
 
@@ -68,8 +68,8 @@ export function Screen({
           <RefreshControl
             progressViewOffset={topInset}
             refreshing={refreshing}
-            tintColor={CENTER_RED}
-            colors={[CENTER_RED]}
+            tintColor={t.action}
+            colors={[t.action]}
             onRefresh={async () => {
               setRefreshing(true);
               try {

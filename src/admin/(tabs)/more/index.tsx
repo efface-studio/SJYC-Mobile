@@ -1,3 +1,4 @@
+import { AppearanceRow } from '~/shared/appearance-row';
 import { openScreen } from '~/shared/navigation';
 import Constants from 'expo-constants';
 import { Stack, type Href } from 'expo-router';
@@ -208,6 +209,8 @@ export default function More() {
             </View>
           ))
         )}
+        <Gutter style={styles.groupLabel}><Txt variant="captionStrong" color="textTertiary" accessibilityRole="header">앱 설정</Txt></Gutter>
+        <AppearanceRow />
         <Divider />
         <Gutter style={styles.footer}>
           <Button

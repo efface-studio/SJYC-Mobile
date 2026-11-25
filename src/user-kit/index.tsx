@@ -301,7 +301,7 @@ export function BellButton() {
       <Icon ios="bell" android="notifications" color={t.text} size={22} />
       {unread > 0 && (
         <View style={[styles.bellBadge, { backgroundColor: t.tone.danger.fg, borderColor: t.bg }]}>
-          <Txt variant="small" color="#FFFFFF" style={styles.bellCount}>
+          <Txt variant="small" color={t.tone.danger.bg} style={styles.bellCount}>
             {unread > 9 ? '9+' : unread}
           </Txt>
         </View>

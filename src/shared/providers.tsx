@@ -1,3 +1,5 @@
+import { useAppColorScheme } from '~/shared/appearance';
+import { restoreAppearance } from './appearance';
 import { LoginSessionGate } from './login-preferences';
 import {
   focusManager,
@@ -9,7 +11,7 @@ import {
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { AppState, Platform, View, useColorScheme } from "react-native";
+import { AppState, Platform, View } from "react-native";
 import { BrandSplash } from "./brand-splash";
 import { ApiError } from "@/api/errors";
 import { SESSION_KEY } from "@/features/auth/session";
@@ -33,12 +35,17 @@ export function AppProviders({
   children: ReactNode;
   onReady?: () => void;
 }) {
+  const [appearanceReady, setAppearanceReady] = useState(false);
+  useEffect(() => {
+    restoreAppearance();
+    setAppearanceReady(true);
+  }, []);
   const [launching, setLaunching] = useState(true);
   const finish = useCallback(() => {
     setLaunching(false);
     onReady?.();
   }, [onReady]);
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const t = useTheme();
   const fontsReady = useAppFonts();
   const [client] = useState(() => {
@@ -71,7 +78,7 @@ export function AppProviders({
   }, []);
   const base = scheme === "dark" ? DarkTheme : DefaultTheme;
   // 폰트가 준비될 때까지 스플래시를 유지한다 (실패 시 시스템 폰트로 진행)
-  if (!fontsReady) return null;
+  if (!fontsReady || !appearanceReady) return null;
 
   return (
     <QueryClientProvider client={client}>
@@ -88,7 +95,7 @@ export function AppProviders({
           },
         }}
       >
-        <StatusBar style="auto" />
+        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
         <View style={{ flex: 1 }}>
           <View
             style={{ flex: 1 }}

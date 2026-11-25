@@ -1,10 +1,11 @@
+import { useAppColorScheme } from '~/shared/appearance';
 import { BlurTargetView, BlurView } from 'expo-blur';
 import { useRef, type ReactNode } from 'react';
-import { StyleSheet, View, useColorScheme } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export function ScrollBackdrop({ height, children }: { height: number; children: ReactNode }) {
   const target = useRef<View>(null);
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   if (height <= 0) return <>{children}</>;
   return (
     <View style={styles.fill}>

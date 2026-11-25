@@ -1,7 +1,7 @@
 import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
-type Key = 'remember-login-off' | 'remember-email';
+type Key = 'remember-login-off' | 'remember-email' | 'appearance';
 
 export function readPreference(key: Key): string | null {
   if (Platform.OS === 'web') return typeof window === 'undefined' ? null : window.localStorage.getItem('sjyc.' + key);

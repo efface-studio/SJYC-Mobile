@@ -1,5 +1,5 @@
+import { useAppColorScheme } from '~/shared/appearance';
 import { createContext, useContext } from 'react';
-import { useColorScheme } from 'react-native';
 import type { Tone } from '@/domain/labels';
 
 export const CENTER_RED = '#E41D25';
@@ -82,7 +82,7 @@ export type Theme = Palette;
 export const ThemeAudience = createContext<'user' | 'admin'>('user');
 
 export function useTheme(): Theme {
-  const night = useColorScheme() === 'dark';
+  const night = useAppColorScheme() === 'dark';
   return useContext(ThemeAudience) === 'admin' ? (night ? staffDark : staffLight) : night ? dark : light;
 }
 

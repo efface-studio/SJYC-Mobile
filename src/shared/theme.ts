@@ -1,5 +1,6 @@
+import { useAppColorScheme } from '~/shared/appearance';
 import { useTheme } from '~/ds/tokens';
-import { Platform, PlatformColor, useColorScheme, type ColorValue } from 'react-native';
+import { Platform, PlatformColor, type ColorValue } from 'react-native';
 
 /**
  * 색은 OS 기본을 따른다.
@@ -75,7 +76,7 @@ const android = (dark: boolean): Colors =>
       };
 
 export function useColors(): Colors {
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const t = useTheme();
   const system = Platform.OS === 'ios' ? ios(dark) : android(dark);
   return { ...system, tint: t.action, onTint: t.onAction };

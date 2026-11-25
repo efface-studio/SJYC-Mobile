@@ -1,3 +1,4 @@
+import { useAppColorScheme } from '~/shared/appearance';
 import { LoginOptions, useLoginPreferences } from '~/shared/login-preferences';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Platform, StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
+import { Platform, StyleSheet, View, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { AuthReveal, LoginSubmit, useLoginMotion } from '~/shared/login-motion';
@@ -25,13 +26,13 @@ const SOCIAL: Record<
   { bg: string; fg: string; border?: string; darkBg?: string; darkFg?: string }
 > = {
   kakao: { bg: '#FEE500', fg: '#191919' },
-  naver: { bg: '#03C75A', fg: '#FFFFFF' },
+  naver: { bg: '#03C75A', fg: '#092E1A' },
   apple: { bg: '#000000', fg: '#FFFFFF', darkBg: '#FFFFFF', darkFg: '#000000' },
   google: { bg: '#FFFFFF', fg: '#1F1F1F', border: '#DADCE0' },
 };
 
 function SocialButton({ p }: { p: ProviderState }) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const c = SOCIAL[p.provider];
   const bg = dark && c.darkBg ? c.darkBg : c.bg;
   const fg = dark && c.darkFg ? c.darkFg : c.fg;
@@ -70,7 +71,7 @@ function SocialButton({ p }: { p: ProviderState }) {
         <Image
           contentFit="contain"
           source={socialMarks[p.provider]}
-          tintColor={p.provider === 'google' ? undefined : fg}
+          tintColor={p.provider === 'google' ? undefined : p.provider === 'naver' ? '#FFFFFF' : fg}
           style={styles.providerMark}
         />
       </View>
