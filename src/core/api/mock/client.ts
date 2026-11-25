@@ -1098,6 +1098,8 @@ export const mockClient: ApiClient = {
 
   site: { settings: () => respond((db) => db.siteSettings ?? { version: 0, values: {} }) },
   admin: {
+    changeAppUpdate: () => respond(db=>{requirePermission(db,'site.manage');throw new ApiError('NOT_FOUND','요청한 업데이트가 없습니다.');}),
+    appUpdates: () => respond(db=>{ requirePermission(db,'site.manage'); return []; }),
     serverLogs: () =>
       respond((db) => {
         requirePermission(db, 'developer.access');

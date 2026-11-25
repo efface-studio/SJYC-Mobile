@@ -1,3 +1,4 @@
+import { AppUpdates } from './app-updates';
 import {
   focusManager,
   MutationCache,
@@ -87,6 +88,7 @@ export function AppProviders({
           },
         }}
       >
+        {!launching && <AppUpdates />}
         <StatusBar style="auto" />
         <View style={{ flex: 1 }}>
           <View
