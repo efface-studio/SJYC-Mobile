@@ -270,6 +270,19 @@ export const mockClient: ApiClient = {
   auth: {
     startNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
     finishNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
+    adminProviders: async () => [],
+    startAdminSocial: async () => {
+      throw new ApiError('NOT_CONFIGURED', '사용할 수 없는 로그인 방법입니다.');
+    },
+    completeAdminSocial: async () => {
+      throw new ApiError('NOT_CONFIGURED', '사용할 수 없는 로그인 방법입니다.');
+    },
+    adminSocialLink: async () => {
+      throw new ApiError('VALIDATION', '관리자 소셜 로그인을 다시 시작해 주세요.');
+    },
+    linkAdminSocial: async () => {
+      throw new ApiError('NOT_CONFIGURED', '관리자 소셜 로그인을 다시 시작해 주세요.');
+    },
     socialDraft: async () => {throw new ApiError('VALIDATION','소셜 로그인을 다시 시작해 주세요.');},
     requestSocialCode: async () => {throw new ApiError('NOT_CONFIGURED','소셜 로그인을 다시 시작해 주세요.');},
     saveSocialProfile: async () => {throw new ApiError('NOT_CONFIGURED','소셜 로그인을 다시 시작해 주세요.');},

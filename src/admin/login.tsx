@@ -1,3 +1,4 @@
+import { AdminSocialButtons } from '~/admin-kit/social-login';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AuthReveal, LoginSubmit, useLoginMotion } from '~/shared/login-motion';
 import { Wordmark } from '~/shared/wordmark';
@@ -120,6 +121,7 @@ export default function Login() {
             </View>
           </View>
         </AuthReveal>
+        <AdminSocialButtons />
         {DEMO_DATA && (
           <View style={[styles.demo, { borderTopColor: t.line }]}>
             <Txt variant="captionStrong" color="textTertiary" style={{ paddingHorizontal: space.lg }}>

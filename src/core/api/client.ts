@@ -101,6 +101,14 @@ export interface ApiClient {
   auth: {
     startNativeApple(link: boolean): Promise<{ state: string; nonce: string }>;
     finishNativeApple(input: { state: string; identityToken: string; name?:string }): Promise<{ signedIn: boolean; needsProfile?: boolean }>;
+    adminProviders(): Promise<OAuthProvider[]>;
+    startAdminSocial(provider: OAuthProvider): Promise<{ url: string; claim: string }>;
+    completeAdminSocial(proof: {
+      receipt: string;
+      claim: string;
+    }): Promise<{ signedIn: boolean; needsLink: boolean }>;
+    adminSocialLink(): Promise<{ provider: OAuthProvider }>;
+    linkAdminSocial(input: LoginInput): Promise<{ signedIn: boolean }>;
     socialDraft(): Promise<SocialDraft>;
     requestSocialCode(email: string): Promise<void>;
     saveSocialProfile(input: SocialDetails): Promise<{signedIn: boolean}>;
