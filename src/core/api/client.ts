@@ -1,3 +1,4 @@
+import type { SignupPhoneState } from '@/domain/signup-phone';
 import type { SocialDraft, SocialDetails } from '@/domain/social-profile';
 import type { LoginDevice, SocialAccounts } from '@/domain/account-settings';
 import type { OAuthProvider } from '@/domain/types';
@@ -110,8 +111,7 @@ export interface ApiClient {
     adminSocialLink(): Promise<{ provider: OAuthProvider }>;
     linkAdminSocial(input: LoginInput): Promise<{ signedIn: boolean }>;
     socialDraft(): Promise<SocialDraft>;
-    requestSocialCode(email: string): Promise<void>;
-    saveSocialProfile(input: SocialDetails): Promise<{signedIn: boolean}>;
+    saveSocialProfile(input: SocialDetails): Promise<SignupPhoneState>;
     socialProviders(): Promise<OAuthProvider[]>;
     startSocial(provider: OAuthProvider, link: boolean): Promise<{ url: string; claim: string }>;
     completeSocial(proof: { receipt: string; claim: string }): Promise<{ signedIn: boolean; needsProfile?: boolean }>;
@@ -119,8 +119,10 @@ export interface ApiClient {
     me(): Promise<Session | null>;
     login(input: LoginInput): Promise<Session>;
     logout(): Promise<void>;
-    signup(input: SignupInput): Promise<{ requiresEmailVerification: boolean; verificationMode?: 'preview' }>;
-    confirmPreviewCode(code: string): Promise<void>;
+    signup(input: SignupInput): Promise<SignupPhoneState>;
+    signupPhone(): Promise<SignupPhoneState>;
+    resendPhone(phone?: string): Promise<SignupPhoneState>;
+    confirmPhone(code: string): Promise<{signedIn:boolean}>;
     resendVerification(email: string): Promise<void>;
     requestPasswordReset(email: string): Promise<void>;
     resetPassword(token: string, password: string): Promise<void>;

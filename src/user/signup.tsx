@@ -59,8 +59,7 @@ export default function SignupScreen() {
 
   const signup = useMutation({
     mutationFn: api.auth.signup,
-    // 웹과 같은 흐름: 가입 → 이메일 인증 안내 (mock 모드는 그 화면에서 개발용 인증 처리)
-    onSuccess: (result, input) => router.replace({ pathname: '/verify-email', params: { email: input.email, mode: result.verificationMode } }),
+    onSuccess: () => router.replace('/verify-phone'),
     onError: (e) => {
       if (isApiError(e) && e.fieldErrors) setErrors(e.fieldErrors);
       notify('가입하지 못했습니다', errorMessage(e));
@@ -100,7 +99,7 @@ export default function SignupScreen() {
             몇 가지 정보만 입력해 주세요
           </Txt>
           <Txt variant="caption" color="textTertiary">
-            가입 후 이메일 인증을 완료하면 프로그램 신청과 공간 예약을 이용할 수 있습니다.
+            휴대전화 인증을 마치면 프로그램 신청과 공간 예약을 이용할 수 있습니다.
           </Txt>
         </Gutter>
 

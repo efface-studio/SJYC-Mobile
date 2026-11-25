@@ -50,7 +50,7 @@ export default function Settings() {
           onPress={
             user.emailVerified
               ? undefined
-              : () => openScreen({ pathname: '/verify-email', params: { email: user.email } })
+              : () => void api.auth.resendVerification(user.email).then(() => notify('메일을 확인해 주세요', '받은 메일의 링크를 눌러 이메일 인증을 완료해 주세요.')).catch((e) => notify('메일을 요청하지 못했습니다', errorMessage(e)))
           }
         />
       </Rows>
