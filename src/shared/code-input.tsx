@@ -1,16 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, TextInput, View } from 'react-native';
 import { Txt, useTheme } from '~/ds';
 import { Image } from 'expo-image';
 
 type Phase = 'idle' | 'verifying' | 'success' | 'error';
-export function SignupOtp({
+export function useReducedMotion() {
+  const [reduce, setReduce] = useState(true);
+  useEffect(() => {
+    let active = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (active) setReduce(enabled);
+    });
+    const listener = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
+    return () => { active = false; listener.remove(); };
+  }, []);
+  return reduce;
+}
+
+export function CodeInput({
+  length = 6,
+  label = '인증 코드',
   code,
   onChange,
   phase,
   reduce,
   disabled,
 }: {
+  length?: 4 | 6;
+  label?: string;
   code: string;
   onChange: (s: string) => void;
   phase: Phase;
@@ -48,14 +65,14 @@ export function SignupOtp({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        {Array.from({ length: 6 }, (_, i) => {
+        {Array.from({ length }, (_, i) => {
           const start = i * 0.04;
           const collapse = phase === 'success';
           const x =
             collapse && !reduce
               ? progress.interpolate({
                   inputRange: [0, 0.48 + start, 0.8 + start, 1.01],
-                  outputRange: [0, 0, ((2.5 - i) * (width + 6)) / 6, ((2.5 - i) * (width + 6)) / 6],
+                  outputRange: [0, 0, (((length - 1) / 2 - i) * (width + 6)) / length, (((length - 1) / 2 - i) * (width + 6)) / length],
                 })
               : 0;
           const y =
@@ -88,9 +105,9 @@ export function SignupOtp({
                 minWidth: 0,
                 height: 54,
                 borderRadius: 9,
-                borderWidth: focus && i === Math.min(code.length, 5) ? 2 : 1,
+                borderWidth: focus && i === Math.min(code.length, length - 1) ? 2 : 1,
                 borderColor:
-                  phase === 'error' || collapse || (focus && i === Math.min(code.length, 5))
+                  phase === 'error' || collapse || (focus && i === Math.min(code.length, length - 1))
                     ? t.action
                     : t.line,
                 backgroundColor: collapse ? t.action : t.bg,
@@ -139,13 +156,13 @@ export function SignupOtp({
         </Animated.View>
       )}
       <TextInput
-        accessibilityLabel="인증 코드"
+        accessibilityLabel={label}
         value={code}
         onChangeText={onChange}
         editable={!disabled}
         keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        autoComplete="one-time-code"
+        textContentType={length === 6 ? 'oneTimeCode' : 'none'}
+        autoComplete={length === 6 ? 'one-time-code' : 'off'}
         caretHidden
         onFocus={() => setFocus(true)}
         onBlur={() => setFocus(false)}
