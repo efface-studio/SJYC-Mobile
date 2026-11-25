@@ -1,3 +1,4 @@
+import { confirmSession } from '~/shared/confirm-session';
 import { useAppColorScheme } from '~/shared/appearance';
 import { LoginOptions, useLoginPreferences } from '~/shared/login-preferences';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +16,7 @@ import { DEMO_DATA } from '@/config/env';
 import { providerStates, type ProviderState } from '@/config/oauth';
 import type { OAuthProvider } from '@/domain/types';
 import { forgotPasswordSchema, loginSchema, parseValues, type FieldErrors } from '@/domain/schemas';
-import { SESSION_KEY } from '@/features/auth/session';
+
 import { Button, Gutter, Screen, Tap, TextField, Txt, radius, space, useTheme } from '~/ds';
 import { beginSocial, socialMarks, useAppleAvailable } from '~/user-kit/social-accounts';
 import { notify } from '~/shared/dialogs';
@@ -44,7 +45,7 @@ function SocialButton({ p }: { p: ProviderState }) {
       if (result === 'native') {
         const session = await api.auth.me();
         if (!session) throw new Error('로그인 상태를 확인할 수 없습니다.');
-        cache.setQueryData(SESSION_KEY, session);
+        confirmSession(cache, session);
       }
     },
     onError: (err) => notify('소셜 로그인', errorMessage(err)),
@@ -106,7 +107,7 @@ export default function LoginScreen() {
     mutationFn: api.auth.login,
     onSuccess: (s) => {
       preferences.rememberEmail(s.user.email);
-      motion.finish(() => qc.setQueryData(SESSION_KEY, s));
+      motion.finish(() => confirmSession(qc, s));
     },
     onError: (e) => {
       motion.fail();

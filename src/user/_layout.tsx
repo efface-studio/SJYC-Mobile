@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Stack } from 'expo-router';
-import { AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { SESSION_KEY, useSession } from '@/features/auth/session';
+import { useDeviceSession } from '~/shared/use-device-session';
+import { SESSION_KEY } from '@/features/auth/session';
 import { useLoginPermissions } from '~/shared/login-permissions';
 import { AppProviders } from '~/shared/providers';
 import { useHeaderOptions } from '~/user-kit';
@@ -21,13 +21,11 @@ export default function UserRootLayout() {
 
 function UserNavigator({ready}:{ready:boolean}) {
   const header = useHeaderOptions();
-  const session = useSession();
+  const {session, access} = useDeviceSession();
   const cache = useQueryClient();
-  const expiresAt = session.data?.expiresAt;
   const userId = session.data?.user.id;
-  useLoginPermissions(ready && !!userId,true);
+  useLoginPermissions(ready && access === 'signed-in',true);
   const previousUser = useRef(userId);
-  const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (previousUser.current && previousUser.current !== userId) {
       cache.removeQueries({ predicate: (query) => query.queryKey[0] !== SESSION_KEY[0] });
@@ -35,29 +33,13 @@ function UserNavigator({ready}:{ready:boolean}) {
     }
     previousUser.current = userId;
   }, [cache, userId]);
-  useEffect(() => {
-    if (!expiresAt) return;
-    const expiry = Date.parse(expiresAt);
-    const refresh = () => {
-      setNow(Date.now());
-      void cache.invalidateQueries({ queryKey: SESSION_KEY });
-    };
-    const timer = setTimeout(refresh, Math.min(2147483647, Math.max(0, expiry - Date.now())));
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refresh();
-    });
-    return () => {
-      clearTimeout(timer);
-      subscription.remove();
-    };
-  }, [cache, expiresAt]);
-  if (session.isPending)
+  if (access === 'checking')
     return (
       <Screen>
         <LoadingState />
       </Screen>
     );
-  if (session.isError && (!session.data || Date.parse(session.data.expiresAt) <= Date.now()))
+  if (access === 'error')
     return (
       <Screen>
         <EmptyState
@@ -67,7 +49,7 @@ function UserNavigator({ready}:{ready:boolean}) {
         />
       </Screen>
     );
-  const signedIn = !!session.data && Date.parse(session.data.expiresAt) > Math.max(now, Date.now());
+  const signedIn = access === 'signed-in';
   return (
     <Stack screenOptions={{ ...header, headerBackButtonDisplayMode: 'minimal' }}>
       <Stack.Protected guard={signedIn}>

@@ -1,9 +1,10 @@
+import { confirmSession } from '~/shared/confirm-session';
 import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, errorMessage } from '@/api';
-import { SESSION_KEY } from '@/features/auth/session';
+
 import { useSignupPhone } from '@/features/auth/use-signup-phone';
 import { Button, Gutter, LoadingState, Screen, TextField, Txt, space } from '~/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,7 +53,7 @@ export default function VerifyPhone() {
             onPress={async () => {
               if (signedIn) {
                 const session = await api.auth.me();
-                if (session) cache.setQueryData(SESSION_KEY, session);
+                if (session) confirmSession(cache, session);
                 router.replace('/home');
               } else {
                 router.dismissTo('/login');
