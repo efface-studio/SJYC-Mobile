@@ -2,10 +2,10 @@
 
 한 코드베이스에서 **사용자 앱**과 **관리자 앱** 두 개를 만든다 (Expo SDK 57, expo-router, React Native 0.86).
 
-| 앱     | 실행                                                                  | 번들 ID                    | 라우트      |
-| ------ | --------------------------------------------------------------------- | -------------------------- | ----------- |
-| 사용자 | `npm run start` / `npm run ios` / `npm run android`                   | `studio.efface.sjyc`       | `src/user`  |
-| 관리자 | `npm run start:admin` / `npm run ios:admin` / `npm run android:admin` | `studio.efface.sjyc.admin` | `src/admin` |
+| 앱     | 실행                                                                  | iOS 번들 ID | Android 패키지 | 라우트      |
+| ------ | --------------------------------------------------------------------- | ------------------- | -------------------------- | ----------- |
+| 사용자 | `npm run start` / `npm run ios` / `npm run android`                   | `dev.efface.sjyc` | `studio.efface.sjyc`       | `src/user`  |
+| 관리자 | `npm run start:admin` / `npm run ios:admin` / `npm run android:admin` | `dev.efface.sjyc.admin` | `studio.efface.sjyc.admin` | `src/admin` |
 
 `APP_FLAVOR=admin` 이 라우트 폴더·앱 이름·번들 ID 를 바꾼다(`app.config.ts`). 두 앱을 한 기기에 함께 설치할 수 있다.
 

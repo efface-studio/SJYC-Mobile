@@ -19,7 +19,10 @@ const application = requireOptionalNativeModule<{
 }>('ExpoApplication');
 export async function storeUpdate() {
   const id = application?.applicationId;
-  if (!id || !['studio.efface.sjyc', 'studio.efface.sjyc.admin'].includes(id)) return null;
+  const bundleIds = Platform.OS === 'ios'
+    ? ['dev.efface.sjyc', 'dev.efface.sjyc.admin']
+    : ['studio.efface.sjyc', 'studio.efface.sjyc.admin'];
+  if (!id || !bundleIds.includes(id)) return null;
   if (Platform.OS === 'android') {
     const play = requireOptionalNativeModule<{ availableVersion(): Promise<number | null> }>('SjycStore');
     const update = await play?.availableVersion();

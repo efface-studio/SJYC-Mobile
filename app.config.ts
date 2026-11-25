@@ -15,18 +15,21 @@ const FLAVORS = {
   user: {
     name: '중구청소년센터',
     slug: 'sjyc',
-    bundleId: 'studio.efface.sjyc',
+    iosBundleId: "dev.efface.sjyc",
+    androidPackage: "studio.efface.sjyc",
     scheme: 'sjyc',
   },
   admin: {
     name: '중구청소년센터 관리자',
     slug: 'sjyc-admin',
-    bundleId: 'studio.efface.sjyc.admin',
+    iosBundleId: "dev.efface.sjyc.admin",
+    androidPackage: "studio.efface.sjyc.admin",
     scheme: 'sjyc-admin',
   },
 } as const;
 
 const f = FLAVORS[FLAVOR];
+const nativeAppleSignIn = FLAVOR === "user" && process.env.SJYC_IOS_APPLE_SIGN_IN === "1";
 const otaCertificate = process.env.SJYC_OTA_CERTIFICATE;
 const otaBase = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
 const channel =
@@ -74,19 +77,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // 시스템 라이트/다크 설정을 따른다 (색은 OS 시스템 색 사용)
   userInterfaceStyle: 'automatic',
   ios: {
-    bundleIdentifier: f.bundleId,
-    usesAppleSignIn: FLAVOR === 'user',
+    bundleIdentifier: f.iosBundleId,
+    usesAppleSignIn: nativeAppleSignIn,
     supportsTablet: FLAVOR === 'admin',
     config: { usesNonExemptEncryption: false },
     infoPlist: { CFBundleAllowMixedLocalizations: true },
   },
   android: {
-    package: f.bundleId,
+    package: f.androidPackage,
     predictiveBackGestureEnabled: true,
     blockedPermissions: ['android.permission.RECORD_AUDIO', 'android.permission.ACCESS_FINE_LOCATION'],
   },
   plugins: [
-    ...(FLAVOR === 'user' ? ['expo-apple-authentication'] : []),
+    "./scripts/with-apple-sign-in.cjs",
+    ...(nativeAppleSignIn ? ['expo-apple-authentication'] : []),
     ['expo-router', { root: FLAVOR === 'admin' ? './src/admin' : './src/user' }],
     ...(FLAVOR === 'user'
       ? [
@@ -114,5 +118,5 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     '@react-native-community/datetimepicker',
   ],
   experiments: { typedRoutes: false },
-  extra: { flavor: FLAVOR, otaTrust },
+  extra: { flavor: FLAVOR, nativeAppleSignIn, otaTrust },
 });
