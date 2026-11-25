@@ -30,6 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: f.slug,
   scheme: f.scheme,
   version: "0.1.0",
+  icon: `./assets/brand/launcher/${FLAVOR}.png`,
   orientation: "portrait",
   // 시스템 라이트/다크 설정을 따른다 (색은 OS 시스템 색 사용)
   userInterfaceStyle: "automatic",
@@ -42,6 +43,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: f.bundleId,
+    adaptiveIcon: {
+      foregroundImage: `./assets/brand/launcher/${FLAVOR}-foreground.png`,
+      backgroundColor: FLAVOR === "admin" ? "#F4F0FA" : "#FFFFFF",
+      monochromeImage: "./assets/brand/launcher/monochrome.png",
+    },
     predictiveBackGestureEnabled: true,
     blockedPermissions: [
       "android.permission.RECORD_AUDIO",
