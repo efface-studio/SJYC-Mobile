@@ -1,106 +1,154 @@
-import { openScreen } from '~/shared/navigation';
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Platform, StyleSheet } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Stack, useFocusEffect } from 'expo-router';
 import { api } from '@/api';
-import type { Club } from '@/domain/types';
+import { useSession } from '@/features/auth/session';
 import {
-  Badge,
-  Chips,
-  EmptyState,
   Gutter,
+  InfoRow,
   Photo,
   QueryBoundary,
   Screen,
   Tap,
   Txt,
-  radius,
+  pickOption,
   space,
   useTheme,
 } from '~/ds';
+import { Icon } from '~/shared/icon';
+import { openScreen } from '~/shared/navigation';
+import { ClubRecruitment } from '~/user-kit/club-recruitment';
+import { MemberSections } from '~/user-kit/club-member-sections';
 
-/** 동아리 행 — 사진이 있을 때만 표지를 보여주고, 행 사이는 구분선 (웹 동아리 목록) */
-function ClubRow({ c }: { c: Club }) {
+function openRecruitment() {
+  openScreen('/clubs/recruitment');
+}
+
+export default function MyClubsScreen() {
   const t = useTheme();
-  const photo = c.photos[0];
-  return (
-    <Tap
-      onPress={() => openScreen(`/clubs/${c.id}`)}
-      accessibilityLabel={`${c.name}, ${c.field}${c.recruiting ? ', 모집 중' : ''}`}
-      style={[styles.row, { borderBottomColor: t.line }]}
-    >
-      <View style={styles.copy}>
-        <View style={styles.badges}>
-          <Txt variant="caption" color="textTertiary" numberOfLines={1} style={styles.field}>
-            {c.field}
-          </Txt>
-          {c.recruiting && <Badge text="모집 중" tone="brand" />}
-        </View>
-        <Txt variant="title3" numberOfLines={2}>
-          {c.name}
-        </Txt>
-        <Txt variant="caption" color="textSecondary" numberOfLines={2}>
-          {c.summary}
-        </Txt>
-        <Txt variant="small" color="textTertiary" numberOfLines={1}>
-          {[c.target, c.meetingInfo, `${c.memberCount}명 활동`].filter(Boolean).join(' · ')}
-        </Txt>
-      </View>
-      {photo && <Photo uri={photo.url} alt={photo.caption || c.name} ratio={1} style={styles.thumb} />}
-    </Tap>
+  const session = useSession();
+  const cache = useQueryClient();
+  const userId = session.data?.user.id;
+  const memberships = useQuery({
+    queryKey: ['my-clubs', userId],
+    queryFn: api.me.clubs,
+    enabled: !!session.data,
+  });
+  const [selectedId, setSelectedId] = useState<string>();
+  const all = memberships.data ?? [];
+  const selected = all.find(({ club }) => club.id === selectedId) ?? all[0];
+  const club = selected?.club;
+  const multiple = all.length > 1;
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) void cache.invalidateQueries({ queryKey: ['my-clubs'] });
+    }, [cache, userId]),
   );
-}
-
-export default function ClubsScreen() {
-  const [filter, setFilter] = useState<'all' | 'open'>('all');
-  const clubs = useQuery({ queryKey: ['clubs'], queryFn: () => api.clubs.list() });
+  async function switchClub() {
+    if (!multiple || !selected) return;
+    const index = await pickOption(
+      '내 동아리 선택',
+      all.map(
+        ({ club: item }) => item.name + (Platform.OS === 'ios' && item.id === club?.id ? ' (선택됨)' : ''),
+      ),
+      all.indexOf(selected),
+    );
+    if (index !== null && all[index]) setSelectedId(all[index].club.id);
+  }
+  const refresh = () =>
+    Promise.all([
+      memberships.refetch(),
+      ...(club
+        ? [
+            ['club-posts', club.id],
+            ['club-members', club.id],
+          ].map((queryKey) => cache.invalidateQueries({ queryKey }))
+        : []),
+    ]);
+  if (memberships.isSuccess && all.length === 0) {
+    return (
+      <>
+        <Stack.Screen options={{ title: '동아리 모집', headerRight: () => null }} />
+        <ClubRecruitment onRefreshMembership={memberships.refetch} />
+      </>
+    );
+  }
   return (
-    <Screen onRefresh={() => clubs.refetch()}>
-      <Chips
-        options={[
-          { value: 'all', label: '전체 동아리' },
-          { value: 'open', label: '모집 중' },
-        ]}
-        value={filter}
-        onChange={setFilter}
-      />
-      <QueryBoundary
-        query={clubs}
-        isEmpty={(d) => d.length === 0}
-        empty={{ title: '등록된 동아리가 없습니다' }}
-      >
-        {(data) => {
-          const visible = filter === 'all' ? data : data.filter((club) => club.recruiting);
-          return (
-            <Gutter style={{ paddingTop: space.sm }}>
-              <Txt variant="caption" color="textTertiary" style={{ paddingBottom: space.sm }}>
-                {filter === 'open' ? '모집 중인 동아리' : '전체 동아리'} {visible.length}개
-              </Txt>
-              <View>
-                {visible.length === 0 && <EmptyState title="지금 모집 중인 동아리가 없습니다" />}
-                {visible.map((c) => (
-                  <ClubRow key={c.id} c={c} />
-                ))}
-              </View>
-            </Gutter>
-          );
+    <>
+      <Stack.Screen
+        options={{
+          title: '내 동아리',
+          headerRight: () => club ? (
+            <Tap onPress={openRecruitment} accessibilityLabel="동아리 모집 보기" style={styles.action}>
+              <Icon ios="person.2.badge.plus" android="group_add" size={22} color={t.text} />
+            </Tap>
+          ) : null,
         }}
-      </QueryBoundary>
-    </Screen>
+      />
+      <Screen key={club?.id} onRefresh={refresh}>
+        <QueryBoundary query={memberships}>
+          {() =>
+            club ? (
+              <>
+                <Gutter style={styles.intro}>
+                  <Txt variant="caption" color="textTertiary">
+                    {[club.field, selected.role === 'leader' ? '대표' : '동아리원']
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Txt>
+                  {multiple ? (
+                    <Tap
+                      onPress={() => void switchClub()}
+                      accessibilityLabel={club.name + ', 동아리 변경'}
+                      style={styles.switcher}
+                    >
+                      <Txt variant="title1" style={styles.name}>
+                        {club.name}
+                      </Txt>
+                      <Icon ios="chevron.down" android="expand_more" size={18} color={t.textSecondary} />
+                    </Tap>
+                  ) : (
+                    <Txt accessibilityRole="header" variant="title1">
+                      {club.name}
+                    </Txt>
+                  )}
+                  {!!club.summary && <Txt color="textSecondary">{club.summary}</Txt>}
+                </Gutter>
+                {club.photos[0] && (
+                  <Photo uri={club.photos[0].url} alt={club.photos[0].caption || club.name} ratio={2.15} />
+                )}
+                <Gutter style={styles.info}>
+                  {!!club.meetingInfo && <InfoRow label="모임 안내" value={club.meetingInfo} />}
+                  <Tap
+                    onPress={() => openScreen(`/clubs/${club.id}`)}
+                    accessibilityLabel="동아리 소개 보기"
+                    style={styles.detail}
+                  >
+                    <Txt variant="label">동아리 소개</Txt>
+                    <Icon ios="chevron.right" android="chevron_right" size={16} color={t.textTertiary} />
+                  </Tap>
+                </Gutter>
+                <MemberSections clubId={club.id} />
+              </>
+            ) : null
+          }
+        </QueryBoundary>
+      </Screen>
+    </>
   );
 }
-
 const styles = StyleSheet.create({
-  copy: { flex: 1, minWidth: 0, gap: 3 },
-  field: { minWidth: 0, flexShrink: 1 },
-  thumb: { width: 80, flexShrink: 0, borderRadius: radius.sm },
-  row: {
+  action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  intro: { paddingTop: space.lg, paddingBottom: space.xl, gap: space.sm },
+  switcher: {
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: space.md,
-    gap: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: space.sm,
+    alignSelf: 'flex-start',
   },
-  badges: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  name: { flexShrink: 1 },
+  info: { paddingTop: space.md },
+  detail: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

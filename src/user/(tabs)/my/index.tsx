@@ -349,7 +349,7 @@ export default function MyScreen() {
           <SectionHeader
             title="내 동아리"
             action="동아리 둘러보기"
-            onAction={() => router.navigate('/clubs')}
+            onAction={() => openScreen('/clubs/recruitment')}
           />
           <QueryBoundary
             query={clubs}
