@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import { AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { SESSION_KEY, useSession } from '@/features/auth/session';
-import { useStartupCameraPermission } from '~/user-kit/startup-camera';
+import { useLoginPermissions } from '~/shared/login-permissions';
 import { AppProviders } from '~/shared/providers';
 import { useHeaderOptions } from '~/user-kit';
 import { Screen, EmptyState, LoadingState, Button } from '~/ds';
@@ -11,20 +11,21 @@ import { Screen, EmptyState, LoadingState, Button } from '~/ds';
 export default function UserRootLayout() {
   const [ready, setReady] = useState(false);
   const onReady = useCallback(() => setReady(true), []);
-  useStartupCameraPermission(ready);
+
   return (
     <AppProviders onReady={onReady}>
-      <UserNavigator />
+      <UserNavigator ready={ready}/>
     </AppProviders>
   );
 }
 
-function UserNavigator() {
+function UserNavigator({ready}:{ready:boolean}) {
   const header = useHeaderOptions();
   const session = useSession();
   const cache = useQueryClient();
   const expiresAt = session.data?.expiresAt;
   const userId = session.data?.user.id;
+  useLoginPermissions(ready && !!userId,true);
   const previousUser = useRef(userId);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {

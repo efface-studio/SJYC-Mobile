@@ -2,13 +2,13 @@ import { Image } from 'expo-image';
 import QRCode from 'qrcode-generator';
 import { useMemo } from 'react';
 
-export function AttendanceQR({ code }: { code: string }) {
+export function AttendanceQR({ payload }: { payload: string }) {
   const uri = useMemo(() => {
     const qr = QRCode(0, 'M');
-    qr.addData(`SJYC:ATTENDANCE:${code}`, 'Alphanumeric');
+    qr.addData(payload, 'Alphanumeric');
     qr.make();
     return qr.createDataURL(6, 24);
-  }, [code]);
+  }, [payload]);
   return (
     <Image
       accessible
