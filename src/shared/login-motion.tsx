@@ -1,7 +1,8 @@
 import { Image, useImage } from 'expo-image';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { Txt, useTheme } from '~/ds';
+import { ThemeAudience } from '~/ds/tokens';
 
 type Phase = 'idle' | 'loading' | 'success' | 'error';
 const ease = Easing.out(Easing.cubic);
@@ -107,6 +108,7 @@ export function LoginSubmit({
   disabled?: boolean;
 }) {
   const t = useTheme();
+  const audience = useContext(ThemeAudience);
   const { phase, attempt, reduce } = motion;
   const progress = useRef(new Animated.Value(0)).current;
   const [width, setWidth] = useState(1);
@@ -133,7 +135,8 @@ export function LoginSubmit({
     inputRange: [0, 0.16, 0.32, 0.48, 0.64, 0.82, 1],
     outputRange: [0, -6, 6, -4, 4, -2, 0],
   });
-  const fg = failed ? t.tone.danger.fg : t.onAction;
+  const showErrorColor = failed && audience === 'user';
+  const fg = showErrorColor ? t.tone.danger.fg : t.onAction;
   return (
     <Animated.View style={{ transform: [{ translateX: failed && !reduce ? offset : 0 }] }}>
       <Pressable
@@ -146,7 +149,7 @@ export function LoginSubmit({
         style={({ pressed }) => [
           styles.button,
           {
-            backgroundColor: failed ? t.tone.danger.bg : t.action,
+            backgroundColor: showErrorColor ? t.tone.danger.bg : t.action,
             opacity: pressed ? 0.85 : 1,
           },
         ]}

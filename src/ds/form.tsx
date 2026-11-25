@@ -92,6 +92,7 @@ export function TextField({
 }) {
   const t = useTheme();
   const [focused, setFocused] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const phone = keyboardType === 'phone-pad' || autoComplete === 'tel';
   const displayed = phone ? formatMobilePhone(value) : value;
   const input = (
@@ -103,7 +104,7 @@ export function TextField({
       placeholderTextColor={t.textTertiary}
       multiline={multiline}
       keyboardType={keyboardType}
-      secureTextEntry={secureTextEntry}
+      secureTextEntry={secureTextEntry && !passwordVisible}
       maxLength={maxLength}
       autoComplete={autoComplete}
       autoCapitalize={autoCapitalize}
@@ -125,10 +126,24 @@ export function TextField({
           minHeight: multiline ? 120 : 52,
           paddingTop: multiline ? 14 : 0,
         },
+        secureTextEntry && { paddingRight: 52 },
         trailing ? { flex: 1, minWidth: 0, borderWidth: 0, paddingRight: 2 } : undefined,
       ]}
     />
   );
+  const field = secureTextEntry ? (
+    <View style={trailing ? { flex: 1 } : undefined}>
+      {input}
+      <Tap
+        rounded={22}
+        accessibilityLabel={`${label ?? '비밀번호'} ${passwordVisible ? '숨기기' : '보기'}`}
+        onPress={() => setPasswordVisible((shown) => !shown)}
+        style={styles.passwordToggle}
+      >
+        <Icon ios={passwordVisible ? 'eye.slash' : 'eye'} android={passwordVisible ? 'visibility_off' : 'visibility'} size={20} color={t.textSecondary} />
+      </Tap>
+    </View>
+  ) : input;
   return (
     <FieldShell label={label} error={error} hint={hint}>
       {trailing ? (
@@ -143,11 +158,11 @@ export function TextField({
             borderColor: error ? t.tone.danger.fg : focused ? t.action : 'transparent',
           }}
         >
-          {input}
+          {field}
           {trailing}
         </View>
       ) : (
-        input
+        field
       )}
     </FieldShell>
   );
@@ -313,6 +328,7 @@ export function FormSection({ title, children }: { title?: string; children: Rea
 }
 
 const styles = StyleSheet.create({
+  passwordToggle: { position: 'absolute', right: 4, top: 4, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   input: {
     borderRadius: radius.md,
     borderWidth: 1.5,
