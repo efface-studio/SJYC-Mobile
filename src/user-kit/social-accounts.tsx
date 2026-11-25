@@ -67,11 +67,13 @@ export async function beginSocial(provider: OAuthProvider, link: boolean) {
   if (provider === 'apple' && Platform.OS === 'ios') {
     const challenge = await api.auth.startNativeApple(link);
     try {
-      const credential = await AppleAuthentication.signInAsync(challenge);
+      const credential = await AppleAuthentication.signInAsync({...challenge, requestedScopes:[AppleAuthentication.AppleAuthenticationScope.FULL_NAME,AppleAuthentication.AppleAuthenticationScope.EMAIL]});
       if (!credential.identityToken || credential.state !== challenge.state) {
         throw new Error('Apple 인증을 확인할 수 없습니다. 다시 시도해 주세요.');
       }
-      await api.auth.finishNativeApple({ state: challenge.state, identityToken: credential.identityToken });
+      const name = credential.fullName ? AppleAuthentication.formatFullName(credential.fullName) || undefined : undefined;
+      const result = await api.auth.finishNativeApple({ state: challenge.state, identityToken: credential.identityToken, name });
+      if (result.needsProfile) return 'profile' as const;
       return 'native' as const;
     } catch (err) {
       if (err instanceof Error && 'code' in err && err.code === 'ERR_REQUEST_CANCELED') return 'cancelled' as const;

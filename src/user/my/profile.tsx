@@ -98,7 +98,7 @@ function ProfileForm({ session }: { session: Session }) {
           error={errors.name}
         />
         <TextField
-          label="휴대전화 (선택)"
+          label="휴대전화 (필수)"
           value={phone}
           onChangeText={setPhone}
           placeholder="010-1234-5678"

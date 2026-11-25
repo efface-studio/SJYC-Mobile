@@ -6,6 +6,7 @@ import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { ScrollBackdrop } from './scroll-backdrop';
 import { type ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Dimensions,
   Keyboard,
@@ -48,6 +49,7 @@ export function Screen({
 }) {
   const t = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const [footerHeight, setFooterHeight] = useState(0);
   const bg = subtle ? t.bgSubtle : t.bg;
   const keyboardOverlap = useKeyboardOverlap(footer != null);
   const headerHeight = useContext(HeaderHeightContext) ?? 0;
@@ -61,7 +63,8 @@ export function Screen({
       automaticallyAdjustKeyboardInsets={keyboardInsets}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentContainerStyle={{ paddingBottom: 48, paddingTop: topInset }}
+      contentContainerStyle={{ paddingBottom: 48 + (footer ? footerHeight : 0), paddingTop: topInset }}
+      scrollIndicatorInsets={footer ? {bottom: footerHeight} : undefined}
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -86,11 +89,13 @@ export function Screen({
   );
   const content = topInset > 0 ? <ScrollBackdrop height={topInset}>{scroll}</ScrollBackdrop> : scroll;
   if (!footer) return content;
-  // 하단 고정 영역은 스크롤 아래에 두고, iOS 에서는 키보드가 올라오면 함께 올린다 (입력 중에도 제출 버튼이 보이게)
   return (
-    <View style={{ flex: 1, backgroundColor: bg, paddingBottom: keyboardOverlap }}>
+    <View style={{ flex: 1, backgroundColor: bg }}>
       {content}
-      {footer}
+      <View pointerEvents="box-none" onLayout={e => setFooterHeight(Math.ceil(e.nativeEvent.layout.height))}
+        style={{position:'absolute',left:0,right:0,bottom:keyboardOverlap}}>
+        {footer}
+      </View>
     </View>
   );
 }
@@ -152,13 +157,24 @@ const TAB_BAR_HEIGHT = Platform.OS === 'ios' && !Platform.isPad ? 49 : 0;
 export function StickyFooter({ children }: { children: ReactNode }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const [opaque, setOpaque] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    let active = true;
+    void AccessibilityInfo.isReduceTransparencyEnabled().then(v => { if (active) setOpaque(v); });
+    const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setOpaque);
+    return () => { active = false; sub.remove(); };
+  }, []);
   const keyboard = useKeyboardShown();
   const overTabBar = useContext(OverTabBarContext);
   const bottom = keyboard
     ? space.md
     : Math.max(insets.bottom, space.lg) + (overTabBar ? TAB_BAR_HEIGHT + space.sm : 0);
   return (
-    <View style={[styles.sticky, { backgroundColor: t.bg, borderTopColor: t.line, paddingBottom: bottom }]}>
+    <View pointerEvents="box-none" style={[styles.sticky, {paddingBottom:bottom}]}>
+      <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        style={[StyleSheet.absoluteFill, opaque ? {backgroundColor:t.bg} : {experimental_backgroundImage:
+          'linear-gradient(180deg, '+t.bg+'00 0%, '+t.bg+'C2 25%, '+t.bg+'E6 65%, '+t.bg+'F2 100%)'}]} />
       {children}
     </View>
   );
@@ -450,11 +466,12 @@ export function Chips<T extends string>({
             key={o.value}
             onPress={() => onChange(o.value)}
             accessibilityLabel={`${o.label}${active ? ', 선택됨' : ''}`}
-            style={[styles.tab, { borderBottomColor: active ? t.action : 'transparent' }]}
+            style={styles.tab}
           >
+            <View style={{alignItems:'center',paddingBottom:2,borderBottomWidth:2,borderBottomColor:active ? t.action : 'transparent'}}>
             <Txt variant={active ? 'bodyStrong' : 'label'} color={active ? 'action' : 'textSecondary'}>
               {o.label}
-            </Txt>
+            </Txt></View>
           </Tap>
         );
       })}
@@ -522,8 +539,7 @@ export function QueryBoundary<T>({
 const styles = StyleSheet.create({
   sticky: {
     paddingHorizontal: GUTTER,
-    paddingTop: space.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: space.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -562,7 +578,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 2,
-    borderBottomWidth: 2,
   },
   state: {
     alignItems: 'center',

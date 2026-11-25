@@ -63,6 +63,8 @@ function Gate() {
       </Stack.Protected>
       <Stack.Protected guard={!allowed}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="oauth-return" options={{ title: '소셜 로그인' }} />
+        <Stack.Screen name="oauth-link" options={{ title: '관리자 계정 연결' }} />
       </Stack.Protected>
     </Stack>
   );

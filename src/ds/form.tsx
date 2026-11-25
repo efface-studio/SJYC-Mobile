@@ -330,5 +330,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 36 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 },
 });
