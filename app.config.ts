@@ -77,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        image: "./assets/brand/symbol.png",
+        image: FLAVOR === "admin" ? "./assets/brand/symbol-admin.png" : "./assets/brand/symbol.png",
         imageWidth: 46,
         resizeMode: "contain",
         backgroundColor: "#FFFEFC",

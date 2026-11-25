@@ -1,14 +1,17 @@
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useRef, useState } from 'react';
+import { ThemeAudience } from '~/ds/tokens';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Image, Platform, StyleSheet, View, useColorScheme, useWindowDimensions } from 'react-native';
 
 if (Platform.OS !== 'web') void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const logo = require('../../assets/brand/wordmark.png');
 const inverse = require('../../assets/brand/wordmark-inverse.png');
-const symbol = require('../../assets/brand/symbol.png');
+const userSymbol = require('../../assets/brand/symbol.png');
+const adminSymbol = require('../../assets/brand/symbol-admin.png');
 
 export function BrandSplash({ onFinish }: { onFinish: () => void }) {
+  const symbol = useContext(ThemeAudience) === 'admin' ? adminSymbol : userSymbol;
   const dark = useColorScheme() === 'dark';
   const width = Math.min(useWindowDimensions().width - 48, 288);
   const height = width * 114 / 720;
