@@ -268,6 +268,9 @@ let lastResetToken: { token: string; userId: string } | null = null;
 
 export const mockClient: ApiClient = {
   auth: {
+    socialProviders: () => respond(() => []),
+    startSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),
+    completeSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),
     me: () => respond((db) => (currentUser(db) ? toSession(db, currentUser(db)!) : null)),
     login: (input) =>
       respond((db) => {
@@ -343,6 +346,22 @@ export const mockClient: ApiClient = {
   },
 
   me: {
+    socialAccounts: () => respond((db) => {
+      const u = requireUser(db);
+      return { linked: u.providers, available: [], hasPassword: !!u.password };
+    }),
+    unlinkSocial: (provider) => respond((db) => {
+      const u = requireUser(db);
+      if (u.providers.includes(provider) && !u.password && u.providers.length === 1) throw new ApiError('CONFLICT', '마지막 로그인 수단입니다.');
+      u.providers = u.providers.filter((p) => p !== provider);
+      return { linked: u.providers, available: [], hasPassword: !!u.password };
+    }),
+    loginDevices: () => respond((db) => {
+      requireUser(db);
+      const expiresAt = readSession()!.expiresAt;
+      return [{ id: 'current', label: '현재 기기', current: true, expiresAt, createdAt: new Date(Date.parse(expiresAt) - 3600000).toISOString() }];
+    }),
+    revokeDevice: () => respond(() => { throw new ApiError('NOT_FOUND', '로그인 기기를 찾을 수 없습니다.'); }),
     notificationPreferences: () => respond((db) => ({ muted: db.mutedNotifications?.[requireUser(db).id] ?? [] })),
     setNotificationPreference: ({ kind, enabled }) => respond((db) => {
       const id = requireUser(db).id;

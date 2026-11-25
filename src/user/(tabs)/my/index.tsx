@@ -390,6 +390,7 @@ export default function MyScreen() {
 
       <SectionHeader title="활동" />
       <Rows>
+        <LinkRow title="내 알림" ios="bell" android="notifications" onPress={() => router.push('/notifications')} />
         <LinkRow
           title="출석 체크 · 내 출석 기록"
           ios="checkmark.circle"
@@ -406,10 +407,6 @@ export default function MyScreen() {
         </Gutter>
       )}
 
-      <SectionHeader title="설정" />
-      <Rows>
-        <LinkRow title="알림 설정" ios="bell" android="notifications" onPress={() => router.push('/my/notification-settings')} />
-      </Rows>
       <InfoSections />
 
       <Divider />

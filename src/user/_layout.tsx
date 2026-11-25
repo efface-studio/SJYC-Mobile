@@ -30,6 +30,10 @@ export default function UserRootLayout() {
           name="programs/calendar"
           options={{ title: "프로그램 캘린더" }}
         />
+        <Stack.Screen name="my/settings" options={{ title: "설정" }} />
+        <Stack.Screen name="my/social-accounts" options={{ title: "연결된 소셜 계정" }} />
+        <Stack.Screen name="my/devices" options={{ title: "로그인 기기" }} />
+        <Stack.Screen name="oauth-return" options={{ title: "소셜 계정 인증" }} />
         <Stack.Screen name="my/notification-settings" options={{ title: "알림 설정" }} />
         <Stack.Screen name="notifications" options={{ title: "알림" }} />
         <Stack.Screen name="gallery" options={{ title: "센터 소식" }} />
