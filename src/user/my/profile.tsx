@@ -140,7 +140,7 @@ export default function ProfileScreen() {
   if (isPending) {
     return (
       <Screen>
-        <LoadingState />
+        <LoadingState layout="form" />
       </Screen>
     );
   }

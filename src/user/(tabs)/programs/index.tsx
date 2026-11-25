@@ -94,7 +94,7 @@ export default function ProgramsScreen() {
             </Txt>
           )}
         </Gutter>
-        <QueryBoundary
+        <QueryBoundary layout="program"
           query={programs}
           isEmpty={(d) => d.items.length === 0}
           empty={{ title: '조건에 맞는 프로그램이 없습니다', description: '모집 상태나 분류를 바꿔 보세요.' }}

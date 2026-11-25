@@ -35,15 +35,17 @@ import {
 /** 상세 화면: 데이터가 준비되기 전(로딩·오류)에는 빈 Screen 안에서 상태를 보여준다 */
 export function QueryScreen<T>({
   query,
+  layout = 'detail',
   children,
 }: {
   query: UseQueryResult<T>;
+  layout?: import('~/ds/loading').LoadingLayout;
   children: (data: T) => ReactNode;
 }) {
-  if (query.isSuccess) return <>{children(query.data)}</>;
+  if (query.data !== undefined) return <>{children(query.data)}</>;
   return (
     <Screen>
-      <QueryBoundary query={query}>{() => null}</QueryBoundary>
+      <QueryBoundary layout={layout} query={query}>{() => null}</QueryBoundary>
     </Screen>
   );
 }

@@ -28,14 +28,14 @@ export default function NotificationSettings() {
     onSuccess: (value) => cache.setQueryData(key, value),
     onError: (err) => notify('알림 설정을 저장하지 못했습니다', errorMessage(err)),
   });
-  if (session.isPending) return <Screen><LoadingState /></Screen>;
+  if (session.isPending) return <Screen><LoadingState layout="settings" /></Screen>;
   if (!session.data) return <SignInPrompt />;
   return <Screen onRefresh={() => preferences.refetch()}>
     <Gutter style={{ paddingVertical: 16 }}>
       <Txt variant="title3">알림함에서 받을 소식</Txt>
       <Txt variant="caption" color="textSecondary">설정은 앞으로 도착하는 알림부터 적용됩니다.</Txt>
     </Gutter>
-    <QueryBoundary query={preferences}>
+    <QueryBoundary layout="settings" query={preferences}>
       {(value) => <Gutter>{categories.map(({ kind, description }) => (
         <View key={kind} style={{ paddingVertical: 12, borderTopWidth: 0.5, borderColor: t.line }}>
           <SwitchRow

@@ -18,7 +18,7 @@ export default function SpacesScreen() {
         </Txt>
         <Txt variant="caption" color="textSecondary">담당자가 확인하면 예약이 확정됩니다.</Txt>
       </Gutter>
-      <QueryBoundary
+      <QueryBoundary layout="program"
         query={spaces}
         isEmpty={(d) => d.length === 0}
         empty={{ title: '예약할 수 있는 공간이 없습니다' }}

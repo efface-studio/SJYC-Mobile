@@ -65,7 +65,7 @@ export default function ClubsScreen() {
         value={filter}
         onChange={setFilter}
       />
-      <QueryBoundary
+      <QueryBoundary layout="club"
         query={clubs}
         isEmpty={(d) => d.length === 0}
         empty={{ title: '등록된 동아리가 없습니다' }}
