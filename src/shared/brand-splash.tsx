@@ -1,6 +1,7 @@
+import { useAppColorScheme } from '~/shared/appearance';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Image, Platform, StyleSheet, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Image, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 if (Platform.OS !== 'web') void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -9,7 +10,7 @@ const inverse = require('../../assets/brand/wordmark-inverse.png');
 const symbol = require('../../assets/brand/symbol.png');
 
 export function BrandSplash({ onFinish }: { onFinish: () => void }) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const width = Math.min(useWindowDimensions().width - 48, 288);
   const height = width * 114 / 720;
   const mark = width * 84 / 720;

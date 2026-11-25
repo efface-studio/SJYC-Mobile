@@ -100,7 +100,7 @@ export function SignupOtp({
                 transform: [{ translateX: x }, { translateY: y }, { scale }],
               }}
             >
-              <Txt variant="title2" color={collapse ? '#fff' : t.text}>
+              <Txt variant="title2" color={collapse ? t.onAction : t.text}>
                 {code[i] ?? ''}
               </Txt>
             </Animated.View>
@@ -131,7 +131,7 @@ export function SignupOtp({
           >
             <Image
               source={require('../../assets/icons/login-check.svg')}
-              tintColor="#fff"
+              tintColor={t.onAction}
               accessible={false}
               style={{ width: 26, height: 26 }}
             />

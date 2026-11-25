@@ -1,9 +1,10 @@
+import { useAppColorScheme } from '~/shared/appearance';
 import { Image } from 'expo-image';
-import { Platform, useColorScheme } from 'react-native';
+import { Platform } from 'react-native';
 import { CENTER } from '@/config/center';
 
 export function Wordmark({ width = 168 }: { width?: number }) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   return (
     <Image
       source={

@@ -1,5 +1,5 @@
+import { useAppColorScheme } from '~/shared/appearance';
 import { createContext, useContext } from 'react';
-import { useColorScheme } from 'react-native';
 import type { Tone } from '@/domain/labels';
 
 export const CENTER_RED = '#E41D25';
@@ -57,21 +57,22 @@ const dark: Palette = {
 };
 
 function adminPalette(base: Palette, night: boolean): Palette {
-  const action = night ? '#CAB6FF' : '#59418C';
-  const soft = night ? '#362C46' : '#F0ECF6';
+  const action = night ? '#EEEEEE' : '#59418C';
+  const soft = night ? '#2C2C2C' : '#F0ECF6';
   return {
     ...base,
     action,
+    onAction: night ? '#161616' : base.onAction,
     brand: action,
     brandSoft: soft,
-    bg: night ? '#17151D' : '#FFFFFF',
-    bgSubtle: night ? '#23202B' : '#F2F3F5',
-    card: night ? '#292530' : '#FFFFFF',
-    text: night ? '#F5F0FC' : '#202126',
-    textSecondary: night ? '#D4CCDF' : '#434448',
-    textTertiary: night ? '#B9B0C5' : '#62646C',
-    line: night ? '#3B3544' : '#E2E3E6',
-    lineStrong: night ? '#83788E' : '#8E8499',
+    bg: night ? '#101010' : '#FFFFFF',
+    bgSubtle: night ? '#191919' : '#F2F3F5',
+    card: night ? '#242424' : '#FFFFFF',
+    text: night ? '#F5F5F5' : '#202126',
+    textSecondary: night ? '#D0D0D0' : '#434448',
+    textTertiary: night ? '#ACACAC' : '#62646C',
+    line: night ? '#363636' : '#E2E3E6',
+    lineStrong: night ? '#808080' : '#8E8499',
     tone: { ...base.tone, brand: { fg: action, bg: soft } },
   };
 }
@@ -82,7 +83,7 @@ export type Theme = Palette;
 export const ThemeAudience = createContext<'user' | 'admin'>('user');
 
 export function useTheme(): Theme {
-  const night = useColorScheme() === 'dark';
+  const night = useAppColorScheme() === 'dark';
   return useContext(ThemeAudience) === 'admin' ? (night ? staffDark : staffLight) : night ? dark : light;
 }
 
