@@ -65,7 +65,7 @@ type DbUser = MockDb['users'][number];
 function manageableMember(db: MockDb, id: string) {
   const actor = requirePermission(db, 'member.manage');
   const target = findOr404(db.users,id);
-  if (id === actor.id || !canManageUser(actor,target)) throw new ApiError('FORBIDDEN','이 회원을 변경할 수 없습니다.');
+  if (!canManageUser(actor, target)) throw new ApiError('FORBIDDEN','이 회원을 변경할 수 없습니다.');
   if (target.status === 'withdrawn') throw new ApiError('CONFLICT','탈퇴한 회원입니다.');
   return {actor,target};
 }
@@ -1454,7 +1454,9 @@ export const mockClient: ApiClient = {
         return activityOptions(db,id);
       }),
       act: (id, command) => respond(db => {
-        const {actor,target} = manageableMember(db,id);
+        const { actor, target } = manageableMember(db, id);
+          if (actor.id === id && !['join-club', 'enroll', 'sign-out'].includes(command.action))
+            throw new ApiError('FORBIDDEN', '이 작업은 본인 계정에 수행할 수 없습니다.');
         let resetUrl: string | undefined;
         const now = new Date().toISOString();
         if (target.status !== 'active' && ['reset-password','join-club','enroll'].includes(command.action)) throw new ApiError('CONFLICT','활성 회원만 사용할 수 있습니다.');
