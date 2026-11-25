@@ -6,7 +6,8 @@ export default function ClubsStack() {
   const header = useHeaderOptions();
   return (
     <Stack screenOptions={header}>
-      <Stack.Screen name="index" options={{ title: '동아리' }} />
+      <Stack.Screen name="index" options={{ title: '내 동아리' }} />
+      <Stack.Screen name="recruitment" options={{ title: '동아리 모집', headerBackButtonDisplayMode: 'minimal' }} />
     </Stack>
   );
 }
