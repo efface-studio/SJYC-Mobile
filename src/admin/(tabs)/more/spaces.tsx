@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { api } from '@/api';
 import { NoPermission, Rows, StatusBadge, useCan } from '~/admin-kit/components';
 import { ListRow, QueryBoundary, Screen } from '~/ds';
@@ -39,7 +40,7 @@ export default function Spaces() {
                           : { text: '예약 중지', tone: 'warning' as const })}
                       />
                     }
-                    onPress={() => router.push({ pathname: '/more/space/[id]', params: { id: s.id } })}
+                    onPress={() => openScreen({ pathname: '/more/space/[id]', params: { id: s.id } })}
                   />
                 )}
               />

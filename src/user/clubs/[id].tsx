@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { api, errorMessage, isApiError } from '@/api';
@@ -233,7 +234,7 @@ function ClubDetail({ club: c }: { club: Club }) {
   } else if (!c.recruiting) {
     footer = <Button label="현재 모집 없음" disabled onPress={() => {}} />;
   } else if (!session) {
-    footer = <Button label="로그인하고 가입 신청하기" onPress={() => router.push('/login')} />;
+    footer = <Button label="로그인하고 가입 신청하기" onPress={() => openScreen('/login')} />;
   } else if (canApply) {
     footer = <Button label="가입 신청하기" onPress={submit} loading={apply.isPending} />;
   }

@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
@@ -52,7 +53,7 @@ export default function ProgramsScreen() {
         options={{
           headerRight: () => (
             <Tap
-              onPress={() => router.push('/programs/calendar')}
+              onPress={() => openScreen('/programs/calendar')}
               rounded={22}
               accessibilityLabel="프로그램 캘린더"
               style={styles.headerBtn}

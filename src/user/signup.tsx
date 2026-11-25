@@ -1,3 +1,4 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -27,7 +28,7 @@ const MIN_SELF_CONSENT_AGE = 14;
 
 function PolicyLink({ label, href }: { label: string; href: '/policies/terms' | '/policies/privacy' }) {
   return (
-    <Tap onPress={() => router.push(href)} accessibilityLabel={label} style={styles.policyLink}>
+    <Tap onPress={() => openScreen(href)} accessibilityLabel={label} style={styles.policyLink}>
       <Txt variant="caption" color="action">
         {label}
       </Txt>

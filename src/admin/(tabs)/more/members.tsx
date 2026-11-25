@@ -1,4 +1,5 @@
-import { router, Stack } from 'expo-router';
+import { openScreen } from '~/shared/navigation';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/api';
 import { USER_STATUS } from '@/domain/labels';
@@ -47,7 +48,7 @@ export default function Members() {
             title={u.name}
             subtitle={u.email}
             trailing={<StatusBadge {...USER_STATUS[u.status]} />}
-            onPress={() => router.push({ pathname: '/more/member/[id]', params: { id: u.id } })}
+            onPress={() => openScreen({ pathname: '/more/member/[id]', params: { id: u.id } })}
           />
         )}
       />

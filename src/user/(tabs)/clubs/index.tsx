@@ -1,6 +1,7 @@
+import { openScreen } from '~/shared/navigation';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import type { Club } from '@/domain/types';
@@ -25,7 +26,7 @@ function ClubRow({ c }: { c: Club }) {
   const photo = c.photos[0];
   return (
     <Tap
-      onPress={() => router.push(`/clubs/${c.id}`)}
+      onPress={() => openScreen(`/clubs/${c.id}`)}
       accessibilityLabel={`${c.name}, ${c.field}${c.recruiting ? ', 모집 중' : ''}`}
       style={[styles.row, { borderBottomColor: t.line }]}
     >

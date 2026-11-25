@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { api, errorMessage } from '@/api';
 import type { Decision } from '@/api/client';
 import { parseValues, rejectReasonSchema } from '@/domain/schemas';
@@ -117,7 +118,7 @@ export function useDecision(kind: DecisionKind, opts: { onDone?: () => void } = 
       '반려',
     );
     if (!prompt) {
-      router.push({ pathname: '/decision/[kind]/[ids]', params: { kind, ids: ids.join(',') } });
+      openScreen({ pathname: '/decision/[kind]/[ids]', params: { kind, ids: ids.join(',') } });
       opts.onDone?.();
       return;
     }
