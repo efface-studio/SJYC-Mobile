@@ -78,6 +78,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'automatic',
   ios: {
     bundleIdentifier: f.iosBundleId,
+    buildNumber: '2',
     usesAppleSignIn: nativeAppleSignIn,
     supportsTablet: FLAVOR === 'admin',
     config: { usesNonExemptEncryption: false },
@@ -89,6 +90,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     blockedPermissions: ['android.permission.RECORD_AUDIO', 'android.permission.ACCESS_FINE_LOCATION'],
   },
   plugins: [
+    ['expo-build-properties', { ios: { enableSceneSupport: true } }],
     "./scripts/with-apple-sign-in.cjs",
     ...(nativeAppleSignIn ? ['expo-apple-authentication'] : []),
     ['expo-router', { root: FLAVOR === 'admin' ? './src/admin' : './src/user' }],
