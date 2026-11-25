@@ -147,7 +147,6 @@ export function LoginSubmit({
           styles.button,
           {
             backgroundColor: failed ? t.tone.danger.bg : t.action,
-            borderRadius: loading || success ? 27 : 8,
             opacity: pressed ? 0.85 : 1,
           },
         ]}
@@ -210,6 +209,7 @@ export function LoginSubmit({
 }
 const styles = StyleSheet.create({
   button: {
+    borderRadius: 8,
     minHeight: 52,
     overflow: 'hidden',
     alignItems: 'center',
