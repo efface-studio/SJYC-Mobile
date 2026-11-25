@@ -1,11 +1,20 @@
 import { useEffect } from 'react';
 import { Alert, AppState, Linking } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
+import type { Manifest } from 'expo-updates';
+import { formatReleaseNotes } from './release-notes.mjs';
 import { storeUpdate } from './store-update';
 
 type NativeUpdates = typeof import('expo-updates');
 const EVERY_MINUTE = 60_000;
 const STORE_INTERVAL = 15 * EVERY_MINUTE;
+
+function updateMessage(manifest?: Manifest) {
+  const extra = manifest && 'extra' in manifest ? manifest.extra : undefined;
+  return extra && 'message' in extra && typeof extra.message === 'string'
+    ? formatReleaseNotes([extra.message])
+    : '';
+}
 
 /** 두 앱의 네이티브 진입점에서 한 번만 마운트한다. 로그인 화면에서도 업데이트할 수 있다. */
 export function AppUpdates() {
@@ -96,17 +105,14 @@ export function AppUpdates() {
         if (!mounted || storeUrl || __DEV__ || !requireOptionalNativeModule('ExpoUpdates')) return;
         updates ??= await import('expo-updates');
         if (!updates.isEnabled) return;
-        if (updates.latestContext?.isUpdatePending) {
-          offerUpdate(updates, '새 버전이 준비되었습니다. 적용하면 앱이 다시 시작됩니다.');
+        const pending = updates.latestContext;
+        if (pending?.isUpdatePending) {
+          offerUpdate(updates, pending.rollback ? '이전 버전을 적용합니다.' : updateMessage(pending.downloadedManifest));
           return;
         }
         const result = await updates.checkForUpdateAsync();
         if (result.isAvailable || result.isRollBackToEmbedded) {
-          const extra = result.isAvailable && 'extra' in result.manifest ? result.manifest.extra : undefined;
-          offerUpdate(
-            updates,
-            extra && 'message' in extra && typeof extra.message === 'string' ? extra.message : '',
-          );
+          offerUpdate(updates, result.isRollBackToEmbedded ? '이전 버전을 적용합니다.' : updateMessage(result.manifest));
         }
       } catch {
         /* 연결이 복구되면 다음 활성화 또는 정기 확인에서 다시 시도한다. */

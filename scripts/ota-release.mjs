@@ -4,6 +4,7 @@ import { createHash, createSign, randomUUID, X509Certificate, verify } from 'nod
 import { readFile, writeFile, mkdir, mkdtemp, rename, link, rm } from 'node:fs/promises';
 import { join, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { formatReleaseNotes } from '../src/shared/release-notes.mjs';
 import { tmpdir } from 'node:os';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const {
@@ -13,7 +14,7 @@ const {
   EXPO_PUBLIC_API_BASE_URL,
   SJYC_OTA_CHANNEL = 'production',
 } = process.env;
-const note = process.argv.slice(2).join(' ').trim();
+const note = formatReleaseNotes(process.argv.slice(2));
 if (
   !OTA_DIRECTORY ||
   !SJYC_OTA_PRIVATE_KEY ||
