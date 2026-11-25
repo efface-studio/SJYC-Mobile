@@ -1,3 +1,4 @@
+import { LoginSessionGate } from './login-preferences';
 import {
   focusManager,
   MutationCache,
@@ -96,7 +97,7 @@ export function AppProviders({
               launching ? "no-hide-descendants" : "auto"
             }
           >
-            {children}
+            <LoginSessionGate>{children}</LoginSessionGate>
           </View>
           {launching && <BrandSplash onFinish={finish} />}
         </View>

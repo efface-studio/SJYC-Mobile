@@ -1,3 +1,4 @@
+import { LoginOptions, useLoginPreferences } from '~/shared/login-preferences';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -95,13 +96,15 @@ export default function LoginScreen() {
   const providers = useQuery({ queryKey: ['available-social-providers'], queryFn: api.auth.socialProviders, staleTime: 60_000 });
   const qc = useQueryClient();
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
-  const [email, setEmail] = useState('');
+  const preferences = useLoginPreferences();
+  const [email, setEmail] = useState(preferences.initialEmail);
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const login = useMutation({
     mutationFn: api.auth.login,
     onSuccess: (s) => {
+      preferences.rememberEmail(s.user.email);
       motion.finish(() => qc.setQueryData(SESSION_KEY, s));
     },
     onError: (e) => {
@@ -212,6 +215,7 @@ export default function LoginScreen() {
               onSubmitEditing={submitLogin}
               error={errors.password}
             />
+            <LoginOptions options={preferences} />
             {!!loginError && (
               <View accessibilityLiveRegion="polite">
                 <Txt color={t.tone.danger.fg}>{loginError}</Txt>
