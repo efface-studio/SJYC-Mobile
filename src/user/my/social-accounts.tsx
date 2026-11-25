@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { OAUTH_PROVIDER_LABEL } from '@/domain/labels';
 import type { OAuthProvider } from '@/domain/types';
@@ -13,6 +13,7 @@ import {
   SocialMark,
   socialKey,
   useSocialAccounts,
+  useAppleAvailable,
 } from '~/user-kit/social-accounts';
 
 export default function SocialAccountsScreen() {
@@ -21,10 +22,14 @@ export default function SocialAccountsScreen() {
   const query = useSocialAccounts(id);
   const cache = useQueryClient();
   const t = useTheme();
+  const apple = useAppleAvailable();
   const change = useMutation({
     mutationFn: async ({ p, linked }: { p: OAuthProvider; linked: boolean }) => {
       if (!linked) {
-        await beginSocial(p, true);
+        if (await beginSocial(p, true) === 'native') {
+          await cache.invalidateQueries({ queryKey: socialKey(id) });
+          await cache.invalidateQueries({ queryKey: SESSION_KEY });
+        }
         return;
       }
       if (
@@ -66,8 +71,8 @@ export default function SocialAccountsScreen() {
             <Rows>
               {SOCIAL_ORDER.map((p) => {
                 const linked = data.linked.includes(p);
-                const available = data.available.includes(p);
-                const last = linked && !data.hasPassword && data.linked.length === 1;
+                const available = p !== 'google' && data.available.includes(p) && (p !== 'apple' || Platform.OS !== 'ios' || !!apple.data);
+                const last = linked && !data.hasPassword && !data.linked.some((other) => other !== p && other !== 'google');
                 const label = linked ? '연결 해제' : available ? '연결하기' : '준비 중';
                 return (
                   <Gutter
@@ -111,7 +116,7 @@ export default function SocialAccountsScreen() {
                 );
               })}
             </Rows>
-            {!data.hasPassword && data.linked.length === 1 && (
+            {!data.hasPassword && data.linked.filter((p) => p !== 'google').length === 1 && (
               <Gutter style={{ paddingTop: 16 }}>
                 <Txt variant="caption" color="textSecondary">
                   마지막 로그인 수단을 해제하려면 먼저 비밀번호를 설정해 주세요.
