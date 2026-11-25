@@ -67,7 +67,7 @@ function TodayStatus() {
 
 const HOME_SHORTCUTS = [
   { label: '공간 예약', href: '/spaces', ios: 'calendar', android: 'event' },
-  { label: '동아리 찾기', href: '/clubs', ios: 'person.3', android: 'groups' },
+  { label: '동아리 찾기', href: '/clubs/recruitment', ios: 'person.3', android: 'groups' },
 ] as const;
 
 export default function HomeScreen() {
