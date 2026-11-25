@@ -78,7 +78,7 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
 
   const isMe = me?.id === u.id;
   const protectedAccount = canManage && !canManageUser(me, u);
-  const editable = canManage && !isMe && !protectedAccount && u.status !== 'withdrawn';
+  const manageable = canManage && !protectedAccount && u.status !== 'withdrawn';
 
   return (
     <Screen>
@@ -94,8 +94,8 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
         <InfoRow label="가입일" value={formatDate(u.createdAt)} />
         <InfoRow label="이메일 인증" value={u.emailVerified ? '완료' : '미완료'} />
       </Gutter>
-      {editable && <MemberCommands key={u.id} user={u} />}
-      {editable ? (
+      {manageable && <MemberCommands key={u.id} user={u} self={isMe} />}
+      {manageable && !isMe ? (
         <FormSection title="권한 · 상태">
           <SelectField label="역할" value={role} options={roleOptions} onChange={(r) => void changeRole(r)} />
           <SelectField
