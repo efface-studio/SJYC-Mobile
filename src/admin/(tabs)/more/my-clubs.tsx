@@ -1,4 +1,5 @@
-import { router, Stack } from 'expo-router';
+import { openScreen } from '~/shared/navigation';
+import { Stack } from 'expo-router';
 import { managesAnyClub } from '@/domain/permissions';
 import { useSession } from '@/features/auth/session';
 import { useManagedClubs } from '~/admin-kit/club-ops';
@@ -33,7 +34,7 @@ export default function MyClubs() {
                       trailing={
                         c.recruiting ? <Badge text="모집 중" tone="success" /> : <Badge text="모집 마감" />
                       }
-                      onPress={() => router.push(`/more/my-club/${c.id}`)}
+                      onPress={() => openScreen(`/more/my-club/${c.id}`)}
                     />
                   )}
                 />

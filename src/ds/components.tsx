@@ -22,7 +22,7 @@ import { errorMessage } from '@/api/errors';
 import type { Tone } from '@/domain/labels';
 import { Icon } from '~/shared/icon';
 import { Txt } from './text';
-import { GUTTER, radius, space, useTheme } from './tokens';
+import { CENTER_RED, GUTTER, radius, space, useTheme } from './tokens';
 
 /* ---------- 레이아웃 ---------- */
 
@@ -65,8 +65,8 @@ export function Screen({
           <RefreshControl
             progressViewOffset={topInset}
             refreshing={refreshing}
-            tintColor={t.textTertiary}
-            colors={[t.action]}
+            tintColor={CENTER_RED}
+            colors={[CENTER_RED]}
             onRefresh={async () => {
               setRefreshing(true);
               try {
@@ -237,6 +237,7 @@ export function Tap({
 
 export function ListRow({
   title,
+  titlePrefix,
   subtitle,
   meta,
   leading,
@@ -246,6 +247,7 @@ export function ListRow({
   numberOfLines = 2,
 }: {
   title: string;
+  titlePrefix?: ReactNode;
   subtitle?: string;
   meta?: string;
   leading?: ReactNode;
@@ -264,9 +266,12 @@ export function ListRow({
             {meta}
           </Txt>
         )}
-        <Txt variant="bodyStrong" numberOfLines={numberOfLines}>
-          {title}
-        </Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {titlePrefix}
+          <Txt variant="bodyStrong" numberOfLines={numberOfLines} style={{ flexShrink: 1 }}>
+            {title}
+          </Txt>
+        </View>
         {subtitle && (
           <Txt variant="caption" color="textSecondary" numberOfLines={2}>
             {subtitle}
@@ -572,7 +577,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   infoRow: { flexDirection: 'row', gap: space.md, paddingVertical: 10 },
-  badge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   badgeMark: { width: 6, height: 6, borderRadius: 3 },
   block: {
     paddingVertical: space.lg,

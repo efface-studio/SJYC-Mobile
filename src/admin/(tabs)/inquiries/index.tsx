@@ -1,4 +1,5 @@
-import { router, Stack } from 'expo-router';
+import { openScreen } from '~/shared/navigation';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/api';
 import { INQUIRY_CATEGORY_LABEL, INQUIRY_STATUS } from '@/domain/labels';
@@ -45,7 +46,7 @@ export default function Inquiries() {
             meta={`${INQUIRY_CATEGORY_LABEL[x.category]} · ${x.authorName} · ${formatDate(x.createdAt)}`}
             title={x.title}
             trailing={<StatusBadge {...INQUIRY_STATUS[x.status]} />}
-            onPress={() => router.push({ pathname: '/inquiries/[id]', params: { id: x.id } })}
+            onPress={() => openScreen({ pathname: '/inquiries/[id]', params: { id: x.id } })}
           />
         )}
       />

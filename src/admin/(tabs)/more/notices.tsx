@@ -1,4 +1,5 @@
-import { router, Stack } from 'expo-router';
+import { openScreen } from '~/shared/navigation';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/api';
 import { NOTICE_CATEGORY_LABEL, PUBLISH_STATUS } from '@/domain/labels';
@@ -17,7 +18,7 @@ import { Chips, ListRow } from '~/ds';
 
 const SORTS = sortOptions();
 
-const open = (id: string) => router.push({ pathname: '/more/notice/[id]', params: { id } });
+const open = (id: string) => openScreen({ pathname: '/more/notice/[id]', params: { id } });
 
 export default function Notices() {
   const allowed = useCan()('notice.write');

@@ -1,7 +1,7 @@
+import { Image, useImage } from 'expo-image';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { Txt, useTheme } from '~/ds';
-import { Icon } from '~/shared/icon';
 
 type Phase = 'idle' | 'loading' | 'success' | 'error';
 const ease = Easing.out(Easing.cubic);
@@ -110,13 +110,14 @@ export function LoginSubmit({
   const { phase, attempt, reduce } = motion;
   const progress = useRef(new Animated.Value(0)).current;
   const [width, setWidth] = useState(1);
+  const check = useImage(require('../../assets/icons/login-check.svg'));
   const loading = phase === 'loading';
   const success = phase === 'success';
   const failed = phase === 'error';
   const label = loading ? '확인 중' : success ? '로그인 완료' : failed ? '다시 시도' : '로그인';
   useEffect(() => {
     progress.setValue(0);
-    if (reduce || phase === 'idle') return;
+    if (reduce || (phase !== 'loading' && phase !== 'error')) return;
     const step = Animated.timing(progress, {
       toValue: 1,
       duration: phase === 'loading' ? 1000 : 400,
@@ -170,7 +171,7 @@ export function LoginSubmit({
             ]}
           />
         )}
-        <View style={styles.result} accessibilityLiveRegion="polite">
+        <View style={[styles.result, success && styles.successResult]} accessibilityLiveRegion="polite">
           {loading && (
             <View style={styles.dots}>
               {[0, 1, 2].map((i) => (
@@ -197,9 +198,7 @@ export function LoginSubmit({
             </View>
           )}
           {success && (
-            <Animated.View style={{ opacity: reduce ? 1 : progress }}>
-              <Icon ios="checkmark" android="check" color={fg} size={20} />
-            </Animated.View>
+            <Image source={check} tintColor={fg} style={styles.check} accessible={false} />
           )}
           <Txt variant="title3" color={fg}>
             {label}
@@ -219,6 +218,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   result: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  successResult: { gap: 6 },
+  check: { width: 20, height: 20 },
   dots: { flexDirection: 'row', gap: 3 },
   dot: { width: 5, height: 5, borderRadius: 3 },
   sweep: {

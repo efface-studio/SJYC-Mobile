@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { openScreen } from '~/shared/navigation';
 import { Linking, StyleSheet, View } from 'react-native';
 import {
   CENTER,
@@ -66,7 +66,7 @@ export default function AboutScreen() {
               <Button label="전화 걸기" size="md" onPress={() => void Linking.openURL(`tel:${CENTER.tel}`)} />
             </View>
             <View style={{ flex: 1 }}>
-              <Button label="문의하기" size="md" variant="secondary" onPress={() => router.push('/qna')} />
+              <Button label="문의하기" size="md" variant="secondary" onPress={() => openScreen('/qna')} />
             </View>
           </View>
         </Card>
@@ -121,7 +121,7 @@ export default function AboutScreen() {
         <ListRow
           title="센터 소식·갤러리"
           subtitle="공식 채널의 사진과 영상 모아 보기"
-          onPress={() => router.push('/gallery')}
+          onPress={() => openScreen('/gallery')}
         />
         {OFFICIAL_CHANNELS.map((c) => (
           <ListRow key={c.key} title={c.label} numberOfLines={1} onPress={() => openExternal(c.url)} />

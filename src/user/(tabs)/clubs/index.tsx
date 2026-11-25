@@ -1,6 +1,7 @@
+import { openScreen } from '~/shared/navigation';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import type { Club } from '@/domain/types';
@@ -25,13 +26,13 @@ function ClubRow({ c }: { c: Club }) {
   const photo = c.photos[0];
   return (
     <Tap
-      onPress={() => router.push(`/clubs/${c.id}`)}
+      onPress={() => openScreen(`/clubs/${c.id}`)}
       accessibilityLabel={`${c.name}, ${c.field}${c.recruiting ? ', 모집 중' : ''}`}
       style={[styles.row, { borderBottomColor: t.line }]}
     >
       <View style={styles.copy}>
         <View style={styles.badges}>
-          <Txt variant="caption" color="textTertiary" numberOfLines={1}>
+          <Txt variant="caption" color="textTertiary" numberOfLines={1} style={styles.field}>
             {c.field}
           </Txt>
           {c.recruiting && <Badge text="모집 중" tone="brand" />}
@@ -91,8 +92,9 @@ export default function ClubsScreen() {
 }
 
 const styles = StyleSheet.create({
-  copy: { flex: 1, gap: 3 },
-  thumb: { width: 80, borderRadius: radius.sm },
+  copy: { flex: 1, minWidth: 0, gap: 3 },
+  field: { minWidth: 0, flexShrink: 1 },
+  thumb: { width: 80, flexShrink: 0, borderRadius: radius.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

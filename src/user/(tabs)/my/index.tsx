@@ -1,3 +1,5 @@
+import { openScreen } from '~/shared/navigation';
+import { ProfilePhoto } from '~/user-kit/profile-photo';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -64,32 +66,32 @@ function InfoSections() {
           title="질문·문의"
           ios="bubble.left.and.bubble.right"
           android="forum"
-          onPress={() => router.push('/qna')}
+          onPress={() => openScreen('/qna')}
         />
         <LinkRow
           title="공지사항"
           ios="megaphone"
           android="campaign"
-          onPress={() => router.push('/notices')}
+          onPress={() => openScreen('/notices')}
         />
         <LinkRow
           title="센터 소식·갤러리"
           ios="photo.on.rectangle"
           android="photo_library"
-          onPress={() => router.push('/gallery')}
+          onPress={() => openScreen('/gallery')}
         />
         <LinkRow
           title="센터 안내·오시는 길"
           ios="info.circle"
           android="info"
-          onPress={() => router.push('/about')}
+          onPress={() => openScreen('/about')}
         />
         {IS_MOCK ? (
           <LinkRow
             title="개발 도구 (mock 모드)"
             ios="wrench.and.screwdriver"
             android="build"
-            onPress={() => router.push('/dev-tools')}
+            onPress={() => openScreen('/dev-tools')}
           />
         ) : null}
       </Rows>
@@ -100,7 +102,7 @@ function InfoSections() {
             key={p.key}
             title={p.title}
             numberOfLines={1}
-            onPress={() => router.push(`/policies/${p.key}`)}
+            onPress={() => openScreen(`/policies/${p.key}`)}
           />
         ))}
       </Rows>
@@ -113,14 +115,14 @@ function SignedOut() {
     <Screen>
       <EmptyState
         title="로그인하고 더 편하게 이용하세요"
-        description="프로그램 신청, 공간 예약, 동아리 가입 내역을 한곳에서 확인할 수 있습니다."
+        description={'프로그램 신청, 공간 예약, 동아리 가입 내역을\n한곳에서 확인할 수 있습니다.'}
         action={
           <View style={styles.authButtons}>
             <View style={{ flex: 1 }}>
-              <Button label="로그인" onPress={() => router.push('/login')} />
+              <Button label="로그인" onPress={() => openScreen('/login')} />
             </View>
             <View style={{ flex: 1 }}>
-              <Button label="회원가입" variant="secondary" onPress={() => router.push('/signup')} />
+              <Button label="회원가입" variant="secondary" onPress={() => openScreen('/signup')} />
             </View>
           </View>
         }
@@ -132,7 +134,8 @@ function SignedOut() {
 
 function ProfileHeader({ user }: { user: User }) {
   return (
-    <Tap onPress={() => router.push('/my/profile')} accessibilityLabel="내 정보 수정" style={styles.profile}>
+    <Tap onPress={() => openScreen('/my/profile')} accessibilityLabel="내 정보 수정" style={styles.profile}>
+      <ProfilePhoto userId={user.id} />
       <View style={{ flex: 1, gap: 2 }}>
         <Txt variant="title2">{user.name}님</Txt>
         <Txt variant="caption" color="textTertiary" numberOfLines={1}>
@@ -287,7 +290,7 @@ export default function MyScreen() {
                       key={a.id}
                       accessibilityLabel={`${a.programTitle}, ${s.text}, ${formatDate(a.createdAt)} 신청, 상세 보기`}
                       style={styles.applicationRow}
-                      onPress={() => router.push(`/my/applications/${a.id}`)}
+                      onPress={() => openScreen(`/my/applications/${a.id}`)}
                     >
                       <View style={styles.applicationCopy}>
                         <Txt variant="bodyStrong" numberOfLines={2}>
@@ -364,7 +367,7 @@ export default function MyScreen() {
                     title={club.name}
                     subtitle={club.meetingInfo}
                     trailing={role === 'leader' ? <Badge text="대표" tone="brand" /> : undefined}
-                    onPress={() => router.push(`/clubs/${club.id}`)}
+                    onPress={() => openScreen(`/clubs/${club.id}`)}
                   />
                 ))}
                 {pendingClubApps.map((a) => {
@@ -376,7 +379,7 @@ export default function MyScreen() {
                       title={a.clubName}
                       subtitle={a.reason ? `사유: ${a.reason}` : `${formatDate(a.createdAt)} 신청`}
                       trailing={<Badge text={s.text} tone={s.tone} />}
-                      onPress={() => router.push(`/clubs/${a.clubId}`)}
+                      onPress={() => openScreen(`/clubs/${a.clubId}`)}
                     />
                   );
                 })}
@@ -388,11 +391,12 @@ export default function MyScreen() {
 
       <SectionHeader title="활동" />
       <Rows>
+        <LinkRow title="내 알림" ios="bell" android="notifications" onPress={() => openScreen('/notifications')} />
         <LinkRow
           title="출석 체크 · 내 출석 기록"
           ios="checkmark.circle"
           android="how_to_reg"
-          onPress={() => router.push('/my/attendance')}
+          onPress={() => openScreen('/my/attendance')}
         />
       </Rows>
       {session.user.managedClubIds.length > 0 && (

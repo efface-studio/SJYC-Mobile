@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { api } from '@/api';
@@ -109,7 +110,7 @@ export default function QnaScreen() {
                     meta={`${INQUIRY_CATEGORY_LABEL[q.category]} · ${formatDate(q.createdAt)}`}
                     title={q.title}
                     trailing={<Badge text={s.text} tone={s.tone} />}
-                    onPress={() => router.push(`/qna/${q.id}`)}
+                    onPress={() => openScreen(`/qna/${q.id}`)}
                   />
                 );
               })}
@@ -127,7 +128,7 @@ export default function QnaScreen() {
         <Button
           label={session ? '문의하기' : '로그인하고 문의하기'}
           variant={session ? 'primary' : 'secondary'}
-          onPress={() => router.push(session ? '/qna/new' : '/login')}
+          onPress={() => openScreen(session ? '/qna/new' : '/login')}
         />
       </Gutter>
 

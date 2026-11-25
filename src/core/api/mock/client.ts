@@ -247,6 +247,7 @@ function audit(db: MockDb, actor: DbUser, e: Omit<AuditEvent, 'id' | 'at' | 'act
 
 /** 처리 결과를 신청자에게 알린다 (실서버에서는 서버가 같은 시점에 만든다) */
 function notify(db: MockDb, n: Pick<Notification, 'userId' | 'kind' | 'title' | 'body' | 'link'>): void {
+  if (db.mutedNotifications?.[n.userId]?.includes(n.kind)) return;
   db.notifications.unshift({ id: nextId(db, 'nt'), createdAt: new Date().toISOString(), readAt: null, ...n });
 }
 
@@ -267,6 +268,11 @@ let lastResetToken: { token: string; userId: string } | null = null;
 
 export const mockClient: ApiClient = {
   auth: {
+    startNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
+    finishNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
+    socialProviders: () => respond(() => []),
+    startSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),
+    completeSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),
     me: () => respond((db) => (currentUser(db) ? toSession(db, currentUser(db)!) : null)),
     login: (input) =>
       respond((db) => {
@@ -287,7 +293,14 @@ export const mockClient: ApiClient = {
       }),
     signup: (input) =>
       respond((db) => {
-        if (db.users.some((x) => x.email.toLowerCase() === input.email.toLowerCase())) {
+        const registered = db.users.find((x) => x.email.toLowerCase() === input.email.toLowerCase());
+        if (registered) {
+          if (
+            registered.status === 'active' &&
+            !registered.emailVerified &&
+            registered.password === input.password
+          )
+            return { requiresEmailVerification: true };
           throw new ApiError('CONFLICT', '이미 가입된 이메일입니다.', {
             reason: 'EMAIL_TAKEN',
             fieldErrors: { email: '이미 가입된 이메일입니다.' },
@@ -298,7 +311,7 @@ export const mockClient: ApiClient = {
           id: nextId(db, 'u'),
           email: input.email,
           name: input.name,
-          phone: null,
+          phone: input.phone || null,
           birthYear: input.birthYear,
           roles: ['member'],
           status: 'active',
@@ -342,6 +355,40 @@ export const mockClient: ApiClient = {
   },
 
   me: {
+    socialAccounts: () => respond((db) => {
+      const u = requireUser(db);
+      return { linked: u.providers, available: [], hasPassword: !!u.password };
+    }),
+    unlinkSocial: (provider) => respond((db) => {
+      const u = requireUser(db);
+      if (u.providers.includes(provider) && !u.password && u.providers.length === 1) throw new ApiError('CONFLICT', '마지막 로그인 수단입니다.');
+      u.providers = u.providers.filter((p) => p !== provider);
+      return { linked: u.providers, available: [], hasPassword: !!u.password };
+    }),
+    loginDevices: () => respond((db) => {
+      requireUser(db);
+      const expiresAt = readSession()!.expiresAt;
+      return [{ id: 'current', label: '현재 기기', current: true, expiresAt, createdAt: new Date(Date.parse(expiresAt) - 3600000).toISOString() }];
+    }),
+    revokeDevice: () => respond(() => { throw new ApiError('NOT_FOUND', '로그인 기기를 찾을 수 없습니다.'); }),
+    notificationPreferences: () => respond((db) => ({ muted: db.mutedNotifications?.[requireUser(db).id] ?? [] })),
+    setNotificationPreference: ({ kind, enabled }) => respond((db) => {
+      const id = requireUser(db).id;
+      const prefs = db.mutedNotifications ??= {};
+      const muted = new Set(prefs[id] ?? []);
+      if (enabled) muted.delete(kind);
+      else muted.add(kind);
+      prefs[id] = [...muted];
+      return { muted: prefs[id] };
+    }),
+    profilePhoto: () => respond((db) => ({ image: db.profilePhotos?.[requireUser(db).id] ?? null })),
+    setProfilePhoto: (image) => respond((db) => {
+      const id = requireUser(db).id;
+      const photos = db.profilePhotos ??= {};
+      if (image === null) delete photos[id];
+      else photos[id] = image;
+      return { image };
+    }),
     updateProfile: (input) =>
       respond((db) => {
         const u = requireUser(db);

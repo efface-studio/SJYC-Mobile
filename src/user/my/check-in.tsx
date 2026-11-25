@@ -1,8 +1,9 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useIsFocused } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, StyleSheet, View } from 'react-native';
+import { AppState, Linking, StyleSheet, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { useSession } from '@/features/auth/session';
 import { Button, Chips, FormSection, Gutter, Screen, TextField, Txt } from '~/ds';
@@ -13,16 +14,19 @@ export default function CheckInScreen() {
   const client = useQueryClient();
   const focused = useIsFocused();
   const [active, setActive] = useState(AppState.currentState === 'active');
-  const [permission, request] = useCameraPermissions();
+  const [permission, request, refreshPermission] = useCameraPermissions();
   const [mode, setMode] = useState<'scan' | 'manual'>('scan');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [unavailable, setUnavailable] = useState(false);
   const locked = useRef(false);
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (v) => setActive(v === 'active'));
+    const sub = AppState.addEventListener('change', (v) => {
+      setActive(v === 'active');
+      if (v === 'active') void refreshPermission().catch(() => setUnavailable(true));
+    });
     return () => sub.remove();
-  }, []);
+  }, [refreshPermission]);
   const check = useMutation({
     mutationFn: (value: string) => api.me.checkIn({ code: value }),
     onSuccess: () => {
@@ -54,7 +58,7 @@ export default function CheckInScreen() {
       <Screen>
         {session.isPending ? null : !session.data?.user ? (
           <FormSection title="로그인 후 출석할 수 있습니다">
-            <Button label="로그인" onPress={() => router.push('/login')} />
+            <Button label="로그인" onPress={() => openScreen('/login')} />
           </FormSection>
         ) : check.isSuccess ? (
           <FormSection title="출석했습니다">
@@ -115,6 +119,9 @@ export default function CheckInScreen() {
                         ? '이 기기에서 카메라를 사용할 수 없습니다.'
                         : 'QR을 읽으려면 카메라 접근이 필요합니다.'}
                     </Txt>
+                    {!unavailable && permission?.canAskAgain === false && (
+                      <Button label="설정에서 카메라 허용" onPress={() => void Linking.openSettings().catch(() => setUnavailable(true))} />
+                    )}
                     {!unavailable && permission?.canAskAgain !== false && (
                       <Button
                         label="카메라 허용"

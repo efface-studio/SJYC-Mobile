@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { APPLICATION_STATUS } from '@/domain/labels';
@@ -108,7 +109,7 @@ export default function MyApplicationScreen() {
                 </Txt>
               </View>
               <Tap
-                onPress={() => router.push(`/programs/${a.programId}`)}
+                onPress={() => openScreen(`/programs/${a.programId}`)}
                 accessibilityLabel="프로그램 상세 보기"
                 style={{ alignSelf: 'flex-start', paddingVertical: 8 }}
               >

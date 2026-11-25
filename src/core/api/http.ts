@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { API_BASE_URL } from '@/config/env';
 import type { ApiClient } from './client';
 import { ApiError, DEFAULT_MESSAGE, type ApiErrorCode, type ConflictReason } from './errors';
@@ -92,6 +93,11 @@ const enc = encodeURIComponent;
 
 export const httpClient: ApiClient = {
   auth: {
+    startNativeApple: (link) => request('POST', (link ? '/me/social' : '/auth/social') + '/apple/native/start'),
+    finishNativeApple: (input) => request('POST', '/auth/social/apple/native/complete', { body: input }),
+    socialProviders: () => request('GET', '/auth/social/providers', { query: { platform: Platform.OS } }),
+    startSocial: (provider, link) => request('POST', (link ? '/me/social/' : '/auth/social/') + provider + '/start'),
+    completeSocial: (proof) => request('POST', '/auth/social/complete', { body: proof }),
     async me() {
       try {
         return await request('GET', '/auth/session');
@@ -109,6 +115,14 @@ export const httpClient: ApiClient = {
       request('POST', '/auth/password-reset/confirm', { body: { token, password } }),
   },
   me: {
+    socialAccounts: () => request('GET', '/me/social', { query: { platform: Platform.OS } }),
+    unlinkSocial: (provider) => request('DELETE', '/me/social/' + provider),
+    loginDevices: () => request('GET', '/me/login-devices'),
+    revokeDevice: (id) => request('DELETE', '/me/login-devices/' + enc(id)),
+    notificationPreferences: () => request('GET', '/me/notifications/preferences'),
+    setNotificationPreference: (input) => request('PATCH', '/me/notifications/preferences', { body: input }),
+    profilePhoto: () => request('GET', '/me/profile/photo'),
+    setProfilePhoto: (image) => request('PUT', '/me/profile/photo', { body: { image } }),
     updateProfile: (input) => request('PATCH', '/me/profile', { body: input }),
     withdraw: () => request('DELETE', '/me'),
     applications: () => request('GET', '/me/applications'),

@@ -1,59 +1,47 @@
-import { Image } from 'expo-image';
-import { useIsFocused } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo, AppState, StyleSheet, View } from 'react-native';
+import { Image, type ImageSource } from 'expo-image';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { visibleBanners, type BannerConfig } from '@/domain/mobile-banners';
 import type { Club, Program } from '@/domain/types';
 import { todayKst } from '@/lib/format';
 import { Tap, Txt } from '~/ds';
-import { Icon, type IconProps } from '~/shared/icon';
+import { programPhoto } from './program-photo';
 import { openInternal } from '~/user-kit';
 
 const photos = {
   program: require('../../assets/center/program-studio.webp'),
   club: require('../../assets/center/clubs-studio.webp'),
   space: require('../../assets/center/spaces/gym.webp'),
-};
-type Slide = { id: string; title: string; kind: string; path: string; image: string };
+  afterschool: require('../../assets/center/banners/afterschool.webp'),
+} as const;
 
-function slidesFor(config: BannerConfig, programs: Program[], clubs: Club[]): Slide[] {
-  const items: Slide[] = visibleBanners(config.items, todayKst());
+type Slide = { id: string; title: string; kind: string; path: string; source: number | ImageSource };
+
+function slidesFor(config: BannerConfig, programs: Program[], clubs: Club[], today: string): Slide[] {
+  const items: Slide[] = visibleBanners(config.items, today).map((b) => ({
+    ...b,
+    id: 'manual-' + b.id,
+    source:
+      b.image === 'program' || b.image === 'club' || b.image === 'space' ? photos[b.image] : { uri: b.image },
+  }));
   if (!config.automatic) return items;
   const paths = new Set(items.map((b) => b.path));
-  const more: Slide[] = [
-    ...programs
-      .filter((p) => p.recruitStatus === 'open')
-      .map((p) => ({
-        id: 'program-' + p.id,
-        title: p.title,
-        kind: '프로그램',
-        image: 'program',
-        path: '/programs/' + p.id,
-      })),
-    ...clubs
-      .filter((c) => c.status === 'active' && c.recruiting)
-      .map((c) => ({
-        id: 'club-' + c.id,
-        title: c.name,
-        kind: '동아리 모집',
-        image: 'club',
-        path: '/clubs/' + c.id,
-      })),
-  ];
-  return items.concat(more.filter((b) => !paths.has(b.path)));
-}
-
-function Control({
-  label,
-  onPress,
-  ios,
-  android,
-}: Pick<IconProps, 'android' | 'ios'> & { label: string; onPress: () => void }) {
-  return (
-    <Tap style={styles.control} accessibilityLabel={label} onPress={onPress}>
-      <Icon ios={ios} android={android} color="#fff" size={16} />
-    </Tap>
-  );
+  for (const p of programs) {
+    const path = '/programs/' + p.id;
+    if (p.recruitStatus === 'open' && !paths.has(path))
+      items.push({ id: 'program-' + p.id, title: p.title, kind: '프로그램', path, source: programPhoto(p) ?? photos.program });
+  }
+  for (const c of clubs) {
+    const path = '/clubs/' + c.id;
+    if (c.status !== 'active' || !c.recruiting || paths.has(path)) continue;
+    const source = /방과후아카데미|꿈을 여는 교실/.test(c.name)
+      ? photos.afterschool
+      : c.photos[0]?.url
+        ? { uri: c.photos[0].url }
+        : photos.club;
+    items.push({ id: 'club-' + c.id, title: c.name, kind: '동아리 모집', path, source });
+  }
+  return items;
 }
 
 export function HomeBanner({
@@ -65,95 +53,96 @@ export function HomeBanner({
   programs: Program[];
   clubs: Club[];
 }) {
-  const slides = config ? slidesFor(config, programs, clubs) : [];
+  const today = todayKst();
+  const slides = useMemo(
+    () => (config ? slidesFor(config, programs, clubs, today) : []),
+    [config, programs, clubs, today],
+  );
+  const list = useRef<FlatList<Slide>>(null);
+  const selectedId = useRef<string | undefined>(undefined);
+  const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [active, setActive] = useState(AppState.currentState === 'active');
-  const [reduceMotion, setReduceMotion] = useState(true);
-  const focus = useIsFocused();
-  const count = slides.length;
-  const seconds = config?.seconds ?? 0;
-  const current = count ? index % count : 0;
-  const slide = slides[current];
   useEffect(() => {
-    let mounted = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((v) => {
-      if (mounted) setReduceMotion(v);
-    });
-    const motion = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    const app = AppState.addEventListener('change', (s) => setActive(s === 'active'));
-    return () => {
-      mounted = false;
-      motion.remove();
-      app.remove();
-    };
-  }, []);
-  useEffect(() => {
-    if (!active || !focus || paused || reduceMotion || !seconds || count < 2) return;
-    const timer = setInterval(() => setIndex((i) => (i + 1) % count), seconds * 1000);
-    return () => clearInterval(timer);
-  }, [active, focus, paused, reduceMotion, seconds, count, current]);
-  if (!slide) return null;
-  const source =
-    slide.image === 'program' || slide.image === 'club' || slide.image === 'space'
-      ? photos[slide.image]
-      : { uri: slide.image };
+    if (!width || !slides.length) return;
+    const next = Math.max(
+      0,
+      slides.findIndex((s) => s.id === selectedId.current),
+    );
+    list.current?.scrollToOffset({ offset: next * width, animated: false });
+    setIndex(next);
+    selectedId.current = slides[next]?.id;
+  }, [width, slides]);
+
+  if (!slides.length) return null;
   return (
-    <View style={styles.banner}>
-      <Tap
-        accessibilityLabel={slide.kind + ', ' + slide.title}
-        onPress={() => openInternal(slide.path)}
-        style={styles.slide}
-      >
-        <Image
-          source={source}
-          placeholder={photos.program}
-          placeholderContentFit="cover"
-          contentFit="cover"
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={[StyleSheet.absoluteFill, styles.shade]} />
-        <View style={styles.caption}>
-          <Txt variant="captionStrong" color="#fff">
-            {slide.kind}
-          </Txt>
-          <Txt variant="title1" color="#fff" numberOfLines={2}>
-            {slide.title}
-          </Txt>
-        </View>
-      </Tap>
-      {count > 1 && (
-        <View style={styles.controls}>
-          <Control
-            ios="chevron.left"
-            android="chevron_left"
-            label="이전 배너"
-            onPress={() => setIndex((current + count - 1) % count)}
-          />
-          <Txt variant="small" color="#fff">
-            {current + 1} / {count}
-          </Txt>
-          <Control
-            ios="chevron.right"
-            android="chevron_right"
-            label="다음 배너"
-            onPress={() => setIndex((current + 1) % count)}
-          />
-          {!!seconds && !reduceMotion && (
-            <Control
-              ios={paused ? 'play.fill' : 'pause.fill'}
-              android={paused ? 'play_arrow' : 'pause'}
-              label={paused ? '자동 넘김 시작' : '자동 넘김 정지'}
-              onPress={() => setPaused((v) => !v)}
-            />
+    <View style={styles.banner} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 && (
+        <FlatList
+          ref={list}
+          data={slides}
+          horizontal
+          pagingEnabled
+          directionalLockEnabled
+          scrollEnabled={slides.length > 1}
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(s) => s.id}
+          initialNumToRender={2}
+          windowSize={5}
+          getItemLayout={(_, n) => ({ length: width, offset: width * n, index: n })}
+          onScroll={(e) => {
+            const next = Math.max(
+              0,
+              Math.min(slides.length - 1, Math.round(e.nativeEvent.contentOffset.x / width)),
+            );
+            selectedId.current = slides[next]?.id;
+            setIndex(next);
+          }}
+          scrollEventThrottle={32}
+          renderItem={({ item }) => (
+            <Tap
+              accessibilityLabel={item.kind + ', ' + item.title}
+              onPress={() => openInternal(item.path)}
+              style={[styles.slide, { width }]}
+            >
+              <Image
+                source={item.source}
+                recyclingKey={item.path}
+                accessible={false}
+                contentFit="cover"
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={[StyleSheet.absoluteFill, styles.shade]} />
+              <View style={styles.caption}>
+                <Txt variant="captionStrong" color="#fff">
+                  {item.kind}
+                </Txt>
+                <Txt variant="title1" color="#fff" numberOfLines={2}>
+                  {item.title}
+                </Txt>
+              </View>
+            </Tap>
           )}
+        />
+      )}
+      {slides.length > 1 && (
+        <View
+          pointerEvents="none"
+          accessible
+          accessibilityLabel={index + 1 + ' / ' + slides.length}
+          style={styles.position}
+        >
+          <Txt variant="small" color="#fff">
+            {index + 1} / {slides.length}
+          </Txt>
         </View>
       )}
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   banner: {
+    width: '100%',
     backgroundColor: '#302520',
     aspectRatio: 354 / 202,
     minHeight: 190,
@@ -161,19 +150,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
   },
-  slide: { flex: 1, justifyContent: 'flex-end' },
+  slide: { height: '100%', justifyContent: 'flex-end' },
   shade: {
     experimental_backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.02) 5%, rgba(0,0,0,0.82) 100%)',
   },
-  caption: { gap: 3, paddingHorizontal: 16, paddingBottom: 16, paddingTop: 44 },
-  controls: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-  },
-  control: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  caption: { gap: 3, paddingLeft: 16, paddingRight: 62, paddingBottom: 16, paddingTop: 44 },
+  position: { position: 'absolute', right: 16, bottom: 18 },
 });

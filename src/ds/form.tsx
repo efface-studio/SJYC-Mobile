@@ -1,5 +1,6 @@
+import { editMobilePhone, formatMobilePhone } from '@/lib/phone';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useState, type Ref } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -66,6 +67,7 @@ export function TextField({
   autoFocus,
   returnKeyType,
   onSubmitEditing,
+  trailing,
   ref,
 }: {
   label?: string;
@@ -84,45 +86,69 @@ export function TextField({
   autoFocus?: boolean;
   returnKeyType?: TextInputProps['returnKeyType'];
   onSubmitEditing?: () => void;
+  trailing?: ReactNode;
   /** 다음 입력칸으로 포커스를 옮길 때 사용 (React 19 ref prop) */
   ref?: Ref<TextInput>;
 }) {
   const t = useTheme();
   const [focused, setFocused] = useState(false);
+  const phone = keyboardType === 'phone-pad' || autoComplete === 'tel';
+  const displayed = phone ? formatMobilePhone(value) : value;
+  const input = (
+    <TextInput
+      ref={ref}
+      value={displayed}
+      onChangeText={phone ? (next) => onChangeText(editMobilePhone(displayed, next)) : onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={t.textTertiary}
+      multiline={multiline}
+      keyboardType={keyboardType}
+      secureTextEntry={secureTextEntry}
+      maxLength={maxLength}
+      autoComplete={autoComplete}
+      autoCapitalize={autoCapitalize}
+      autoCorrect={autoCorrect}
+      autoFocus={autoFocus}
+      returnKeyType={returnKeyType}
+      onSubmitEditing={onSubmitEditing ? () => onSubmitEditing() : undefined}
+      submitBehavior={multiline ? 'newline' : undefined}
+      accessibilityLabel={label ?? placeholder}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      textAlignVertical={multiline ? 'top' : 'center'}
+      style={[
+        styles.input,
+        {
+          color: t.text,
+          backgroundColor: t.bgSubtle,
+          borderColor: error ? t.tone.danger.fg : focused ? t.action : 'transparent',
+          minHeight: multiline ? 120 : 52,
+          paddingTop: multiline ? 14 : 0,
+        },
+        trailing ? { flex: 1, minWidth: 0, borderWidth: 0, paddingRight: 2 } : undefined,
+      ]}
+    />
+  );
   return (
     <FieldShell label={label} error={error} hint={hint}>
-      <TextInput
-        ref={ref}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={t.textTertiary}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        maxLength={maxLength}
-        autoComplete={autoComplete}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={autoCorrect}
-        autoFocus={autoFocus}
-        returnKeyType={returnKeyType}
-        onSubmitEditing={onSubmitEditing ? () => onSubmitEditing() : undefined}
-        submitBehavior={multiline ? 'newline' : undefined}
-        accessibilityLabel={label ?? placeholder}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        textAlignVertical={multiline ? 'top' : 'center'}
-        style={[
-          styles.input,
-          {
-            color: t.text,
+      {trailing ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderRadius: radius.md,
+            borderWidth: 1.5,
+            paddingRight: 4,
             backgroundColor: t.bgSubtle,
             borderColor: error ? t.tone.danger.fg : focused ? t.action : 'transparent',
-            minHeight: multiline ? 120 : 52,
-            paddingTop: multiline ? 14 : 0,
-          },
-        ]}
-      />
+          }}
+        >
+          {input}
+          {trailing}
+        </View>
+      ) : (
+        input
+      )}
     </FieldShell>
   );
 }
@@ -242,27 +268,23 @@ export function SwitchRow({
   description,
   value,
   onValueChange,
+  disabled,
   error,
 }: {
   label: string;
   description?: string;
   value: boolean;
   onValueChange: (v: boolean) => void;
+  disabled?: boolean;
   error?: string;
 }) {
   const t = useTheme();
   return (
     <View style={{ gap: 4 }}>
       <View style={styles.switchRow}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Txt variant="label">{label}</Txt>
-          {description && (
-            <Txt variant="caption" color="textTertiary">
-              {description}
-            </Txt>
-          )}
-        </View>
+        <Txt variant="label" style={{ flex: 1 }}>{label}</Txt>
         <Switch
+          disabled={disabled}
           value={value}
           onValueChange={onValueChange}
           accessibilityLabel={label}
@@ -270,6 +292,7 @@ export function SwitchRow({
           thumbColor={Platform.OS === 'android' ? t.bg : undefined}
         />
       </View>
+      {description && <Txt variant="caption" color="textTertiary">{description}</Txt>}
       {error && (
         <Txt variant="caption" color={t.tone.danger.fg}>
           {error}
@@ -307,5 +330,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 48 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 36 },
 });

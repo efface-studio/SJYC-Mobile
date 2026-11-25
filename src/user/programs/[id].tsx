@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import { DEMO_DATA } from '@/config/env';
@@ -40,7 +41,7 @@ function ApplyFooter({ program }: { program: Program }) {
       <Button
         label="신청 완료 · 신청 내역 보기"
         variant="secondary"
-        onPress={() => router.push(`/my/applications/${active.id}`)}
+        onPress={() => openScreen(`/my/applications/${active.id}`)}
       />
     );
   } else if (program.recruitStatus === 'upcoming') {
@@ -60,9 +61,9 @@ function ApplyFooter({ program }: { program: Program }) {
       />
     );
   } else if (session) {
-    button = <Button label="신청하기" onPress={() => router.push(`/programs/apply/${program.id}`)} />;
+    button = <Button label="신청하기" onPress={() => openScreen(`/programs/apply/${program.id}`)} />;
   } else {
-    button = <Button label="로그인하고 신청하기" onPress={() => router.push('/login')} />;
+    button = <Button label="로그인하고 신청하기" onPress={() => openScreen('/login')} />;
   }
   return <StickyFooter>{button}</StickyFooter>;
 }

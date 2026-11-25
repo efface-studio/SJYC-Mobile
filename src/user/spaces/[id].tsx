@@ -1,3 +1,4 @@
+import { openScreen } from '~/shared/navigation';
 import { SpacePhoto } from '~/user-kit/space-photo';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -319,7 +320,7 @@ function SpaceDetail({ s }: { s: Space }) {
       footer={
         s.reservable ? (
           <StickyFooter>
-            <Button label="로그인하고 예약 신청하기" onPress={() => router.push('/login')} />
+            <Button label="로그인하고 예약 신청하기" onPress={() => openScreen('/login')} />
           </StickyFooter>
         ) : undefined
       }

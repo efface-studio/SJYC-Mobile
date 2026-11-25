@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { useState } from 'react';
 import { api, errorMessage } from '@/api';
 import { CLUB_APPLICATION_STATUS, CLUB_POST_KIND_LABEL, CLUB_ROLE_LABEL } from '@/domain/labels';
@@ -315,7 +316,7 @@ export function AttendanceSection({ club }: { club: Club }) {
       </Txt>
       <Button
         label={`${club.name} 출석부 열기`}
-        onPress={() => router.push({ pathname: '/more/attendance', params: { target: `club:${club.id}` } })}
+        onPress={() => openScreen({ pathname: '/more/attendance', params: { target: `club:${club.id}` } })}
       />
     </FormSection>
   );
