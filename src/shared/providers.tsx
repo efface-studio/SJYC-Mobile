@@ -1,3 +1,4 @@
+import { AppUpdates } from './app-updates';
 import { useAppColorScheme } from '~/shared/appearance';
 import { restoreAppearance } from './appearance';
 import { LoginSessionGate } from './login-preferences';
@@ -95,6 +96,7 @@ export function AppProviders({
           },
         }}
       >
+        {!launching && <AppUpdates />}
         <StatusBar style={scheme === "dark" ? "light" : "dark"} />
         <View style={{ flex: 1 }}>
           <View

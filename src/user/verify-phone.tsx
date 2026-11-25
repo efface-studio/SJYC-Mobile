@@ -1,6 +1,6 @@
 import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Keyboard, ScrollView, StyleSheet, View } from 'react-native';
+import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, errorMessage } from '@/api';
 import { SESSION_KEY } from '@/features/auth/session';
@@ -9,21 +9,10 @@ import { Button, Gutter, LoadingState, Screen, TextField, Txt, space } from '~/d
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '~/shared/icon';
 import { useTheme } from '~/ds';
-import { SignupOtp } from '~/shared/signup-otp';
+import { CodeInput, useReducedMotion } from '~/shared/code-input';
 export default function VerifyPhone() {
-  const [reduce, setReduce] = useState(true),
-    [done, setDone] = useState(false);
-  useEffect(() => {
-    let active = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((v) => {
-      if (active) setReduce(v);
-    });
-    const s = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
-    return () => {
-      active = false;
-      s.remove();
-    };
-  }, []);
+  const reduce = useReducedMotion();
+  const [done, setDone] = useState(false);
   const f = useSignupPhone(!reduce),
     cache = useQueryClient(),
     success = f.verify.isSuccess;
@@ -125,7 +114,7 @@ export default function VerifyPhone() {
                 ? '테스트 코드 284600을 입력해 주세요.'
                 : '문자로 받은 6자리 코드를 입력해 주세요.'}
             </Txt>
-            <SignupOtp
+            <CodeInput
               code={f.code}
               onChange={f.input}
               phase={

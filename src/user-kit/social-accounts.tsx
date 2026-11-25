@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -59,7 +60,7 @@ export function SocialMark({
 
 export const useAppleAvailable = () => useQuery({
   queryKey: ['apple-sign-in-available'], queryFn: AppleAuthentication.isAvailableAsync,
-  enabled: Platform.OS === 'ios', staleTime: Infinity,
+  enabled: Platform.OS === 'ios' && Constants.expoConfig?.extra?.nativeAppleSignIn === true, staleTime: Infinity,
 });
 
 let pending: { claim: string; link: boolean } | null = null;

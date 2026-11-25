@@ -2,10 +2,10 @@
 
 한 코드베이스에서 **사용자 앱**과 **관리자 앱** 두 개를 만든다 (Expo SDK 57, expo-router, React Native 0.86).
 
-| 앱     | 실행                                                                  | 번들 ID                    | 라우트      |
-| ------ | --------------------------------------------------------------------- | -------------------------- | ----------- |
-| 사용자 | `npm run start` / `npm run ios` / `npm run android`                   | `studio.efface.sjyc`       | `src/user`  |
-| 관리자 | `npm run start:admin` / `npm run ios:admin` / `npm run android:admin` | `studio.efface.sjyc.admin` | `src/admin` |
+| 앱     | 실행                                                                  | iOS 번들 ID | Android 패키지 | 라우트      |
+| ------ | --------------------------------------------------------------------- | ------------------- | -------------------------- | ----------- |
+| 사용자 | `npm run start` / `npm run ios` / `npm run android`                   | `dev.efface.sjyc` | `studio.efface.sjyc`       | `src/user`  |
+| 관리자 | `npm run start:admin` / `npm run ios:admin` / `npm run android:admin` | `dev.efface.sjyc.admin` | `studio.efface.sjyc.admin` | `src/admin` |
 
 `APP_FLAVOR=admin` 이 라우트 폴더·앱 이름·번들 ID 를 바꾼다(`app.config.ts`). 두 앱을 한 기기에 함께 설치할 수 있다.
 
@@ -55,3 +55,11 @@ npm run export:admin
 - 관리자 앱: 대시보드, 프로그램 신청·공간 예약·동아리 가입 승인/반려, 문의 답변, 공지·프로그램·공간·동아리(담당자 지정 포함)·FAQ·정책 문서 편집, 회원 역할/상태 변경(개발자 역할은 개발자만), 출석부(출석 코드), 감사 로그, 개발자 도구(개발자만).
 - 동아리 담당자: 관리자 앱에 로그인하면 하단 탭이 `동아리 운영` 하나로 바뀌고, 담당 동아리의 회원·가입 신청·출석·소식·소개만 관리한다.
 - Android 에는 OS 기본 텍스트 입력 다이얼로그가 없어 반려 사유는 별도 입력 화면으로 받는다.
+
+## 앱 업데이트
+
+두 앱의 서명된 네이티브 빌드에 같은 공개 인증서를 `SJYC_OTA_CERTIFICATE`로 전달합니다. 운영 API 주소는 `EXPO_PUBLIC_API_BASE_URL`, 채널은 `SJYC_OTA_CHANNEL`입니다. 배포 작업은 `SJYC_OTA_PRIVATE_KEY`로 서명합니다. 관리자 화면의 되돌리기를 사용하려면 API 서버에서 같은 서명 키를 비밀 파일로 마운트하고 `OTA_ROLLBACK_KEY_FILE`에 경로를 설정합니다. 앱에는 공개 인증서만 포함됩니다.
+
+서버와 배포 작업이 공유하는 영속 디렉터리를 `OTA_DIRECTORY`로 지정하고 빌드와 동일한 소스·환경에서 `npm run ota:publish -- "변경 내용"`을 실행합니다. 네 가지 서명된 번들이 모두 준비되면 한 번에 공개합니다. 운영 서버는 디렉터리를 읽기 전용으로 연결할 수 있습니다. 호환 런타임의 모든 기기가 대상이며 네이티브 모듈 변경은 스토어 빌드로 배포합니다.
+
+관리자 웹 설정 또는 관리자앱 운영 메뉴의 **앱 업데이트**에서 배포와 적용 확인 수를 볼 수 있습니다. 수치는 최근 90일간 확인 요청을 보내온 기기의 근삿값입니다. 스토어 확인은 한국 App Store와 해당 Android 기기의 Google Play 배포 트랙을 사용합니다.
