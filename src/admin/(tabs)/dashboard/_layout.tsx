@@ -1,2 +1,3 @@
-/** 탭 내비게이션 스택 */
+export const unstable_settings = { initialRouteName: 'index' };
+
 export { TabStack as default } from '~/admin-kit/components';

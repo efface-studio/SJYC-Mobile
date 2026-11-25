@@ -241,7 +241,7 @@ export default function Dashboard() {
                 <SectionHeader
                   title="최근 수정된 공지"
                   action={allowed('notice.write') ? '전체 보기' : undefined}
-                  onAction={() => router.navigate('/more/notices')}
+                  onAction={() => openScreen('/dashboard/notices')}
                 />
                 {d.recentNotices.length === 0 ? (
                   <EmptyState title="공지가 없습니다" />
@@ -256,7 +256,7 @@ export default function Dashboard() {
                         trailing={<StatusBadge {...PUBLISH_STATUS[n.status]} />}
                         onPress={
                           allowed('notice.write')
-                            ? () => router.navigate({ pathname: '/more/notice/[id]', params: { id: n.id } })
+                            ? () => openScreen({ pathname: '/dashboard/notice/[id]', params: { id: n.id } })
                             : undefined
                         }
                       />
