@@ -4,7 +4,7 @@ import { readBanners, visibleBanners } from '@/domain/mobile-banners';
 import { programPhoto } from '~/user-kit/program-photo';
 import { HomeBanner } from '~/user-kit/home-banner';
 import { router } from 'expo-router';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { api } from '@/api';
 import { CENTER, DESK_HOURS, hoursOn } from '@/config/center';
 import { Icon } from '~/shared/icon';
@@ -63,7 +63,14 @@ function TodayStatus() {
   );
 }
 
+const HOME_SHORTCUTS = [
+  { label: '공간 예약', href: '/spaces', ios: 'calendar', android: 'event' },
+  { label: '동아리 찾기', href: '/clubs', ios: 'person.3', android: 'groups' },
+] as const;
+
 export default function HomeScreen() {
+  const { width, fontScale } = useWindowDimensions();
+  const stackedShortcuts = (width - 40) / Math.max(1, fontScale) < 290;
   const t = useTheme();
   const programs = useQuery({
     queryKey: ['programs', { recruitStatus: 'open', pageSize: 6 }],
@@ -103,19 +110,20 @@ export default function HomeScreen() {
     >
       <Gutter>
         <HomeBanner config={config} programs={programs.data?.items ?? []} clubs={clubs.data ?? []} />
-        <View style={[styles.shortcutRow, { borderColor: t.line }]}>
-          <Tap
-            rounded={6}
-            onPress={() => router.navigate('/spaces')}
-            style={[styles.shortcut, { borderRightWidth: StyleSheet.hairlineWidth, borderColor: t.line }]}
-          >
-            <Icon ios="calendar" android="event" color={t.action} size={19} />
-            <Txt variant="bodyStrong">공간 예약</Txt>
-          </Tap>
-          <Tap rounded={6} onPress={() => router.navigate('/clubs')} style={styles.shortcut}>
-            <Icon ios="person.3" android="groups" color={t.textSecondary} size={19} />
-            <Txt variant="bodyStrong">동아리 찾기</Txt>
-          </Tap>
+        <View style={[styles.shortcutRow, stackedShortcuts && styles.shortcutColumn]}>
+          {HOME_SHORTCUTS.map((item) => (
+            <Tap
+              key={item.href}
+              rounded={12}
+              accessibilityLabel={item.label}
+              onPress={() => router.navigate(item.href)}
+              style={[styles.shortcut, { borderColor: t.line }]}
+            >
+              <Icon ios={item.ios} android={item.android} color={t.action} size={18} />
+              <Txt variant="label" style={{ flex: 1 }}>{item.label}</Txt>
+              <Icon ios="chevron.right" android="chevron_right" color={t.textTertiary} size={12} />
+            </Tap>
+          ))}
         </View>
       </Gutter>
 
@@ -215,21 +223,18 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  shortcutRow: {
-    flexDirection: 'row',
-    paddingVertical: 3,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+  shortcutRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  shortcutColumn: { flexDirection: 'column' },
   shortcut: {
     flex: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    paddingHorizontal: 8,
-    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   mediaCard: { width: 140, gap: 6 },
   today: {

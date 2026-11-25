@@ -142,6 +142,7 @@ export function HomeBanner({
 
 const styles = StyleSheet.create({
   banner: {
+    width: '100%',
     backgroundColor: '#302520',
     aspectRatio: 354 / 202,
     minHeight: 190,
