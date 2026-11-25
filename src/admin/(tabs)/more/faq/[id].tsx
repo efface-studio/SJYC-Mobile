@@ -35,7 +35,7 @@ export default function FaqEdit() {
     <>
       <Stack.Screen options={{ title: isNew ? 'FAQ 등록' : 'FAQ 수정' }} />
       {allowed ? (
-        <QueryBoundary query={faqs}>
+        <QueryBoundary layout="form" query={faqs}>
           {(list) => {
             const nextOrder = Math.max(0, ...list.map((f) => f.order)) + 1;
             if (isNew) return <FaqForm faq={null} nextOrder={nextOrder} />;

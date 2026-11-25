@@ -32,7 +32,7 @@ export default function InquiryDetail() {
   });
 
   if (!allowed) return <NoPermission />;
-  return <QueryBoundary query={query}>{(x) => <InquiryView inquiry={x} />}</QueryBoundary>;
+  return <QueryBoundary layout="detail" query={query}>{(x) => <InquiryView inquiry={x} />}</QueryBoundary>;
 }
 
 function InquiryView({ inquiry: x }: { inquiry: Inquiry }) {

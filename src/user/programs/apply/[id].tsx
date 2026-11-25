@@ -143,5 +143,5 @@ export default function ProgramApplyScreen() {
   const program = useQuery({ queryKey: ['program', id], queryFn: () => api.programs.get(id) });
 
   if (!session) return <SignInPrompt description="프로그램 신청은 로그인 후 이용할 수 있습니다." replace />;
-  return <QueryScreen query={program}>{(p) => <ApplyForm program={p} session={session} />}</QueryScreen>;
+  return <QueryScreen layout="form" query={program}>{(p) => <ApplyForm program={p} session={session} />}</QueryScreen>;
 }

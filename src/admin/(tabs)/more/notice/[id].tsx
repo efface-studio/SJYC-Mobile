@@ -48,7 +48,7 @@ export default function NoticeEdit() {
       ) : isNew ? (
         <NoticeForm notice={null} />
       ) : (
-        <QueryBoundary query={query}>{(n) => <NoticeForm notice={n} />}</QueryBoundary>
+        <QueryBoundary layout="form" query={query}>{(n) => <NoticeForm notice={n} />}</QueryBoundary>
       )}
     </>
   );

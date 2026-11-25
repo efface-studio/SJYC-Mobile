@@ -48,7 +48,7 @@ export default function GalleryScreen() {
           센터 공식 채널에 올라온 사진과 영상입니다. 누르면 원문 게시물로 이동합니다.
         </Txt>
       </Gutter>
-      <QueryBoundary
+      <QueryBoundary layout="gallery"
         query={media}
         isEmpty={(d) => d.length === 0}
         empty={{ title: '등록된 소식이 없습니다' }}

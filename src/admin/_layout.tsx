@@ -29,7 +29,7 @@ function Gate() {
   if (session.isPending) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', backgroundColor: t.bg }}>
-        <LoadingState />
+        <LoadingState layout="dashboard" />
       </View>
     );
   }

@@ -234,7 +234,7 @@ export default function MyScreen() {
   if (isPending) {
     return (
       <Screen>
-        <LoadingState />
+        <LoadingState layout="account" />
       </Screen>
     );
   }

@@ -133,7 +133,7 @@ export default function Dashboard() {
       />
       <Screen onRefresh={() => query.refetch()}>
         <Context />
-        <QueryBoundary query={query}>
+        <QueryBoundary layout="dashboard" query={query}>
           {(d) => {
             const inbox = pending.filter((p) => d[p.key] > 0);
             const total = inbox.reduce((sum, p) => sum + d[p.key], 0);
