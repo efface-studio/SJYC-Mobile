@@ -1,3 +1,4 @@
+import { ProfilePhoto } from '~/user-kit/profile-photo';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -77,6 +78,7 @@ function ProfileForm({ session }: { session: Session }) {
       }
     >
       <Gutter style={styles.account}>
+        <ProfilePhoto userId={user.id} editable />
         <Txt variant="captionStrong" color="textTertiary">
           로그인 계정
         </Txt>

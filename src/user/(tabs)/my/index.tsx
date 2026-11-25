@@ -1,3 +1,4 @@
+import { ProfilePhoto } from '~/user-kit/profile-photo';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -133,6 +134,7 @@ function SignedOut() {
 function ProfileHeader({ user }: { user: User }) {
   return (
     <Tap onPress={() => router.push('/my/profile')} accessibilityLabel="내 정보 수정" style={styles.profile}>
+      <ProfilePhoto userId={user.id} />
       <View style={{ flex: 1, gap: 2 }}>
         <Txt variant="title2">{user.name}님</Txt>
         <Txt variant="caption" color="textTertiary" numberOfLines={1}>
