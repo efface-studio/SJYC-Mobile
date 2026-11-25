@@ -1,11 +1,14 @@
 import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Keyboard, View } from 'react-native';
+import { AccessibilityInfo, Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, errorMessage } from '@/api';
 import { SESSION_KEY } from '@/features/auth/session';
 import { useSignupPhone } from '@/features/auth/use-signup-phone';
 import { Button, Gutter, LoadingState, Screen, TextField, Txt, space } from '~/ds';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Icon } from '~/shared/icon';
+import { useTheme } from '~/ds';
 import { SignupOtp } from '~/shared/signup-otp';
 export default function VerifyPhone() {
   const [reduce, setReduce] = useState(true),
@@ -32,27 +35,51 @@ export default function VerifyPhone() {
   }, [success, reduce]);
   const data = f.state.data,
     busy = f.verify.isPending || f.send.isPending || success;
+  const t = useTheme();
+  if (done) {
+    const signedIn = f.verify.data?.signedIn;
+    return (
+      <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.page, { backgroundColor: t.bg }]}>
+        <Stack.Screen
+          options={{
+            title: '회원가입 성공',
+            headerTransparent: false,
+            headerLargeTitle: false,
+            headerBackVisible: false,
+            gestureEnabled: false,
+          }}
+        />
+        <ScrollView contentContainerStyle={styles.result}>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Icon ios="checkmark.circle.fill" android="check_circle" size={64} color={t.action} />
+          </View>
+          <Txt variant="display" accessibilityRole="header" style={styles.headline}>
+            가입을 완료했어요
+          </Txt>
+        </ScrollView>
+        <Gutter style={styles.footer}>
+          <Button
+            label={signedIn ? '계속하기' : '로그인하기'}
+            onPress={async () => {
+              if (signedIn) {
+                const session = await api.auth.me();
+                if (session) cache.setQueryData(SESSION_KEY, session);
+                router.replace('/home');
+              } else {
+                router.dismissTo('/login');
+              }
+            }}
+          />
+        </Gutter>
+      </SafeAreaView>
+    );
+  }
+  const title = f.verify.isError && !f.editing ? '회원가입 실패' : '휴대전화 인증';
   return (
     <Screen>
-      <Stack.Screen options={{ title: '휴대전화 인증', headerTransparent: false, headerLargeTitle: false }} />
+      <Stack.Screen options={{ title, headerTransparent: false, headerLargeTitle: false }} />
       <Gutter style={{ paddingVertical: space.xl, gap: space.lg }}>
-        {done ? (
-          <>
-            <Txt variant="title1" accessibilityRole="header">
-              가입이 완료되었습니다
-            </Txt>
-            <Button
-              label={f.verify.data?.signedIn ? '계속하기' : '로그인하기'}
-              onPress={async () => {
-                if (f.verify.data?.signedIn) {
-                  const session = await api.auth.me();
-                  if (session) cache.setQueryData(SESSION_KEY, session);
-                  router.replace('/home');
-                } else router.replace('/login');
-              }}
-            />
-          </>
-        ) : f.state.isPending ? (
+        {f.state.isPending ? (
           <LoadingState />
         ) : f.state.isError || !data ? (
           <>
@@ -148,3 +175,17 @@ export default function VerifyPhone() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  page: { flex: 1 },
+  result: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  headline: { textAlign: 'center' },
+  footer: { paddingTop: 12, paddingBottom: 12 },
+});
