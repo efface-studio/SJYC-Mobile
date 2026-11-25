@@ -59,8 +59,8 @@ export function DeveloperMenu() {
   return (
     <View style={{ paddingTop: 24 }}>
       <Txt
-        variant="label"
-        color="textSecondary"
+        variant="captionStrong"
+        color="textTertiary"
         accessibilityRole="header"
         style={{ paddingHorizontal: 16, paddingBottom: 6 }}
       >
@@ -82,10 +82,10 @@ export function DeveloperMenu() {
               <Image source={icon} style={{ width: 18, height: 18, tintColor: t.textSecondary }} />
             </View>
             <View style={styles.copy}>
-              <Txt variant="body" style={styles.title}>
+              <Txt variant="bodyStrong">
                 {label}
               </Txt>
-              <Txt variant="caption" color="textSecondary" style={styles.detail}>
+              <Txt variant="caption" color="textSecondary">
                 {detail}
               </Txt>
             </View>
@@ -107,6 +107,4 @@ const styles = StyleSheet.create({
   },
   icon: { width: 20, alignItems: 'center' },
   copy: { flex: 1, gap: 2 },
-  title: { fontSize: 15, lineHeight: 20, letterSpacing: -0.3 },
-  detail: { fontSize: 13, lineHeight: 18, letterSpacing: -0.26 },
 });
