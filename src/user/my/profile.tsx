@@ -81,7 +81,7 @@ function ProfileForm({ session }: { session: Session }) {
           로그인 계정
         </Txt>
         <View style={styles.accountLine}>
-          <Txt variant="bodyStrong" style={{ flexShrink: 1 }} numberOfLines={1}>
+          <Txt variant="bodyStrong" style={{ flexShrink: 1 }}>
             {user.email}
           </Txt>
           {user.emailVerified ? (
@@ -178,7 +178,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   account: { paddingVertical: space.xl, gap: 4 },
-  accountLine: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  accountLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

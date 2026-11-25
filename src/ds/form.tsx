@@ -254,14 +254,7 @@ export function SwitchRow({
   return (
     <View style={{ gap: 4 }}>
       <View style={styles.switchRow}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Txt variant="label">{label}</Txt>
-          {description && (
-            <Txt variant="caption" color="textTertiary">
-              {description}
-            </Txt>
-          )}
-        </View>
+        <Txt variant="label" style={{ flex: 1 }}>{label}</Txt>
         <Switch
           value={value}
           onValueChange={onValueChange}
@@ -270,6 +263,7 @@ export function SwitchRow({
           thumbColor={Platform.OS === 'android' ? t.bg : undefined}
         />
       </View>
+      {description && <Txt variant="caption" color="textTertiary">{description}</Txt>}
       {error && (
         <Txt variant="caption" color={t.tone.danger.fg}>
           {error}
@@ -307,5 +301,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 48 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 36 },
 });
