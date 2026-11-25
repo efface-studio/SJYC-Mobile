@@ -63,7 +63,7 @@ export const useAppleAvailable = () => useQuery({
 });
 
 let pending: { claim: string; link: boolean } | null = null;
-export async function beginSocial(provider: OAuthProvider, link: boolean) {
+export async function beginSocial(provider: OAuthProvider, link: boolean, adminLink = false) {
   if (provider === 'apple' && Platform.OS === 'ios') {
     const challenge = await api.auth.startNativeApple(link);
     try {
@@ -80,7 +80,7 @@ export async function beginSocial(provider: OAuthProvider, link: boolean) {
       throw err;
     }
   }
-  const { url, claim } = await api.auth.startSocial(provider, link);
+  const { url, claim } = await api.auth.startSocial(provider, link, adminLink);
   pending = { claim, link };
   try {
     await Linking.openURL(url);
