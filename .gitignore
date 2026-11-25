@@ -1,9 +1,11 @@
 # Expo prebuild(CNG) 생성물 — 커밋하지 않는다
-android/
-ios/
+/android/
+/ios/
 node_modules/
 .expo/
 dist/
 .env
 .env.*
 !.env.example
+
+.sjyc-build/

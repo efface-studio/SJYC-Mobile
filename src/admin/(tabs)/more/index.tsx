@@ -108,6 +108,9 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     group: '설정',
     items: [
       {
+        title:'앱 업데이트',icon:{ios:'arrow.down.circle',android:'system_update'},href:'/more/app-updates',subtitle:'유저·관리자 앱 배포와 적용 현황',permission:'site.manage',
+      },
+      {
         title: '정책 문서',
         icon: { ios: 'doc.text', android: 'description' },
         subtitle: '약관 · 개인정보 처리방침 개정',

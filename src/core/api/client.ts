@@ -1,4 +1,5 @@
 import type { AttendancePosition, AttendanceScan } from '@/domain/check-in-location';
+import type { AppUpdate } from '@/domain/app-update';
 import type { SignupPhoneState } from '@/domain/signup-phone';
 import type { SocialDraft, SocialDetails } from '@/domain/social-profile';
 import type { LoginDevice, SocialAccounts } from '@/domain/account-settings';
@@ -238,6 +239,8 @@ export interface ApiClient {
   site: { settings(): Promise<SettingsRecord> };
   admin: {
     updateSettings(input: SettingsRecord): Promise<SettingsRecord>;
+    appUpdates(): Promise<AppUpdate[]>;
+    changeAppUpdate(id:string,input:import('@/domain/app-update').UpdateControl):Promise<{ok:boolean}>;
     serverLogs(): Promise<ServerLogSnapshot>;
     dashboard(periodDays: number): Promise<DashboardSummary>;
     notices: {

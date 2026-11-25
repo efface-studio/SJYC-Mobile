@@ -216,6 +216,8 @@ export const httpClient: ApiClient = {
   site: { settings: () => request('GET', '/site/settings') },
   admin: {
     updateSettings: (input) => request('PUT', '/admin/site-settings', { body: input }),
+    changeAppUpdate:(id,input)=>request('POST','/admin/app-updates/'+encodeURIComponent(id)+'/control',{body:input}),
+    appUpdates: () => request('GET', '/admin/app-updates'),
     serverLogs: () => request('GET', '/admin/server-logs'),
     dashboard: (periodDays) => request('GET', '/admin/dashboard', { query: { periodDays } }),
     notices: {
