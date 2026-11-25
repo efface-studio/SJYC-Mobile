@@ -6,6 +6,7 @@ import { attendanceSessionSchema, parseValues, type FieldErrors } from '@/domain
 import type { AttendanceSession, AttendanceTargetSummary } from '@/domain/types';
 import { todayKst } from '@/lib/format';
 import { Button, Card, DateField, FormSection, Gutter, TextField, Txt, space } from '~/ds';
+import { currentPosition } from './attendance-position';
 import { notify } from '~/shared/dialogs';
 import { AttendanceQR } from './attendance-qr';
 import { AttendanceBarcode } from './attendance-barcode';
@@ -94,7 +95,10 @@ export function CheckIn({
 }) {
   const remaining = useRemaining(session.checkInClosesAt);
   const toggle = useMutation({
-    mutationFn: (open: boolean) => api.attendance.setCheckIn(session.id, open),
+    mutationFn: async ({ open, manual }: { open: boolean; manual?: boolean }) => {
+      const position = open && !manual && session.targetType === 'club' ? await currentPosition() : undefined;
+      return api.attendance.setCheckIn(session.id, open, position);
+    },
     onSuccess: onChange,
     onError: (e) => notify('출석 코드를 바꾸지 못했습니다', errorMessage(e)),
   });
@@ -107,22 +111,37 @@ export function CheckIn({
         </Txt>
         {open ? (
           <>
-            <AttendanceQR code={session.checkInCode!} />
+            {(session.targetType === 'program' || session.qrTicket) && (
+              <AttendanceQR
+                payload={
+                  session.qrTicket
+                    ? 'SJYC:CLUB:' + session.qrTicket
+                    : 'SJYC:ATTENDANCE:' + session.checkInCode
+                }
+              />
+            )}
             <View accessible accessibilityLabel={`출석 코드 ${session.checkInCode!.split('').join(' ')}`}>
               <Txt variant="display" color="action" style={styles.code}>
                 {session.checkInCode}
               </Txt>
             </View>
-            {barcode && <AttendanceBarcode code={session.checkInCode!} />}
+            {barcode && (session.targetType === 'program' || session.qrTicket) && (
+              <AttendanceBarcode code={session.qrTicket ?? session.checkInCode!} />
+            )}
             <Txt variant="caption" color="textSecondary">
-              QR 스캔 또는 숫자 입력 · 남은 시간 {remaining}
+              {session.targetType === 'club'
+                ? session.qrTicket
+                  ? 'QR 출석 반경 100m · 숫자 입력은 어디서나 가능'
+                  : '숫자 입력으로 출석'
+                : 'QR 스캔 또는 숫자 입력'}{' '}
+              · 남은 시간 {remaining}
             </Txt>
             <Button
               label="코드 닫기"
               variant="secondary"
               size="md"
               loading={toggle.isPending}
-              onPress={() => toggle.mutate(false)}
+              onPress={() => toggle.mutate({ open: false })}
             />
           </>
         ) : (
@@ -132,11 +151,20 @@ export function CheckIn({
               않습니다.
             </Txt>
             <Button
-              label="출석 코드 열기"
+              label={session.targetType === 'club' ? '현재 위치에서 QR 열기' : '출석 코드 열기'}
               size="md"
               loading={toggle.isPending}
-              onPress={() => toggle.mutate(true)}
+              onPress={() => toggle.mutate({ open: true })}
             />
+            {session.targetType === 'club' && (
+              <Button
+                label="숫자 코드만 열기"
+                variant="text"
+                size="md"
+                disabled={toggle.isPending}
+                onPress={() => toggle.mutate({ open: true, manual: true })}
+              />
+            )}
           </>
         )}
       </Card>

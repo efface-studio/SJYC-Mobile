@@ -45,10 +45,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     predictiveBackGestureEnabled: true,
     blockedPermissions: [
       "android.permission.RECORD_AUDIO",
-      "android.permission.ACCESS_FINE_LOCATION",
+
     ],
   },
   plugins: [
+    ["expo-location",{locationWhenInUsePermission:"동아리 QR 출석을 시작하거나 스캔할 때 현장 위치를 확인합니다.",isIosBackgroundLocationEnabled:false,isAndroidBackgroundLocationEnabled:false}],
+    ["expo-image-picker",{photosPermission:"프로필이나 게시물에 사용할 사진을 선택합니다.",microphonePermission:false}],
     ...(FLAVOR === "user" ? ["expo-apple-authentication"] : []),
     [
       "expo-router",

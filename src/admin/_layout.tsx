@@ -1,3 +1,4 @@
+import {useLoginPermissions} from '~/shared/login-permissions';
 import { translucentHeader } from '~/shared/header';
 import { Stack } from 'expo-router';
 import { View } from 'react-native';
@@ -26,6 +27,7 @@ export default function RootLayout() {
 function Gate() {
   const t = useTheme();
   const session = useSession();
+  useLoginPermissions(canEnterConsole(session.data?.user),false);
   if (session.isPending) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', backgroundColor: t.bg }}>

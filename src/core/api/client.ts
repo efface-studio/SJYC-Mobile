@@ -1,3 +1,4 @@
+import type { AttendancePosition, AttendanceScan } from '@/domain/check-in-location';
 import type { SignupPhoneState } from '@/domain/signup-phone';
 import type { SocialDraft, SocialDetails } from '@/domain/social-profile';
 import type { LoginDevice, SocialAccounts } from '@/domain/account-settings';
@@ -154,6 +155,7 @@ export interface ApiClient {
     /** 본인이 명단에 있는 출석부 기록, 최신순 */
     attendance(): Promise<MyAttendance[]>;
     /** 담당자가 연 출석 코드로 본인 출석 — 틀린 입력이 반복되면 RATE_LIMITED */
+    scanAttendance(input:AttendanceScan): Promise<MyAttendance>;
     checkIn(input: CheckInInput): Promise<MyAttendance>;
   };
   /** 동아리 운영 — 센터 직원 이상(club.manage) 또는 그 동아리 담당자. 서버가 동아리별로 검사한다. */
@@ -191,7 +193,7 @@ export interface ApiClient {
     /** 여러 명을 한 번에 체크 — 명단에 없는 회원이 있으면 VALIDATION */
     mark(id: string, marks: AttendanceMark[]): Promise<AttendanceSession>;
     /** 본인 출석 체크 열기(서버가 4자리 코드 발급, 10분 후 자동 마감)·닫기 */
-    setCheckIn(id: string, open: boolean): Promise<AttendanceSession>;
+    setCheckIn(id: string, open: boolean, position?:AttendancePosition): Promise<AttendanceSession>;
     /** 회원별 누적 출석 */
     stats(target: AttendanceTarget): Promise<AttendanceMemberStat[]>;
   };
