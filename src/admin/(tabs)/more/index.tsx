@@ -237,6 +237,7 @@ export default function More() {
         />
         <ListRow title="로그인 기기" onPress={() => openScreen('/more/account/devices')} />
         <ListRow title="알림 설정" onPress={() => openScreen('/more/account/notifications')} />
+        <ListRow title="약관 및 정책" onPress={() => openScreen('/more/account/policies')} />
         <AppearanceRow />
         <Divider />
         <Gutter style={styles.footer}>

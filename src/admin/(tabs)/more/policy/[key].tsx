@@ -18,22 +18,28 @@ import {
   StickyFooter,
   TextField,
 } from '~/ds';
+import { PolicyDocument } from '~/shared/policy-document';
 import { confirm, notify } from '~/shared/dialogs';
 
 export default function PolicyEdit() {
   const { key } = useLocalSearchParams<{ key: string }>();
   const allowed = useCan()('policy.manage');
   const docs = useQuery({ ...policiesQuery, enabled: allowed });
+  const [editing, setEditing] = useState(false);
   const doc = docs.data?.find((d) => d.key === key);
 
   return (
     <>
-      <Stack.Screen options={{ title: doc ? `${POLICY_TITLE[doc.key]} 개정` : '정책 문서' }} />
+      <Stack.Screen options={{ title: doc ? POLICY_TITLE[doc.key] + (editing ? ' 개정' : '') : '정책 문서' }} />
       {allowed ? (
         <QueryBoundary layout="form" query={docs}>
           {() =>
             doc ? (
-              <PolicyEditor key={`${doc.key}-${doc.updatedAt}`} doc={doc} />
+              editing ? <PolicyEditor key={`${doc.key}-${doc.updatedAt}`} doc={doc} /> : (
+                <Screen footer={<StickyFooter><Button label="개정본 작성" onPress={() => setEditing(true)} /></StickyFooter>}>
+                  <PolicyDocument doc={doc} />
+                </Screen>
+              )
             ) : (
               <ScreenMessage title="문서를 찾을 수 없습니다" />
             )

@@ -7,9 +7,9 @@ import { api } from '@/api';
 import { OSS_MOBILE } from '@/config/oss-licenses';
 import { POLICY_TITLE } from '@/domain/labels';
 import type { PolicyKey } from '@/domain/types';
-import { formatDate } from '@/lib/format';
-import { Divider, EmptyState, Gutter, ListRow, Screen, Txt, space, useTheme } from '~/ds';
-import { Article, Callout, Hero, QueryScreen, Rows, isExternal, openExternal } from '~/user-kit';
+import { PolicyDocument } from '~/shared/policy-document';
+import { Divider, EmptyState, ListRow, Screen, Txt, useTheme } from '~/ds';
+import { Hero, QueryScreen, Rows, isExternal, openExternal } from '~/user-kit';
 
 const isPolicyKey = (v: string): v is PolicyKey => v in POLICY_TITLE;
 
@@ -103,24 +103,7 @@ export default function PolicyScreen() {
         <>
           <Stack.Screen options={{ title: d.title }} />
           <Screen>
-            <Hero title={d.title}>
-              {d.effectiveAt ? (
-                <Txt variant="caption" color="textTertiary">
-                  시행일 {formatDate(d.effectiveAt)}
-                </Txt>
-              ) : null}
-            </Hero>
-            {!d.confirmed && (
-              <Gutter style={{ paddingBottom: space.lg }}>
-                <Callout tone="warning" title="센터 확정본 미등록">
-                  아래 내용은 임시 안내입니다. 확정 문서가 등록되면 이 화면에 표시됩니다.
-                </Callout>
-              </Gutter>
-            )}
-            <Divider inset={20} />
-            <Gutter style={{ paddingTop: space.xxl }}>
-              <Article>{d.body}</Article>
-            </Gutter>
+            <PolicyDocument doc={d} />
           </Screen>
         </>
       )}
