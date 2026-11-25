@@ -1,8 +1,9 @@
+import { confirmSession } from '~/shared/confirm-session';
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { api, errorMessage } from '@/api';
-import { SESSION_KEY } from '@/features/auth/session';
+
 import { LoadingState, Screen } from '~/ds';
 import { notify } from '~/shared/dialogs';
 import { socialKey, takeSocialAttempt } from '~/user-kit/social-accounts';
@@ -31,7 +32,7 @@ export default function SocialReturn() {
         if (!result.signedIn || result.needsProfile) throw new Error('연결을 확인하지 못했습니다.');
         const session = await api.auth.me();
         if (!session) throw new Error('로그인 상태를 확인할 수 없습니다.');
-        cache.setQueryData(SESSION_KEY, session);
+        confirmSession(cache, session);
         await cache.invalidateQueries({ queryKey: socialKey(session.user.id) });
       } catch (err) {
         notify('소셜 계정 인증', err instanceof Error ? err.message : errorMessage(err));

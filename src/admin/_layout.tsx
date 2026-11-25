@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { View } from 'react-native';
 import { errorMessage } from '@/api';
 import { canEnterConsole } from '@/domain/permissions';
-import { useSession } from '@/features/auth/session';
+import { useDeviceSession } from '~/shared/use-device-session';
 import { Button, EmptyState, LoadingState, useTheme } from '~/ds';
 import { AppProviders } from '~/shared/providers';
 import { ThemeAudience } from '~/ds/tokens';
@@ -26,9 +26,9 @@ export default function RootLayout() {
  */
 function Gate() {
   const t = useTheme();
-  const session = useSession();
-  useLoginPermissions(canEnterConsole(session.data?.user),false);
-  if (session.isPending) {
+  const { session, access } = useDeviceSession();
+  useLoginPermissions(access === 'signed-in' && canEnterConsole(session.data?.user),false);
+  if (access === 'checking') {
     return (
       <View style={{ flex: 1, justifyContent: 'center', backgroundColor: t.bg }}>
         <LoadingState layout="dashboard" />
@@ -36,7 +36,7 @@ function Gate() {
     );
   }
   // 이미 세션이 있는 상태에서 재확인이 실패하면 내비게이션 상태를 유지한다
-  if (session.isError && session.data === undefined) {
+  if (access === 'error') {
     return (
       <View style={{ flex: 1, justifyContent: 'center', backgroundColor: t.bg }}>
         <EmptyState
@@ -49,7 +49,7 @@ function Gate() {
       </View>
     );
   }
-  const allowed = canEnterConsole(session.data?.user);
+  const allowed = access === 'signed-in' && canEnterConsole(session.data?.user);
 
   return (
     <Stack screenOptions={translucentHeader}>

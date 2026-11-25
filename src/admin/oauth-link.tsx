@@ -1,10 +1,11 @@
+import { confirmSession } from '~/shared/confirm-session';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { api, errorMessage } from '@/api';
 import { OAUTH_PROVIDER_LABEL } from '@/domain/labels';
 import { canEnterConsole } from '@/domain/permissions';
-import { SESSION_KEY } from '@/features/auth/session';
+
 import { Button, Screen, Gutter, TextField, Txt, LoadingState, space } from '~/ds';
 export default function AdminLink() {
   const pending = useQuery({
@@ -21,7 +22,7 @@ export default function AdminLink() {
       await api.auth.linkAdminSocial({ email, password });
       const user = await api.auth.me();
       if (!user || !canEnterConsole(user.user)) throw new Error('관리자 권한을 확인할 수 없습니다.');
-      qc.setQueryData(SESSION_KEY, user);
+      confirmSession(qc, user);
     },
   });
   return (

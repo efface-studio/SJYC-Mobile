@@ -1,3 +1,4 @@
+import { confirmSession } from '~/shared/confirm-session';
 import { LoginOptions, useLoginPreferences } from '~/shared/login-preferences';
 import { AdminSocialButtons } from '~/admin-kit/social-login';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +11,7 @@ import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { DEMO_DATA } from '@/config/env';
 import { canEnterConsole } from '@/domain/permissions';
 import { loginSchema, parseValues, type FieldErrors, type LoginInput } from '@/domain/schemas';
-import { SESSION_KEY, useLogout } from '@/features/auth/session';
+import { useLogout } from '@/features/auth/session';
 import { Button, Chips, GUTTER, TextField, Txt, space, useTheme } from '~/ds';
 
 /** 데모 데이터가 활성화된 환경에서만 노출하는 동아리 담당자·직원·관리자 계정 (웹 관리자 로그인과 같은 목록) */
@@ -44,7 +45,7 @@ export default function Login() {
       }
       // 세션이 바뀌면 루트 게이트가 관리자 화면으로 전환한다
       preferences.rememberEmail(session.user.email);
-      motion.finish(() => qc.setQueryData(SESSION_KEY, session));
+      motion.finish(() => confirmSession(qc, session));
     },
     onError: (e) => {
       motion.fail();
