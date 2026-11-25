@@ -1,3 +1,4 @@
+import { AppearanceRow } from '~/shared/appearance-row';
 import { openScreen } from '~/shared/navigation';
 import { View } from 'react-native';
 import { api, errorMessage } from '@/api';
@@ -75,6 +76,8 @@ export default function Settings() {
         />
         <ListRow title="로그인 기기" onPress={() => openScreen('/my/devices')} />
       </Rows>
+      <SectionHeader title="화면" />
+      <Rows><AppearanceRow /></Rows>
       <SectionHeader title="알림" />
       <Rows>
         <ListRow title="알림 설정" onPress={() => openScreen('/my/notification-settings')} />

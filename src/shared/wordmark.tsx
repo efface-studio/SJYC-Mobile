@@ -1,11 +1,12 @@
 import { useContext } from 'react';
 import { ThemeAudience } from '~/ds/tokens';
+import { useAppColorScheme } from '~/shared/appearance';
 import { Image } from 'expo-image';
-import { Platform, useColorScheme } from 'react-native';
+import { Platform } from 'react-native';
 import { CENTER } from '@/config/center';
 
 export function Wordmark({ width = 168 }: { width?: number }) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const admin = useContext(ThemeAudience) === 'admin';
   const source = admin
     ? (dark ? require('../../assets/brand/wordmark-admin-inverse.png') : require('../../assets/brand/wordmark-admin.png'))

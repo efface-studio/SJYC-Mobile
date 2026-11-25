@@ -1,3 +1,5 @@
+import { SOCIAL_ORDER, SocialMark, useSocialAccounts } from '~/user-kit/social-accounts';
+import { AppearanceRow } from '~/shared/appearance-row';
 import { openScreen } from '~/shared/navigation';
 import Constants from 'expo-constants';
 import { Stack, type Href } from 'expo-router';
@@ -139,6 +141,7 @@ const GROUPS: { group: string; items: Menu[] }[] = [
 
 export default function More() {
   const user = useSession().data?.user;
+  const social = useSocialAccounts(user?.id);
   const logout = useLogout();
   const t = useTheme();
   const allowed = (m: Menu) =>
@@ -208,6 +211,30 @@ export default function More() {
             </View>
           ))
         )}
+        <Gutter style={styles.groupLabel}>
+          <Txt variant="captionStrong" color="textTertiary" accessibilityRole="header">
+            앱 설정
+          </Txt>
+        </Gutter>
+        <ListRow
+          title="연결된 소셜 계정"
+          onPress={() => openScreen('/more/account/social')}
+          trailing={
+            social.data && (
+              <View
+                accessibilityLabel={'연결된 계정 ' + social.data.linked.length + '개'}
+                style={{ flexDirection: 'row', gap: 4 }}
+              >
+                {SOCIAL_ORDER.map((p) => (
+                  <SocialMark key={p} provider={p} size={23} muted={!social.data.linked.includes(p)} />
+                ))}
+              </View>
+            )
+          }
+        />
+        <ListRow title="로그인 기기" onPress={() => openScreen('/more/account/devices')} />
+        <ListRow title="알림 설정" onPress={() => openScreen('/more/account/notifications')} />
+        <AppearanceRow />
         <Divider />
         <Gutter style={styles.footer}>
           <Button

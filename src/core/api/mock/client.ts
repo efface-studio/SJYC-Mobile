@@ -1,3 +1,4 @@
+import { memberActionLabels } from '@/domain/member-actions';
 import {freshPosition,distanceMeters,CLUB_RADIUS_METERS,type AttendancePosition} from '@/domain/check-in-location';
 import { settingsWriteSchema } from '@/domain/site-settings';
 /**
@@ -59,6 +60,22 @@ import {
 } from './store';
 
 type DbUser = MockDb['users'][number];
+
+
+function manageableMember(db: MockDb, id: string) {
+  const actor = requirePermission(db, 'member.manage');
+  const target = findOr404(db.users,id);
+  if (id === actor.id || !canManageUser(actor,target)) throw new ApiError('FORBIDDEN','이 회원을 변경할 수 없습니다.');
+  if (target.status === 'withdrawn') throw new ApiError('CONFLICT','탈퇴한 회원입니다.');
+  return {actor,target};
+}
+function activityOptions(db: MockDb, id: string) {
+  const apps = db.applications.filter(a => a.userId === id);
+  return {
+    clubs: db.clubs.filter(c => c.status === 'active' && !db.memberships.some(m => m.clubId === c.id && m.userId === id)).map(c=>({id:c.id,title:c.name})),
+    programs: db.programs.filter(p => p.status === 'published' && !apps.some(a => a.programId===p.id && a.status==='approved') && (computeRecruitStatus(p,new Date())==='open' || apps.some(a => a.programId===p.id && a.status==='submitted'))).map(p=>({id:p.id,title:p.title})),
+  };
+}
 
 const DAY = 86_400_000;
 
@@ -1122,6 +1139,8 @@ export const mockClient: ApiClient = {
 
   site: { settings: () => respond((db) => db.siteSettings ?? { version: 0, values: {} }) },
   admin: {
+    changeAppUpdate: () => respond(db=>{requirePermission(db,'site.manage');throw new ApiError('NOT_FOUND','요청한 업데이트가 없습니다.');}),
+    appUpdates: () => respond(db=>{ requirePermission(db,'site.manage'); return []; }),
     serverLogs: () =>
       respond((db) => {
         requirePermission(db, 'developer.access');
@@ -1430,6 +1449,56 @@ export const mockClient: ApiClient = {
     },
 
     members: {
+      activityOptions: (id) => respond(db => {
+        manageableMember(db,id);
+        return activityOptions(db,id);
+      }),
+      act: (id, command) => respond(db => {
+        const {actor,target} = manageableMember(db,id);
+        let resetUrl: string | undefined;
+        const now = new Date().toISOString();
+        if (target.status !== 'active' && ['reset-password','join-club','enroll'].includes(command.action)) throw new ApiError('CONFLICT','활성 회원만 사용할 수 있습니다.');
+        switch(command.action) {
+          case 'profile':
+            target.name=command.name;target.phone=command.phone;break;
+          case 'reset-password': {
+            const token='dev-'+nextId(db,'reset');
+            lastResetToken={token,userId:id};
+            resetUrl='/password/reset?token='+token;break;
+          }
+          case 'withdraw':
+            target.status='withdrawn';
+            if (db.profilePhotos) delete db.profilePhotos[id];
+            if (lastResetToken?.userId===id) lastResetToken=null;
+            break;
+          case 'sign-out':
+            if (readSession()?.userId===id) expireSession();
+            break;
+          case 'join-club': {
+            if (!activityOptions(db,id).clubs.some(c=>c.id===command.clubId)) throw new ApiError('CONFLICT','등록할 수 없는 동아리입니다.');
+            const club=findOr404(db.clubs,command.clubId);
+            const pending=db.clubApplications.find(a=>a.clubId===club.id && a.userId===id && a.status==='pending');
+            if(pending) {pending.status='approved';pending.reason=null;}
+            db.memberships.push({clubId:club.id,userId:id,role:'member',joinedAt:now});club.memberCount++;
+            notify(db,{userId:id,kind:'club_application',title:'동아리에 등록되었습니다',body:club.name,link:'/clubs/'+club.id});
+            break;
+          }
+          case 'enroll': {
+            if(!activityOptions(db,id).programs.some(p=>p.id===command.programId)) throw new ApiError('CONFLICT','참가할 수 없는 프로그램입니다.');
+            const p=findOr404(db.programs,command.programId);
+            let a=db.applications.find(x=>x.userId===id && x.programId===p.id && x.status==='submitted');
+            if(!a) {
+              if(!target.phone) throw new ApiError('VALIDATION','회원 연락처를 먼저 입력해 주세요.');
+              a={id:nextId(db,'a'),receiptNo:'DEV-'+String(db.seq).padStart(5,'0'),programId:p.id,programTitle:p.title,userId:id,applicantName:target.name,phone:target.phone,note:'',status:'approved',createdAt:now,history:[],cancellable:true};
+              db.applications.push(a);p.appliedCount++;
+            }
+            a.status='approved';a.history.push({at:now,status:'approved',actor:'staff',reason:null});
+            notify(db,{userId:id,kind:'application',title:'프로그램 참가가 확정되었습니다',body:p.title,link:'/my/applications/'+a.id});break;
+          }
+        }
+        audit(db,actor,{action:'user.'+command.action,targetType:'user',targetId:id,summary:memberActionLabels[command.action]});
+        return resetUrl ? {resetUrl} : {};
+      }),
       list: (q) =>
         respond((db) => {
           requirePermission(db, 'member.read');
@@ -1464,6 +1533,11 @@ export const mockClient: ApiClient = {
           const u = findOr404(db.users, id);
           if (!canManageUser(actor, u)) {
             throw new ApiError('FORBIDDEN', '개발자 계정은 개발자만 변경할 수 있습니다.');
+          }
+          if (u.status === 'withdrawn') throw new ApiError('CONFLICT', '이미 탈퇴한 회원입니다.');
+          if (patch.status === 'withdrawn') {
+            if (db.profilePhotos) delete db.profilePhotos[id];
+            if (lastResetToken?.userId === id) lastResetToken = null;
           }
           if (patch.roles) {
             if (patch.roles.length === 0) throw new ApiError('VALIDATION', '역할을 1개 이상 지정해 주세요.');

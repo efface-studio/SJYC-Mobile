@@ -1,3 +1,5 @@
+import type { MemberCommand, MemberActivityOptions } from '@/domain/member-actions';
+import type { AppUpdate } from '@/domain/app-update';
 import type { AttendancePosition, AttendanceScan } from '@/domain/check-in-location';
 import type { SignupPhoneState } from '@/domain/signup-phone';
 import type { SocialDraft, SocialDetails } from '@/domain/social-profile';
@@ -114,7 +116,7 @@ export interface ApiClient {
     socialDraft(): Promise<SocialDraft>;
     saveSocialProfile(input: SocialDetails): Promise<SignupPhoneState>;
     socialProviders(): Promise<OAuthProvider[]>;
-    startSocial(provider: OAuthProvider, link: boolean): Promise<{ url: string; claim: string }>;
+    startSocial(provider: OAuthProvider, link: boolean, adminLink?: boolean): Promise<{ url: string; claim: string }>;
     completeSocial(proof: { receipt: string; claim: string }): Promise<{ signedIn: boolean; needsProfile?: boolean }>;
     /** 세션이 없거나 만료면 null */
     me(): Promise<Session | null>;
@@ -238,6 +240,8 @@ export interface ApiClient {
   site: { settings(): Promise<SettingsRecord> };
   admin: {
     updateSettings(input: SettingsRecord): Promise<SettingsRecord>;
+    changeAppUpdate(id:string,input:import('@/domain/app-update').UpdateControl):Promise<{ok:boolean}>;
+    appUpdates(): Promise<AppUpdate[]>;
     serverLogs(): Promise<ServerLogSnapshot>;
     dashboard(periodDays: number): Promise<DashboardSummary>;
     notices: {
@@ -260,6 +264,8 @@ export interface ApiClient {
       decide(ids: string[], decision: Decision, reason: string | null): Promise<BulkResult>;
     };
     members: {
+      activityOptions(id: string): Promise<MemberActivityOptions>;
+      act(id: string, command: MemberCommand): Promise<{resetUrl?: string}>;
       list(query: AdminListQuery): Promise<Page<User>>;
       get(id: string): Promise<User>;
       update(id: string, patch: { roles?: Role[]; status?: UserStatus }): Promise<User>;

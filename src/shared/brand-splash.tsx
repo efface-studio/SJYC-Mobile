@@ -1,7 +1,8 @@
+import { useAppColorScheme } from '~/shared/appearance';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeAudience } from '~/ds/tokens';
 import { useContext, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Image, Platform, StyleSheet, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Image, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 if (Platform.OS !== 'web') void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -12,7 +13,7 @@ const adminSymbol = require('../../assets/brand/symbol-admin.png');
 
 export function BrandSplash({ onFinish }: { onFinish: () => void }) {
   const symbol = useContext(ThemeAudience) === 'admin' ? adminSymbol : userSymbol;
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const width = Math.min(useWindowDimensions().width - 48, 288);
   const height = width * 114 / 720;
   const mark = width * 84 / 720;

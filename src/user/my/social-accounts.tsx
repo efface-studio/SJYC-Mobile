@@ -1,3 +1,5 @@
+import { useContext } from 'react';
+import { ThemeAudience } from '~/ds/tokens';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Platform, View } from 'react-native';
 import { api, errorMessage } from '@/api';
@@ -17,6 +19,7 @@ import {
 } from '~/user-kit/social-accounts';
 
 export default function SocialAccountsScreen() {
+  const admin = useContext(ThemeAudience) === 'admin';
   const session = useSession();
   const id = session.data?.user.id;
   const query = useSocialAccounts(id);
@@ -26,7 +29,7 @@ export default function SocialAccountsScreen() {
   const change = useMutation({
     mutationFn: async ({ p, linked }: { p: OAuthProvider; linked: boolean }) => {
       if (!linked) {
-        if (await beginSocial(p, true) === 'native') {
+        if (await beginSocial(p, true, admin) === 'native') {
           await cache.invalidateQueries({ queryKey: socialKey(id) });
           await cache.invalidateQueries({ queryKey: SESSION_KEY });
         }
@@ -71,7 +74,7 @@ export default function SocialAccountsScreen() {
             <Rows>
               {SOCIAL_ORDER.map((p) => {
                 const linked = data.linked.includes(p);
-                const available = p !== 'google' && data.available.includes(p) && (p !== 'apple' || Platform.OS !== 'ios' || !!apple.data);
+                const available = p !== 'google' && !(admin && p === 'apple') && data.available.includes(p) && (p !== 'apple' || Platform.OS !== 'ios' || !!apple.data);
                 const last = linked && !data.hasPassword && !data.linked.some((other) => other !== p && other !== 'google' && (other !== 'apple' || data.available.includes('apple')));
                 const label = linked ? '연결 해제' : available ? '연결하기' : '준비 중';
                 return (
