@@ -74,7 +74,7 @@ export default function VerifyPhone() {
       </SafeAreaView>
     );
   }
-  const title = f.verify.isError && !f.editing ? '회원가입 실패' : '휴대전화 인증';
+  const title = f.state.isError || (f.verify.isError && !f.editing) ? '회원가입 실패' : '휴대전화 인증';
   return (
     <Screen>
       <Stack.Screen options={{ title, headerTransparent: false, headerLargeTitle: false }} />
