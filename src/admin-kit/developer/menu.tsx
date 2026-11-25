@@ -1,6 +1,7 @@
 import { Image, StyleSheet, View } from 'react-native';
 import type { Href } from 'expo-router';
 import { developerSections, type DevSection } from '@/domain/developer-console';
+import { useCan } from '~/admin-kit/components';
 import { openScreen } from '~/shared/navigation';
 import { Icon } from '~/shared/icon';
 import { Tap, Txt, useTheme } from '~/ds';
@@ -54,6 +55,7 @@ export function devHref(section: DevSection, entry = 'overview', search?: string
 }
 export function DeveloperMenu() {
   const t = useTheme();
+  const diagnostics = useCan()('developer.access');
   return (
     <View style={{ paddingTop: 24 }}>
       <Txt
@@ -64,7 +66,7 @@ export function DeveloperMenu() {
       >
         개발자
       </Txt>
-      {entries.map(([label, detail, icon, dest], i) => (
+      {entries.filter(([, , , dest]) => diagnostics || dest !== '/more/dev-diagnostics').map(([label, detail, icon, dest], i) => (
         <View key={label}>
           {i > 0 && (
             <View style={{ marginLeft: 48, height: StyleSheet.hairlineWidth, backgroundColor: t.line }} />

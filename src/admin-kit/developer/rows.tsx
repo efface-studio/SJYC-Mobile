@@ -17,9 +17,10 @@ export function DevHeading({ title }: { title: string }) {
   );
 }
 export function ControlRows({ go }: { go: Go }) {
+  const userId = useSession().data?.user.id;
   const cache = useQueryClient(),
     query = useQuery({
-      queryKey: ['admin', 'dev-console', 'operations', 'settings', '', 0],
+      queryKey: ['admin', 'dev-console', 'operations', userId, true, 'settings', '', 0],
       queryFn: () => api.admin.developerView({ section: 'operations', item: 'settings' }),
     });
   const form = query.data?.forms?.find((f) => f.command === 'save-controls');
@@ -232,7 +233,9 @@ export function DevGroups({
   view,
   go,
   filter = '',
+  writable,
 }: {
+  writable: boolean;
   section: DevSection;
   item: string;
   view: DevView;
@@ -246,7 +249,7 @@ export function DevGroups({
         const systemStats = section === 'system' && group.title === '사용량';
         const sessions = section === 'security' && !item,
           sysRoles = section === 'permissions' && !item && group.title === '기본 역할';
-        if (section === 'operations' && !item && group.title === '접수 제어')
+        if (writable && section === 'operations' && !item && group.title === '접수 제어')
           return <ControlRows go={go} key={group.title} />;
         const rows = group.rows.filter(
           (r) =>
@@ -284,7 +287,7 @@ export function DevGroups({
               rows.map((r, i) => (
                 <View key={r.next?.item ?? r.title + i}>
                   {i > 0 && <Divider inset={sessions ? 68 : 16} />}
-                  {sessions ? (
+                  {sessions && writable ? (
                     <SessionRow row={r} go={go} />
                   ) : section === 'logs' && (item === 'requests' || item === 'errors') ? (
                     <ServerLine row={r} go={go} />

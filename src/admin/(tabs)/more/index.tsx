@@ -139,7 +139,7 @@ export default function More() {
   const t = useTheme();
   const allowed = (m: Menu) =>
     typeof m.permission === 'function' ? m.permission(user) : can(user, m.permission);
-  const developer = can(user, 'developer.access');
+  const developer = can(user, 'developer.view');
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(m => allowed(m) && !(developer && (m.href === '/more/members' || m.href === '/more/app-updates'))) })).filter(
     (g) => g.items.length > 0,
   );
