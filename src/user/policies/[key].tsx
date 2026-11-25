@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { useSession } from '@/features/auth/session';
+import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 import { api } from '@/api';
 import { OSS_MOBILE } from '@/config/oss-licenses';
 import { POLICY_TITLE } from '@/domain/labels';
@@ -39,13 +40,16 @@ function OpenSource() {
 
 export default function PolicyScreen() {
   const { key } = useLocalSearchParams<{ key: string }>();
+  const session=useSession();
+  const allowed=!!session.data || key==="terms" || key==="privacy";
   const valid = isPolicyKey(key);
   const doc = useQuery({
     queryKey: ['policy', key],
     queryFn: () => api.policies.get(key as PolicyKey),
-    enabled: valid,
+    enabled: valid && allowed,
   });
 
+  if (!allowed) return <Redirect href="/login"/>;
   if (key === 'opensource') return <OpenSource />;
   if (!valid) {
     return (
