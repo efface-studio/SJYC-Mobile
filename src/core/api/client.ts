@@ -1,3 +1,4 @@
+import type { DevLocation, DevView, DevCommand } from '@/domain/developer-console';
 import type { MemberCommand, MemberActivityOptions } from '@/domain/member-actions';
 import type { AppUpdate } from '@/domain/app-update';
 import type { AttendancePosition, AttendanceScan } from '@/domain/check-in-location';
@@ -242,6 +243,8 @@ export interface ApiClient {
     updateSettings(input: SettingsRecord): Promise<SettingsRecord>;
     changeAppUpdate(id:string,input:import('@/domain/app-update').UpdateControl):Promise<{ok:boolean}>;
     appUpdates(): Promise<AppUpdate[]>;
+    developerView(location: DevLocation): Promise<DevView>;
+    developerAction(input: DevCommand): Promise<void>;
     serverLogs(): Promise<ServerLogSnapshot>;
     dashboard(periodDays: number): Promise<DashboardSummary>;
     notices: {
