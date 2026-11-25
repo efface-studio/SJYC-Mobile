@@ -32,6 +32,7 @@ const VARIANT = {
   title3: { fontFamily: FONT.semibold, fontSize: 17, lineHeight: 24, letterSpacing: -0.3 },
   body: { fontFamily: FONT.regular, fontSize: 16, lineHeight: 24, letterSpacing: -0.2 },
   bodyStrong: { fontFamily: FONT.semibold, fontSize: 16, lineHeight: 24, letterSpacing: -0.2 },
+  menuTitle: { fontFamily: FONT.medium, fontSize: 15.5, lineHeight: 22, letterSpacing: -0.2 },
   label: { fontFamily: FONT.medium, fontSize: 15, lineHeight: 21, letterSpacing: -0.2 },
   caption: { fontFamily: FONT.regular, fontSize: 13, lineHeight: 18, letterSpacing: -0.1 },
   captionStrong: { fontFamily: FONT.semibold, fontSize: 13, lineHeight: 18, letterSpacing: -0.1 },

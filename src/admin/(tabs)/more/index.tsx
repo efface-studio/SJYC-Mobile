@@ -194,6 +194,7 @@ export default function More() {
                   rowKey={(m) => m.title}
                   render={(m) => (
                     <ListRow
+                      titleVariant="menuTitle"
                       leading={<Icon {...m.icon} size={19} color={t.textTertiary} />}
                       title={m.title}
                       subtitle={m.subtitle}
@@ -212,6 +213,7 @@ export default function More() {
           </Txt>
         </Gutter>
         <ListRow
+          titleVariant="menuTitle"
           title="연결된 소셜 계정"
           onPress={() => openScreen('/more/account/social')}
           trailing={
@@ -227,9 +229,9 @@ export default function More() {
             )
           }
         />
-        <ListRow title="로그인 기기" onPress={() => openScreen('/more/account/devices')} />
-        <ListRow title="알림 설정" onPress={() => openScreen('/more/account/notifications')} />
-        <ListRow title="약관 및 정책" onPress={() => openScreen('/more/account/policies')} />
+        <ListRow titleVariant="menuTitle" title="로그인 기기" onPress={() => openScreen('/more/account/devices')} />
+        <ListRow titleVariant="menuTitle" title="알림 설정" onPress={() => openScreen('/more/account/notifications')} />
+        <ListRow titleVariant="menuTitle" title="약관 및 정책" onPress={() => openScreen('/more/account/policies')} />
         <AppearanceRow />
         <Divider />
         <Gutter style={styles.footer}>

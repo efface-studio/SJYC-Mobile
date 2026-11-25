@@ -82,7 +82,7 @@ export function DeveloperMenu() {
               <Image source={icon} style={{ width: 18, height: 18, tintColor: t.textSecondary }} />
             </View>
             <View style={styles.copy}>
-              <Txt variant="bodyStrong">
+              <Txt variant="menuTitle">
                 {label}
               </Txt>
               <Txt variant="caption" color="textSecondary">

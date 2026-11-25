@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { errorMessage } from '@/api/errors';
 import type { Tone } from '@/domain/labels';
 import { Icon } from '~/shared/icon';
-import { Txt } from './text';
+import { Txt, type TextVariant } from './text';
 import { GUTTER, radius, space, useTheme } from './tokens';
 
 /* ---------- 레이아웃 ---------- */
@@ -255,6 +255,7 @@ export function Tap({
 
 export function ListRow({
   title,
+  titleVariant = 'bodyStrong',
   titlePrefix,
   subtitle,
   meta,
@@ -265,6 +266,7 @@ export function ListRow({
   numberOfLines = 2,
 }: {
   title: string;
+  titleVariant?: TextVariant;
   titlePrefix?: ReactNode;
   subtitle?: string;
   meta?: string;
@@ -286,7 +288,7 @@ export function ListRow({
         )}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           {titlePrefix}
-          <Txt variant="bodyStrong" numberOfLines={numberOfLines} style={{ flexShrink: 1 }}>
+          <Txt variant={titleVariant} numberOfLines={numberOfLines} style={{ flexShrink: 1 }}>
             {title}
           </Txt>
         </View>
