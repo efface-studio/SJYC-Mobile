@@ -1,3 +1,4 @@
+import { MemberCommands } from '~/admin-kit/member-commands';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { api, errorMessage } from '@/api';
@@ -30,7 +31,7 @@ export default function MemberDetail() {
     <>
       <Stack.Screen options={{ title: '회원 정보' }} />
       {allowed('member.read') ? (
-        <QueryBoundary query={query}>
+        <QueryBoundary layout="account" query={query}>
           {(u) => <MemberView member={u} canManage={allowed('member.manage')} />}
         </QueryBoundary>
       ) : (
@@ -93,6 +94,7 @@ function MemberView({ member: u, canManage }: { member: User; canManage: boolean
         <InfoRow label="가입일" value={formatDate(u.createdAt)} />
         <InfoRow label="이메일 인증" value={u.emailVerified ? '완료' : '미완료'} />
       </Gutter>
+      {editable && <MemberCommands key={u.id} user={u} />}
       {editable ? (
         <FormSection title="권한 · 상태">
           <SelectField label="역할" value={role} options={roleOptions} onChange={(r) => void changeRole(r)} />

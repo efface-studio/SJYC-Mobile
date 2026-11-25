@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { api, errorMessage, isApiError } from '@/api';
@@ -44,7 +45,7 @@ function ApplyForm({ program, session }: { program: Program; session: Session })
         a.receiptNo ? `접수 번호 ${a.receiptNo}` : '센터 확인 후 결과를 알려 드립니다.',
       );
       closeModal('/programs');
-      router.push(`/my/applications/${a.id}`);
+      openScreen(`/my/applications/${a.id}`);
     },
     onError: (e) => {
       if (isApiError(e) && e.fieldErrors) setErrors(e.fieldErrors);
@@ -115,7 +116,7 @@ function ApplyForm({ program, session }: { program: Program; session: Session })
             <InfoRow label="이용 목적" value="프로그램 신청 접수, 참여 안내 및 연락" />
             <InfoRow label="보유 기간" value="센터 개인정보처리방침에 따름" />
             <Tap
-              onPress={() => router.push('/policies/privacy')}
+              onPress={() => openScreen('/policies/privacy')}
               accessibilityLabel="개인정보처리방침 보기"
               style={{ alignSelf: 'flex-start', paddingVertical: 10 }}
             >
@@ -142,5 +143,5 @@ export default function ProgramApplyScreen() {
   const program = useQuery({ queryKey: ['program', id], queryFn: () => api.programs.get(id) });
 
   if (!session) return <SignInPrompt description="프로그램 신청은 로그인 후 이용할 수 있습니다." replace />;
-  return <QueryScreen query={program}>{(p) => <ApplyForm program={p} session={session} />}</QueryScreen>;
+  return <QueryScreen layout="form" query={program}>{(p) => <ApplyForm program={p} session={session} />}</QueryScreen>;
 }

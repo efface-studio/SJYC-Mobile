@@ -1,3 +1,10 @@
+import type { MemberCommand, MemberActivityOptions } from '@/domain/member-actions';
+import type { AppUpdate } from '@/domain/app-update';
+import type { AttendancePosition, AttendanceScan } from '@/domain/check-in-location';
+import type { SignupPhoneState } from '@/domain/signup-phone';
+import type { SocialDraft, SocialDetails } from '@/domain/social-profile';
+import type { LoginDevice, SocialAccounts } from '@/domain/account-settings';
+import type { OAuthProvider } from '@/domain/types';
 import type { SettingsRecord, ServerLogSnapshot } from '../domain/site-settings';
 import type {
   AttendanceSessionInput,
@@ -41,6 +48,7 @@ import type {
   MyAttendance,
   MyClub,
   Notification,
+  NotificationKind,
   PolicyDoc,
   PolicyKey,
   Space,
@@ -95,16 +103,42 @@ export type Decision = 'approved' | 'rejected';
 
 export interface ApiClient {
   auth: {
+    startNativeApple(link: boolean): Promise<{ state: string; nonce: string }>;
+    finishNativeApple(input: { state: string; identityToken: string; name?:string }): Promise<{ signedIn: boolean; needsProfile?: boolean }>;
+    adminProviders(): Promise<OAuthProvider[]>;
+    startAdminSocial(provider: OAuthProvider): Promise<{ url: string; claim: string }>;
+    completeAdminSocial(proof: {
+      receipt: string;
+      claim: string;
+    }): Promise<{ signedIn: boolean; needsLink: boolean }>;
+    adminSocialLink(): Promise<{ provider: OAuthProvider }>;
+    linkAdminSocial(input: LoginInput): Promise<{ signedIn: boolean }>;
+    socialDraft(): Promise<SocialDraft>;
+    saveSocialProfile(input: SocialDetails): Promise<SignupPhoneState>;
+    socialProviders(): Promise<OAuthProvider[]>;
+    startSocial(provider: OAuthProvider, link: boolean, adminLink?: boolean): Promise<{ url: string; claim: string }>;
+    completeSocial(proof: { receipt: string; claim: string }): Promise<{ signedIn: boolean; needsProfile?: boolean }>;
     /** 세션이 없거나 만료면 null */
     me(): Promise<Session | null>;
     login(input: LoginInput): Promise<Session>;
     logout(): Promise<void>;
-    signup(input: SignupInput): Promise<{ requiresEmailVerification: boolean }>;
+    signup(input: SignupInput): Promise<SignupPhoneState>;
+    signupPhone(): Promise<SignupPhoneState>;
+    resendPhone(phone?: string): Promise<SignupPhoneState>;
+    confirmPhone(code: string): Promise<{signedIn:boolean}>;
     resendVerification(email: string): Promise<void>;
     requestPasswordReset(email: string): Promise<void>;
     resetPassword(token: string, password: string): Promise<void>;
   };
   me: {
+    socialAccounts(): Promise<SocialAccounts>;
+    unlinkSocial(provider: OAuthProvider): Promise<SocialAccounts>;
+    loginDevices(): Promise<LoginDevice[]>;
+    revokeDevice(id: string): Promise<LoginDevice[]>;
+    notificationPreferences(): Promise<{ muted: NotificationKind[] }>;
+    setNotificationPreference(input: { kind: NotificationKind; enabled: boolean }): Promise<{ muted: NotificationKind[] }>;
+    profilePhoto(): Promise<{ image: string | null }>;
+    setProfilePhoto(image: string | null): Promise<{ image: string | null }>;
     updateProfile(input: ProfileInput): Promise<User>;
     withdraw(): Promise<void>;
     applications(): Promise<ProgramApplication[]>;
@@ -123,6 +157,7 @@ export interface ApiClient {
     /** 본인이 명단에 있는 출석부 기록, 최신순 */
     attendance(): Promise<MyAttendance[]>;
     /** 담당자가 연 출석 코드로 본인 출석 — 틀린 입력이 반복되면 RATE_LIMITED */
+    scanAttendance(input:AttendanceScan): Promise<MyAttendance>;
     checkIn(input: CheckInInput): Promise<MyAttendance>;
   };
   /** 동아리 운영 — 센터 직원 이상(club.manage) 또는 그 동아리 담당자. 서버가 동아리별로 검사한다. */
@@ -160,7 +195,7 @@ export interface ApiClient {
     /** 여러 명을 한 번에 체크 — 명단에 없는 회원이 있으면 VALIDATION */
     mark(id: string, marks: AttendanceMark[]): Promise<AttendanceSession>;
     /** 본인 출석 체크 열기(서버가 4자리 코드 발급, 10분 후 자동 마감)·닫기 */
-    setCheckIn(id: string, open: boolean): Promise<AttendanceSession>;
+    setCheckIn(id: string, open: boolean, position?:AttendancePosition): Promise<AttendanceSession>;
     /** 회원별 누적 출석 */
     stats(target: AttendanceTarget): Promise<AttendanceMemberStat[]>;
   };
@@ -205,6 +240,8 @@ export interface ApiClient {
   site: { settings(): Promise<SettingsRecord> };
   admin: {
     updateSettings(input: SettingsRecord): Promise<SettingsRecord>;
+    changeAppUpdate(id:string,input:import('@/domain/app-update').UpdateControl):Promise<{ok:boolean}>;
+    appUpdates(): Promise<AppUpdate[]>;
     serverLogs(): Promise<ServerLogSnapshot>;
     dashboard(periodDays: number): Promise<DashboardSummary>;
     notices: {
@@ -227,6 +264,8 @@ export interface ApiClient {
       decide(ids: string[], decision: Decision, reason: string | null): Promise<BulkResult>;
     };
     members: {
+      activityOptions(id: string): Promise<MemberActivityOptions>;
+      act(id: string, command: MemberCommand): Promise<{resetUrl?: string}>;
       list(query: AdminListQuery): Promise<Page<User>>;
       get(id: string): Promise<User>;
       update(id: string, patch: { roles?: Role[]; status?: UserStatus }): Promise<User>;

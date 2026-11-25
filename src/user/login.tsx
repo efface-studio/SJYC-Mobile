@@ -1,8 +1,12 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAppColorScheme } from '~/shared/appearance';
+import { LoginOptions, useLoginPreferences } from '~/shared/login-preferences';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { StyleSheet, View, useColorScheme, type TextInput } from 'react-native';
+import { Platform, StyleSheet, View, type TextInput } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/api/mock/seed';
 import { AuthReveal, LoginSubmit, useLoginMotion } from '~/shared/login-motion';
@@ -13,7 +17,7 @@ import type { OAuthProvider } from '@/domain/types';
 import { forgotPasswordSchema, loginSchema, parseValues, type FieldErrors } from '@/domain/schemas';
 import { SESSION_KEY } from '@/features/auth/session';
 import { Button, Gutter, Screen, Tap, TextField, Txt, radius, space, useTheme } from '~/ds';
-import { ModalGuard, closeModal } from '~/user-kit';
+import { beginSocial, socialMarks, useAppleAvailable } from '~/user-kit/social-accounts';
 import { notify } from '~/shared/dialogs';
 
 /** 각 공급자 브랜드 가이드 색 */
@@ -22,40 +26,52 @@ const SOCIAL: Record<
   { bg: string; fg: string; border?: string; darkBg?: string; darkFg?: string }
 > = {
   kakao: { bg: '#FEE500', fg: '#191919' },
-  naver: { bg: '#03C75A', fg: '#FFFFFF' },
+  naver: { bg: '#03C75A', fg: '#092E1A' },
   apple: { bg: '#000000', fg: '#FFFFFF', darkBg: '#FFFFFF', darkFg: '#000000' },
   google: { bg: '#FFFFFF', fg: '#1F1F1F', border: '#DADCE0' },
 };
 
-const marks = {
-  kakao: require('../../assets/brand/kakao.png'),
-  naver: require('../../assets/brand/naver.png'),
-  apple: require('../../assets/brand/apple.png'),
-  google: require('../../assets/brand/google.png'),
-};
-
 function SocialButton({ p }: { p: ProviderState }) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const c = SOCIAL[p.provider];
   const bg = dark && c.darkBg ? c.darkBg : c.bg;
   const fg = dark && c.darkFg ? c.darkFg : c.fg;
+  const cache = useQueryClient();
+  const start = useMutation({
+    mutationFn: async () => {
+      const result = await beginSocial(p.provider,false);
+      if (result === 'profile') {router.replace('/oauth-profile'); return;}
+      if (result === 'native') {
+        const session = await api.auth.me();
+        if (!session) throw new Error('로그인 상태를 확인할 수 없습니다.');
+        cache.setQueryData(SESSION_KEY, session);
+      }
+    },
+    onError: (err) => notify('소셜 로그인', errorMessage(err)),
+  });
+  if (p.provider === 'apple' && Platform.OS === 'ios' && p.enabled) {
+    return <AppleAuthentication.AppleAuthenticationButton
+      buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+      buttonStyle={dark ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+      cornerRadius={radius.md}
+      style={{ height: 52 }}
+      onPress={() => { if (!start.isPending) start.mutate(); }}
+    />;
+  }
+  const unavailableLabel = (p.provider === 'google' || p.provider === 'apple') ? '준비 중' : '설정 필요';
   return (
     <Tap
       rounded={radius.md}
-      accessibilityLabel={`${p.label}로 계속하기${p.enabled ? '' : ', 설정 필요'}`}
-      onPress={() =>
-        notify(
-          `${p.label} 로그인`,
-          '서버 연동 설정이 끝나지 않아 아직 사용할 수 없습니다. 이메일로 로그인해 주세요.',
-        )
-      }
-      style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }]}
+      accessibilityLabel={`${p.label}로 계속하기${p.enabled ? '' : ', ' + unavailableLabel}`}
+      disabled={!p.enabled || start.isPending}
+      onPress={() => start.mutate()}
+      style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }, !p.enabled && styles.unavailable]}
     >
       <View style={styles.socialSide}>
         <Image
           contentFit="contain"
-          source={marks[p.provider]}
-          tintColor={p.provider === 'google' ? undefined : fg}
+          source={socialMarks[p.provider]}
+          tintColor={p.provider === 'google' ? undefined : p.provider === 'naver' ? '#FFFFFF' : fg}
           style={styles.providerMark}
         />
       </View>
@@ -65,7 +81,7 @@ function SocialButton({ p }: { p: ProviderState }) {
       <View style={[styles.socialSide, styles.statusSide]}>
         {!p.enabled && (
           <Txt variant="small" color={fg} style={styles.socialTag}>
-            설정 필요
+            {unavailableLabel}
           </Txt>
         )}
       </View>
@@ -73,37 +89,24 @@ function SocialButton({ p }: { p: ProviderState }) {
   );
 }
 
-function Header({ title, description }: { title: string; description: string }) {
-  return (
-    <Gutter style={styles.header}>
-      <Wordmark width={165} />
-      <Txt variant="title1" accessibilityRole="header">
-        {title}
-      </Txt>
-      <Txt variant="caption" color="textTertiary">
-        {description}
-      </Txt>
-    </Gutter>
-  );
-}
-
 export default function LoginScreen() {
   const motion = useLoginMotion();
   const [loginError, setLoginError] = useState('');
   const t = useTheme();
+  const apple = useAppleAvailable();
+  const providers = useQuery({ queryKey: ['available-social-providers'], queryFn: api.auth.socialProviders, staleTime: 60_000 });
   const qc = useQueryClient();
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
-  const [email, setEmail] = useState('');
+  const preferences = useLoginPreferences();
+  const [email, setEmail] = useState(preferences.initialEmail);
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const login = useMutation({
     mutationFn: api.auth.login,
     onSuccess: (s) => {
-      motion.finish(
-        () => qc.setQueryData(SESSION_KEY, s),
-        () => closeModal('/my'),
-      );
+      preferences.rememberEmail(s.user.email);
+      motion.finish(() => qc.setQueryData(SESSION_KEY, s));
     },
     onError: (e) => {
       motion.fail();
@@ -145,10 +148,15 @@ export default function LoginScreen() {
 
   if (mode === 'forgot') {
     return (
-      <>
-        <ModalGuard dirty={false} fallback="/my" />
+      <SafeAreaView edges={['top']} style={{flex:1,backgroundColor:t.bg}}>
         <Screen>
-          <Header title="비밀번호 찾기" description="가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다." />
+          <Gutter style={styles.header}>
+            <Wordmark width={165} />
+            <Txt variant="title1" accessibilityRole="header">비밀번호 찾기</Txt>
+            <Txt variant="caption" color="textTertiary">
+              가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다.
+            </Txt>
+          </Gutter>
           <Gutter style={styles.form}>
             <TextField
               label="이메일"
@@ -170,16 +178,18 @@ export default function LoginScreen() {
             />
           </Gutter>
         </Screen>
-      </>
+      </SafeAreaView>
     );
   }
 
   return (
-    <>
-      <ModalGuard dirty={false} fallback="/my" />
+    <SafeAreaView edges={['top']} style={{flex:1,backgroundColor:t.bg}}>
       <Screen>
         <AuthReveal delay={0} reduce={motion.reduce}>
-          <Header title="로그인" description="이메일 계정으로 로그인해 주세요." />
+          <Gutter style={styles.header}>
+            <Wordmark width={165} />
+            <Txt variant="display" accessibilityRole="header">로그인</Txt>
+          </Gutter>
         </AuthReveal>
         <AuthReveal delay={70} reduce={motion.reduce}>
           <Gutter style={styles.form}>
@@ -206,6 +216,7 @@ export default function LoginScreen() {
               onSubmitEditing={submitLogin}
               error={errors.password}
             />
+            <LoginOptions options={preferences} />
             {!!loginError && (
               <View accessibilityLiveRegion="polite">
                 <Txt color={t.tone.danger.fg}>{loginError}</Txt>
@@ -224,7 +235,7 @@ export default function LoginScreen() {
               </Tap>
               <View style={[styles.sep, { backgroundColor: t.line }]} />
               <Tap
-                onPress={() => router.replace('/signup')}
+                onPress={() => router.push('/signup')}
                 accessibilityLabel="회원가입"
                 style={styles.link}
               >
@@ -245,7 +256,7 @@ export default function LoginScreen() {
             <View style={[styles.orLine, { backgroundColor: t.line }]} />
           </View>
           {providerStates().map((p) => (
-            <SocialButton key={p.provider} p={p} />
+            <SocialButton key={p.provider} p={{ ...p, enabled: p.provider !== 'google' && !!providers.data?.includes(p.provider) && (p.provider !== 'apple' || Platform.OS !== 'ios' || !!apple.data) }} />
           ))}
         </Gutter>
 
@@ -274,12 +285,12 @@ export default function LoginScreen() {
           </Gutter>
         )}
       </Screen>
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { paddingTop: space.sm, paddingBottom: space.xl, gap: space.sm },
+  header: { paddingTop: space.xl, paddingBottom: space.xl, gap: space.lg },
   form: { gap: space.lg },
   links: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   link: { paddingHorizontal: space.md, paddingVertical: 12 },
@@ -295,6 +306,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderWidth: 1,
   },
+  unavailable: { opacity: 0.55 },
   socialSide: { flex: 1, minWidth: 46 },
   statusSide: { alignItems: 'flex-end' },
   providerMark: { width: 22, height: 22 },

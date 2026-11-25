@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { INQUIRY_CATEGORY_LABEL } from '@/domain/labels';
 import type { Faq, InquiryCategory } from '@/domain/types';
@@ -16,7 +17,7 @@ import {
 import { faqsQuery } from '~/admin-kit/queries';
 import { Chips, Divider, EmptyState, ListRow, QueryBoundary, Screen } from '~/ds';
 
-const open = (id: string) => router.push({ pathname: '/more/faq/[id]', params: { id } });
+const open = (id: string) => openScreen({ pathname: '/more/faq/[id]', params: { id } });
 
 type Visibility = '' | 'published' | 'hidden';
 const VISIBILITY: { value: Visibility; label: string }[] = [

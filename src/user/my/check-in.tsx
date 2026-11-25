@@ -1,11 +1,14 @@
+import { AttendanceCodeEntry } from '~/shared/attendance-code-entry';
+import {currentPosition} from '~/shared/attendance-position';
+import { openScreen } from '~/shared/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useIsFocused } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, StyleSheet, View } from 'react-native';
+import { AppState, Linking, StyleSheet, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { useSession } from '@/features/auth/session';
-import { Button, Chips, FormSection, Gutter, Screen, TextField, Txt } from '~/ds';
+import { Button, Chips, FormSection, Gutter, Screen, Txt } from '~/ds';
 import { closeModal, ModalGuard } from '~/user-kit';
 
 export default function CheckInScreen() {
@@ -13,18 +16,24 @@ export default function CheckInScreen() {
   const client = useQueryClient();
   const focused = useIsFocused();
   const [active, setActive] = useState(AppState.currentState === 'active');
-  const [permission, request] = useCameraPermissions();
+  const [permission, request, refreshPermission] = useCameraPermissions();
   const [mode, setMode] = useState<'scan' | 'manual'>('scan');
-  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [unavailable, setUnavailable] = useState(false);
   const locked = useRef(false);
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (v) => setActive(v === 'active'));
+    const sub = AppState.addEventListener('change', (v) => {
+      setActive(v === 'active');
+      if (v === 'active') void refreshPermission().catch(() => setUnavailable(true));
+    });
     return () => sub.remove();
-  }, []);
+  }, [refreshPermission]);
   const check = useMutation({
-    mutationFn: (value: string) => api.me.checkIn({ code: value }),
+    mutationFn: async (entry:{kind:'manual'|'program'|'club';value:string}) => {
+      if(entry.kind==='manual')return api.me.checkIn({code:entry.value});
+      if(entry.kind==='program')return api.me.scanAttendance({kind:'program',code:entry.value});
+      return api.me.scanAttendance({kind:'club',ticket:entry.value,position:await currentPosition()});
+    },
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['me', 'attendance'] });
     },
@@ -33,18 +42,18 @@ export default function CheckInScreen() {
       locked.current = false;
     },
   });
-  const submit = (value: string) => {
+  const submit = (value: string,kind:'manual'|'program'|'club'='manual') => {
     if (locked.current || check.isSuccess) return;
-    if (!/^\d{4}$/.test(value)) {
+    if (!(kind==='club'?/^\d{16}$/:/^\d{4}$/).test(value)) {
       setError('출석 코드 네 자리를 입력해 주세요.');
       return;
     }
     locked.current = true;
     setError('');
-    check.mutate(value);
+    check.mutate({kind,value});
   };
   const change = (next: 'scan' | 'manual') => {
-    if (check.isPending) return;
+    if (check.isPending || client.isMutating({ mutationKey: ['me', 'attendance', 'check-in'] })) return;
     setError('');
     setMode(next);
   };
@@ -54,7 +63,7 @@ export default function CheckInScreen() {
       <Screen>
         {session.isPending ? null : !session.data?.user ? (
           <FormSection title="로그인 후 출석할 수 있습니다">
-            <Button label="로그인" onPress={() => router.push('/login')} />
+            <Button label="로그인" onPress={() => openScreen('/login')} />
           </FormSection>
         ) : check.isSuccess ? (
           <FormSection title="출석했습니다">
@@ -75,17 +84,12 @@ export default function CheckInScreen() {
               onChange={change}
             />
             {mode === 'manual' ? (
-              <FormSection title="출석 코드 입력">
-                <TextField
-                  label="숫자 4자리"
-                  value={code}
-                  maxLength={4}
-                  keyboardType="number-pad"
-                  onChangeText={(v) => setCode(v.replace(/\D/g, ''))}
-                  onSubmitEditing={() => submit(code)}
-                />
-                <Button label="출석하기" loading={check.isPending} onPress={() => submit(code)} />
-              </FormSection>
+              <AttendanceCodeEntry successActions={
+                <>
+                  <Button label="내 출석 기록" onPress={() => router.replace('/my/attendance')} />
+                  <Button label="닫기" variant="text" onPress={() => closeModal('/home')} />
+                </>
+              } />
             ) : (
               <FormSection title="출석 QR을 비춰 주세요">
                 {permission?.granted && !unavailable ? (
@@ -98,11 +102,10 @@ export default function CheckInScreen() {
                         barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
                         onBarcodeScanned={({ type, data }) => {
                           if (locked.current || error) return;
-                          const value =
-                            type === 'qr'
-                              ? /^SJYC:ATTENDANCE:(\d{4})$/.exec(data)?.[1]
-                              : /^\d{4}$/.exec(data)?.[0];
-                          if (value) submit(value);
+                          const club=(type==='qr'?/^SJYC:CLUB:(\d{16})$/:/^(\d{16})$/).exec(data);
+                          const program=(type==='qr'?/^SJYC:ATTENDANCE:(\d{4})$/:/^(\d{4})$/).exec(data);
+                          if(club)submit(club[1]!,'club');
+                          else if(program)submit(program[1]!,'program');
                           else setError('센터 출석용 코드가 아닙니다.');
                         }}
                       />
@@ -115,6 +118,9 @@ export default function CheckInScreen() {
                         ? '이 기기에서 카메라를 사용할 수 없습니다.'
                         : 'QR을 읽으려면 카메라 접근이 필요합니다.'}
                     </Txt>
+                    {!unavailable && permission?.canAskAgain === false && (
+                      <Button label="설정에서 카메라 허용" onPress={() => void Linking.openSettings().catch(() => setUnavailable(true))} />
+                    )}
                     {!unavailable && permission?.canAskAgain !== false && (
                       <Button
                         label="카메라 허용"

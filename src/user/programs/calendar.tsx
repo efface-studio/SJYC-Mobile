@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
@@ -47,7 +48,7 @@ function Agenda({ title, items, empty }: { title: string; items: Program[]; empt
                 title={p.title}
                 subtitle={`${p.target} · ${formatPeriod(p.startsAt, p.endsAt)}`}
                 trailing={<Badge text={s.text} tone={s.tone} />}
-                onPress={() => router.push(`/programs/${p.id}`)}
+                onPress={() => openScreen(`/programs/${p.id}`)}
               />
             );
           })}

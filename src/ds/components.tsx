@@ -1,9 +1,12 @@
+import { LoadingState, type LoadingLayout } from './loading';
+export { LoadingState } from './loading';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { ScrollBackdrop } from './scroll-backdrop';
 import { type ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Dimensions,
   Keyboard,
@@ -46,6 +49,7 @@ export function Screen({
 }) {
   const t = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const [footerHeight, setFooterHeight] = useState(0);
   const bg = subtle ? t.bgSubtle : t.bg;
   const keyboardOverlap = useKeyboardOverlap(footer != null);
   const headerHeight = useContext(HeaderHeightContext) ?? 0;
@@ -59,13 +63,14 @@ export function Screen({
       automaticallyAdjustKeyboardInsets={keyboardInsets}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentContainerStyle={{ paddingBottom: 48, paddingTop: topInset }}
+      contentContainerStyle={{ paddingBottom: 48 + (footer ? footerHeight : 0), paddingTop: topInset }}
+      scrollIndicatorInsets={footer ? {bottom: footerHeight} : undefined}
       refreshControl={
         onRefresh ? (
           <RefreshControl
             progressViewOffset={topInset}
             refreshing={refreshing}
-            tintColor={t.textTertiary}
+            tintColor={t.action}
             colors={[t.action]}
             onRefresh={async () => {
               setRefreshing(true);
@@ -84,11 +89,13 @@ export function Screen({
   );
   const content = topInset > 0 ? <ScrollBackdrop height={topInset}>{scroll}</ScrollBackdrop> : scroll;
   if (!footer) return content;
-  // 하단 고정 영역은 스크롤 아래에 두고, iOS 에서는 키보드가 올라오면 함께 올린다 (입력 중에도 제출 버튼이 보이게)
   return (
-    <View style={{ flex: 1, backgroundColor: bg, paddingBottom: keyboardOverlap }}>
+    <View style={{ flex: 1, backgroundColor: bg }}>
       {content}
-      {footer}
+      <View pointerEvents="box-none" onLayout={e => setFooterHeight(Math.ceil(e.nativeEvent.layout.height))}
+        style={{position:'absolute',left:0,right:0,bottom:keyboardOverlap}}>
+        {footer}
+      </View>
     </View>
   );
 }
@@ -150,13 +157,24 @@ const TAB_BAR_HEIGHT = Platform.OS === 'ios' && !Platform.isPad ? 49 : 0;
 export function StickyFooter({ children }: { children: ReactNode }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const [opaque, setOpaque] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    let active = true;
+    void AccessibilityInfo.isReduceTransparencyEnabled().then(v => { if (active) setOpaque(v); });
+    const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setOpaque);
+    return () => { active = false; sub.remove(); };
+  }, []);
   const keyboard = useKeyboardShown();
   const overTabBar = useContext(OverTabBarContext);
   const bottom = keyboard
     ? space.md
     : Math.max(insets.bottom, space.lg) + (overTabBar ? TAB_BAR_HEIGHT + space.sm : 0);
   return (
-    <View style={[styles.sticky, { backgroundColor: t.bg, borderTopColor: t.line, paddingBottom: bottom }]}>
+    <View pointerEvents="box-none" style={[styles.sticky, {paddingBottom:bottom}]}>
+      <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        style={[StyleSheet.absoluteFill, opaque ? {backgroundColor:t.bg} : {experimental_backgroundImage:
+          'linear-gradient(180deg, '+t.bg+'00 0%, '+t.bg+'C2 25%, '+t.bg+'E6 65%, '+t.bg+'F2 100%)'}]} />
       {children}
     </View>
   );
@@ -237,6 +255,7 @@ export function Tap({
 
 export function ListRow({
   title,
+  titlePrefix,
   subtitle,
   meta,
   leading,
@@ -246,6 +265,7 @@ export function ListRow({
   numberOfLines = 2,
 }: {
   title: string;
+  titlePrefix?: ReactNode;
   subtitle?: string;
   meta?: string;
   leading?: ReactNode;
@@ -264,9 +284,12 @@ export function ListRow({
             {meta}
           </Txt>
         )}
-        <Txt variant="bodyStrong" numberOfLines={numberOfLines}>
-          {title}
-        </Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {titlePrefix}
+          <Txt variant="bodyStrong" numberOfLines={numberOfLines} style={{ flexShrink: 1 }}>
+            {title}
+          </Txt>
+        </View>
         {subtitle && (
           <Txt variant="caption" color="textSecondary" numberOfLines={2}>
             {subtitle}
@@ -443,11 +466,12 @@ export function Chips<T extends string>({
             key={o.value}
             onPress={() => onChange(o.value)}
             accessibilityLabel={`${o.label}${active ? ', 선택됨' : ''}`}
-            style={[styles.tab, { borderBottomColor: active ? t.action : 'transparent' }]}
+            style={styles.tab}
           >
+            <View style={{alignItems:'center',paddingBottom:2,borderBottomWidth:2,borderBottomColor:active ? t.action : 'transparent'}}>
             <Txt variant={active ? 'bodyStrong' : 'label'} color={active ? 'action' : 'textSecondary'}>
               {o.label}
-            </Txt>
+            </Txt></View>
           </Tap>
         );
       })}
@@ -481,47 +505,22 @@ export function EmptyState({
   );
 }
 
-export function LoadingState() {
-  const t = useTheme();
-  return (
-    <View
-      accessible
-      accessibilityRole="progressbar"
-      accessibilityLabel="불러오는 중"
-      accessibilityLiveRegion="polite"
-      style={styles.loadingRows}
-    >
-      {[0, 1, 2].map((row) => (
-        <View
-          key={row}
-          style={[styles.loadingRow, { borderBottomColor: t.line }]}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        >
-          <View
-            style={[styles.loadingTitle, { backgroundColor: t.line, width: row === 1 ? '53%' : '66%' }]}
-          />
-          <View style={[styles.loadingCaption, { backgroundColor: t.bgSubtle }]} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
 /** 쿼리의 로딩·오류·빈 상태를 일관되게 처리 (오류는 서버가 준 안전한 메시지만) */
 export function QueryBoundary<T>({
   query,
+  layout,
   isEmpty,
   empty,
   children,
 }: {
   query: UseQueryResult<T>;
+  layout?: LoadingLayout;
   isEmpty?: (data: T) => boolean;
   empty?: { title: string; description?: string };
   children: (data: T) => ReactNode;
 }) {
-  if (query.isPending) return <LoadingState />;
-  if (query.isError) {
+  if (query.isPending) return <LoadingState layout={layout} />;
+  if (query.data === undefined) {
     return (
       <EmptyState
         title="정보를 불러오지 못했습니다"
@@ -538,19 +537,9 @@ export function QueryBoundary<T>({
 }
 
 const styles = StyleSheet.create({
-  loadingRows: { paddingHorizontal: GUTTER },
-  loadingRow: {
-    height: 72,
-    justifyContent: 'center',
-    gap: space.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  loadingTitle: { height: 15, borderRadius: 4 },
-  loadingCaption: { width: '37%', height: 11, borderRadius: 4 },
   sticky: {
     paddingHorizontal: GUTTER,
-    paddingTop: space.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: space.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -572,7 +561,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   infoRow: { flexDirection: 'row', gap: space.md, paddingVertical: 10 },
-  badge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   badgeMark: { width: 6, height: 6, borderRadius: 3 },
   block: {
     paddingVertical: space.lg,
@@ -589,7 +578,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 2,
-    borderBottomWidth: 2,
   },
   state: {
     alignItems: 'center',

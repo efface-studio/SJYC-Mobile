@@ -1,14 +1,53 @@
+import { Image, View } from 'react-native';
+import { Icon } from '~/shared/icon';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { useSession } from '@/features/auth/session';
+import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 import { api } from '@/api';
 import { OSS_MOBILE } from '@/config/oss-licenses';
 import { POLICY_TITLE } from '@/domain/labels';
 import type { PolicyKey } from '@/domain/types';
 import { formatDate } from '@/lib/format';
-import { Divider, EmptyState, Gutter, ListRow, Screen, Txt, space } from '~/ds';
+import { Divider, EmptyState, Gutter, ListRow, Screen, Txt, space, useTheme } from '~/ds';
 import { Article, Callout, Hero, QueryScreen, Rows, isExternal, openExternal } from '~/user-kit';
 
 const isPolicyKey = (v: string): v is PolicyKey => v in POLICY_TITLE;
+
+const marks: Record<string, number> = {
+  '@tanstack/react-query': require('../../../assets/oss/tanstack.png'),
+  react: require('../../../assets/oss/react.png'),
+  'react-native': require('../../../assets/oss/react.png'),
+  'react-dom': require('../../../assets/oss/react.png'),
+  zod: require('../../../assets/oss/zod.png'),
+  jsbarcode: require('../../../assets/oss/jsbarcode.png'),
+  pretendard: require('../../../assets/oss/pretendard.png'),
+};
+
+function PackageMark({ name }: { name: string }) {
+  const expo = name === 'expo' || name.startsWith('expo-') || name.startsWith('@expo/');
+  const source = expo ? require('../../../assets/oss/expo.png') : marks[name];
+  const theme = useTheme();
+  return (
+    <View
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      style={{
+        width: 34,
+        height: 34,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 7,
+        backgroundColor: source ? '#fff' : theme.bgSubtle,
+      }}
+    >
+      {source ? (
+        <Image source={source} resizeMode="contain" style={{ width: 25, height: 25 }} />
+      ) : (
+        <Icon ios="shippingbox" android="inventory_2" size={20} color={theme.textSecondary} />
+      )}
+    </View>
+  );
+}
 
 function OpenSource() {
   return (
@@ -26,6 +65,7 @@ function OpenSource() {
             <ListRow
               key={p.name}
               title={p.name}
+              leading={<PackageMark name={p.name} />}
               subtitle={`${p.version} · ${p.license}`}
               numberOfLines={1}
               onPress={isExternal(p.url) ? () => openExternal(p.url) : undefined}
@@ -39,13 +79,16 @@ function OpenSource() {
 
 export default function PolicyScreen() {
   const { key } = useLocalSearchParams<{ key: string }>();
+  const session=useSession();
+  const allowed=!!session.data || key==="terms" || key==="privacy";
   const valid = isPolicyKey(key);
   const doc = useQuery({
     queryKey: ['policy', key],
     queryFn: () => api.policies.get(key as PolicyKey),
-    enabled: valid,
+    enabled: valid && allowed,
   });
 
+  if (!allowed) return <Redirect href="/login"/>;
   if (key === 'opensource') return <OpenSource />;
   if (!valid) {
     return (

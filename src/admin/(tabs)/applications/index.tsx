@@ -1,3 +1,4 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -165,7 +166,7 @@ export default function Applications() {
             return (
               <ListRow
                 {...row}
-                onPress={() => router.push({ pathname: '/applications/[id]', params: { id: a.id } })}
+                onPress={() => openScreen({ pathname: '/applications/[id]', params: { id: a.id } })}
               />
             );
           }

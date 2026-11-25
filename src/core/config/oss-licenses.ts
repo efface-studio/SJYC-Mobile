@@ -18,7 +18,7 @@ export const OSS_WEB: OssPackage[] = [
     name: 'clsx',
     version: '2.1.1',
     license: 'MIT',
-    url: 'lukeed/clsx',
+    url: 'https://github.com/lukeed/clsx',
   },
   {
     name: 'lucide-react',
@@ -28,7 +28,7 @@ export const OSS_WEB: OssPackage[] = [
   },
   {
     name: 'next',
-    version: '16.4.2',
+    version: '16.4.6',
     license: 'MIT',
     url: 'https://nextjs.org',
   },
@@ -74,7 +74,7 @@ export const OSS_WEB: OssPackage[] = [
 export const OSS_MOBILE: OssPackage[] = [
   {
     name: '@expo/ui',
-    version: '57.0.25',
+    version: '57.0.26',
     license: 'MIT',
     url: 'https://docs.expo.dev/versions/latest/sdk/ui/',
   },
@@ -92,13 +92,31 @@ export const OSS_MOBILE: OssPackage[] = [
   },
   {
     name: 'expo',
-    version: '57.0.30',
+    version: '57.0.33',
     license: 'MIT',
     url: 'https://github.com/expo/expo/tree/main/packages/expo',
   },
   {
+    name: 'expo-apple-authentication',
+    version: '57.0.2',
+    license: 'MIT',
+    url: 'https://docs.expo.dev/versions/latest/sdk/apple-authentication/',
+  },
+  {
+    name: 'expo-blur',
+    version: '57.0.3',
+    license: 'MIT',
+    url: 'https://docs.expo.dev/versions/latest/sdk/blur-view/',
+  },
+  {
+    name: 'expo-camera',
+    version: '57.0.6',
+    license: 'MIT',
+    url: 'https://docs.expo.dev/versions/latest/sdk/camera/',
+  },
+  {
     name: 'expo-constants',
-    version: '57.0.22',
+    version: '57.0.25',
     license: 'MIT',
     url: 'https://docs.expo.dev/versions/latest/sdk/constants/',
   },
@@ -115,20 +133,38 @@ export const OSS_MOBILE: OssPackage[] = [
     url: 'https://docs.expo.dev/versions/latest/sdk/haptics/',
   },
   {
+    name: 'expo-image',
+    version: '57.0.5',
+    license: 'MIT',
+    url: 'https://docs.expo.dev/versions/latest/sdk/image/',
+  },
+  {
+    name: 'expo-image-manipulator',
+    version: '57.0.23',
+    license: 'MIT',
+    url: 'https://docs.expo.dev/versions/latest/sdk/imagemanipulator/',
+  },
+  {
+    name: 'expo-image-picker',
+    version: '57.0.22',
+    license: 'MIT',
+    url: 'https://docs.expo.dev/versions/latest/sdk/imagepicker/',
+  },
+  {
     name: 'expo-linking',
-    version: '57.0.13',
+    version: '57.0.14',
     license: 'MIT',
     url: 'https://docs.expo.dev/versions/latest/sdk/linking',
   },
   {
     name: 'expo-router',
-    version: '57.0.28',
+    version: '57.0.32',
     license: 'MIT',
     url: 'https://docs.expo.dev/routing/introduction/',
   },
   {
     name: 'expo-splash-screen',
-    version: '57.0.10',
+    version: '57.0.12',
     license: 'MIT',
     url: 'https://docs.expo.dev/versions/latest/sdk/splash-screen/',
   },
@@ -149,6 +185,30 @@ export const OSS_MOBILE: OssPackage[] = [
     version: '57.0.4',
     license: 'MIT',
     url: 'https://docs.expo.dev/versions/latest/sdk/system-ui',
+  },
+  {
+    name: 'jsbarcode',
+    version: '3.12.3',
+    license: 'MIT',
+    url: 'https://github.com/lindell/JsBarcode#readme',
+  },
+  {
+    name: 'patch-package',
+    version: '8.0.1',
+    license: 'MIT',
+    url: 'https://github.com/ds300/patch-package',
+  },
+  {
+    name: 'pretendard',
+    version: '1.3.9',
+    license: 'OFL-1.1',
+    url: 'https://cactus.tistory.com/306',
+  },
+  {
+    name: 'qrcode-generator',
+    version: '2.0.4',
+    license: 'MIT',
+    url: 'https://github.com/kazuhikoarase/qrcode-generator',
   },
   {
     name: 'react',

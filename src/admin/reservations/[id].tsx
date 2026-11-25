@@ -26,7 +26,7 @@ export default function ReservationDetail() {
   });
 
   if (!allowed) return <NoPermission />;
-  return <QueryBoundary query={query}>{(r) => <ReservationView r={r} />}</QueryBoundary>;
+  return <QueryBoundary layout="detail" query={query}>{(r) => <ReservationView r={r} />}</QueryBoundary>;
 }
 
 function ReservationView({ r }: { r: SpaceReservation }) {

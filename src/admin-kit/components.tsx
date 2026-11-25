@@ -221,7 +221,7 @@ export function PagedList<T extends { id: string }>({
       <ListToolbar count={query.data?.total}>{tools}</ListToolbar>
       {below}
       <Divider />
-      <QueryBoundary
+      <QueryBoundary layout="workflow"
         query={query}
         isEmpty={(page) => page.items.length === 0}
         empty={{ title: emptyText, description: '검색어나 필터를 바꿔 보세요.' }}

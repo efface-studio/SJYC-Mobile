@@ -1,14 +1,17 @@
+import { openScreen } from '~/shared/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View, type TextInput } from 'react-native';
 import { api, errorMessage, isApiError } from '@/api';
-import { CENTER } from '@/config/center';
+import { birthDateError, confirmFeedback } from '@/domain/signup-feedback';
+import { todayKst } from '@/lib/format';
+import { BirthDateField } from '~/shared/birth-date-field';
+import { SignupPasswordRules } from '~/shared/signup-password-rules';
+import { SignupEmailField } from '~/shared/signup-email-field';
 import { parseValues, signupSchema, type FieldErrors } from '@/domain/schemas';
 import {
   Button,
-  Card,
-  Divider,
   FormSection,
   Gutter,
   Screen,
@@ -20,14 +23,11 @@ import {
   space,
 } from '~/ds';
 import { notify } from '~/shared/dialogs';
-import { Callout, ModalGuard } from '~/user-kit';
-
-/** 만 14세 미만은 법정대리인 동의 필요 — 온라인 절차 확정 전까지 센터 문의로 안내 */
-const MIN_SELF_CONSENT_AGE = 14;
+import { ModalGuard } from '~/user-kit';
 
 function PolicyLink({ label, href }: { label: string; href: '/policies/terms' | '/policies/privacy' }) {
   return (
-    <Tap onPress={() => router.push(href)} accessibilityLabel={label} style={styles.policyLink}>
+    <Tap onPress={() => openScreen(href)} accessibilityLabel={label} style={styles.policyLink}>
       <Txt variant="caption" color="action">
         {label}
       </Txt>
@@ -36,7 +36,7 @@ function PolicyLink({ label, href }: { label: string; href: '/policies/terms' | 
 }
 
 export default function SignupScreen() {
-  const [v, setV] = useState({ name: '', email: '', password: '', passwordConfirm: '', birthYear: '' });
+  const [v, setV] = useState({ name: '', email: '', password: '', passwordConfirm: '', birthDate: '', phone: '' });
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [marketing, setMarketing] = useState(false);
@@ -45,15 +45,21 @@ export default function SignupScreen() {
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
-  const birthRef = useRef<TextInput>(null);
-  const set = (key: keyof typeof v) => (text: string) => setV((prev) => ({ ...prev, [key]: text }));
+  const match = confirmFeedback(v.password, v.passwordConfirm);
+  const set = (key: keyof typeof v) => (text: string) => {
+    setV((prev) => ({ ...prev, [key]: text }));
+    setErrors((prev) => ({
+      ...prev,
+      [key === 'birthDate' ? 'birthYear' : key]: '',
+      ...(key === 'password' ? { passwordConfirm: '' } : {}),
+    }));
+  };
   const all = terms && privacy && marketing;
   const dirty = Object.values(v).some(Boolean) || terms || privacy || marketing;
 
   const signup = useMutation({
     mutationFn: api.auth.signup,
-    // 웹과 같은 흐름: 가입 → 이메일 인증 안내 (mock 모드는 그 화면에서 개발용 인증 처리)
-    onSuccess: (_r, input) => router.replace({ pathname: '/verify-email', params: { email: input.email } }),
+    onSuccess: () => router.replace('/verify-phone'),
     onError: (e) => {
       if (isApiError(e) && e.fieldErrors) setErrors(e.fieldErrors);
       notify('가입하지 못했습니다', errorMessage(e));
@@ -62,17 +68,17 @@ export default function SignupScreen() {
 
   const submit = () => {
     if (signup.isPending) return;
+    const dateError = birthDateError(v.birthDate, todayKst());
     const parsed = parseValues(signupSchema, {
       ...v,
+      birthYear: v.birthDate.slice(0, 4),
       agreeTerms: terms ? 'on' : undefined,
       agreePrivacy: privacy ? 'on' : undefined,
       agreeMarketing: marketing ? 'on' : undefined,
     });
-    if (!parsed.ok) return setErrors(parsed.errors);
-    if (new Date().getFullYear() - parsed.data.birthYear < MIN_SELF_CONSENT_AGE) {
-      return setErrors({
-        birthYear: `만 ${MIN_SELF_CONSENT_AGE}세 미만은 법정대리인 동의가 필요합니다. 센터(${CENTER.tel})로 문의해 주세요.`,
-      });
+    if (!parsed.ok || dateError) {
+      setErrors({ ...(!parsed.ok && parsed.errors), birthYear: dateError ?? '' });
+      return;
     }
     setErrors({});
     signup.mutate(parsed.data);
@@ -93,7 +99,7 @@ export default function SignupScreen() {
             몇 가지 정보만 입력해 주세요
           </Txt>
           <Txt variant="caption" color="textTertiary">
-            가입 후 이메일 인증을 완료하면 프로그램 신청과 공간 예약을 이용할 수 있습니다.
+            휴대전화 인증을 마치면 프로그램 신청과 공간 예약을 이용할 수 있습니다.
           </Txt>
         </Gutter>
 
@@ -108,31 +114,28 @@ export default function SignupScreen() {
             onSubmitEditing={() => emailRef.current?.focus()}
             error={errors.name}
           />
-          <TextField
+          <SignupEmailField
             ref={emailRef}
-            label="이메일 (로그인 아이디)"
             value={v.email}
-            onChangeText={set('email')}
-            placeholder="example@email.com"
-            keyboardType="email-address"
-            autoComplete="email"
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
+            onChange={set('email')}
+            onNext={() => passwordRef.current?.focus()}
             error={errors.email}
           />
-          <TextField
-            ref={passwordRef}
-            label="비밀번호"
-            value={v.password}
-            onChangeText={set('password')}
-            placeholder="비밀번호"
-            secureTextEntry
-            autoComplete="new-password"
-            hint="8~64자, 영문·숫자 포함"
-            returnKeyType="next"
-            onSubmitEditing={() => confirmRef.current?.focus()}
-            error={errors.password}
-          />
+          <View style={{ gap: space.sm }}>
+            <TextField
+              ref={passwordRef}
+              label="비밀번호"
+              value={v.password}
+              onChangeText={set('password')}
+              placeholder="비밀번호"
+              secureTextEntry
+              autoComplete="new-password"
+              returnKeyType="next"
+              onSubmitEditing={() => confirmRef.current?.focus()}
+              error={errors.password}
+            />
+            <SignupPasswordRules password={v.password} />
+          </View>
           <TextField
             ref={confirmRef}
             label="비밀번호 확인"
@@ -141,28 +144,24 @@ export default function SignupScreen() {
             placeholder="비밀번호 다시 입력"
             secureTextEntry
             autoComplete="new-password"
-            returnKeyType="next"
-            onSubmitEditing={() => birthRef.current?.focus()}
-            error={errors.passwordConfirm}
+            returnKeyType="done"
+            hint={match === '일치합니다.' ? match : undefined}
+            error={errors.passwordConfirm || (match !== '일치합니다.' ? match : undefined)}
           />
+          <BirthDateField value={v.birthDate} onChange={set('birthDate')} error={errors.birthYear} />
           <TextField
-            ref={birthRef}
-            label="출생 연도"
-            value={v.birthYear}
-            onChangeText={set('birthYear')}
-            placeholder="예) 2009"
-            keyboardType="number-pad"
-            maxLength={4}
-            error={errors.birthYear}
+            label="휴대전화 (필수)"
+            value={v.phone}
+            onChangeText={set('phone')}
+            placeholder="010-1234-5678"
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            error={errors.phone}
           />
-          <Callout>
-            만 {MIN_SELF_CONSENT_AGE}세 미만은 법정대리인 동의 절차가 필요합니다. 온라인 절차 준비 전까지 센터로
-            문의해 주세요.
-          </Callout>
         </FormSection>
 
         <FormSection title="약관 동의">
-          <Card style={{ paddingVertical: space.xs }}>
+          <View>
             <SwitchRow
               label="전체 동의"
               description="필수 및 선택 항목에 모두 동의합니다."
@@ -173,8 +172,8 @@ export default function SignupScreen() {
                 setMarketing(on);
               }}
             />
-          </Card>
-          <View style={{ gap: space.xs }}>
+          </View>
+          <View>
             <SwitchRow
               label="[필수] 이용약관 동의"
               value={terms}
@@ -183,8 +182,8 @@ export default function SignupScreen() {
             />
             <PolicyLink label="이용약관 보기" href="/policies/terms" />
           </View>
-          <Divider />
-          <View style={{ gap: space.xs }}>
+
+          <View>
             <SwitchRow
               label="[필수] 개인정보 수집·이용 동의"
               value={privacy}
@@ -193,7 +192,7 @@ export default function SignupScreen() {
             />
             <PolicyLink label="개인정보처리방침 보기" href="/policies/privacy" />
           </View>
-          <Divider />
+
           <SwitchRow
             label="[선택] 프로그램 소식 안내 수신"
             description="새 프로그램 모집 소식을 알려 드립니다."
@@ -208,5 +207,5 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   head: { paddingTop: space.xl, gap: space.sm },
-  policyLink: { alignSelf: 'flex-start', paddingVertical: 8 },
+  policyLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
 });

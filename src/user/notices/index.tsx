@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { api } from '@/api';
@@ -57,8 +58,8 @@ export default function NoticesScreen() {
                   key={n.id}
                   meta={`${NOTICE_CATEGORY_LABEL[n.category]} · ${n.publishedAt ? formatDate(n.publishedAt) : ''}`}
                   title={n.title}
-                  trailing={n.pinned ? <Badge text="중요" tone="brand" /> : undefined}
-                  onPress={() => router.push(`/notices/${n.id}`)}
+                  titlePrefix={n.pinned ? <Badge text="중요" tone="brand" /> : undefined}
+                  onPress={() => openScreen(`/notices/${n.id}`)}
                 />
               ))}
             </Rows>

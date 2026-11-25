@@ -44,7 +44,7 @@ const config = z
   .strict();
 export type MobileBanner = z.infer<typeof item>;
 export type BannerConfig = z.infer<typeof config>;
-export const defaultBanners: BannerConfig = { automatic: true, seconds: 5, items: [] };
+export const defaultBanners: BannerConfig = { automatic: true, seconds: 0, items: [] };
 export function readBanners(raw?: string): BannerConfig {
   if (!raw) return defaultBanners;
   try {

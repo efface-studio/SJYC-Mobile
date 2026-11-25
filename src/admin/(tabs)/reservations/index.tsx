@@ -1,5 +1,6 @@
+import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/api';
 import { RESERVATION_STATUS } from '@/domain/labels';
@@ -87,7 +88,7 @@ export default function Reservations() {
             title={r.spaceName}
             subtitle={`${r.applicantName} · ${r.headcount}명`}
             trailing={<StatusBadge {...RESERVATION_STATUS[r.status]} />}
-            onPress={() => router.push({ pathname: '/reservations/[id]', params: { id: r.id } })}
+            onPress={() => openScreen({ pathname: '/reservations/[id]', params: { id: r.id } })}
           />
         )}
       />

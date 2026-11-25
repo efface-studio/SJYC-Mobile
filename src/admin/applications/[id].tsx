@@ -36,7 +36,7 @@ export default function ApplicationDetail() {
   });
 
   if (!allowed) return <NoPermission />;
-  return <QueryBoundary query={query}>{(a) => <ApplicationView a={a} />}</QueryBoundary>;
+  return <QueryBoundary layout="detail" query={query}>{(a) => <ApplicationView a={a} />}</QueryBoundary>;
 }
 
 function ApplicationView({ a }: { a: ProgramApplication }) {

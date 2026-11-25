@@ -1,3 +1,4 @@
+import {useLoginPermissions} from '~/shared/login-permissions';
 import { translucentHeader } from '~/shared/header';
 import { Stack } from 'expo-router';
 import { View } from 'react-native';
@@ -26,10 +27,11 @@ export default function RootLayout() {
 function Gate() {
   const t = useTheme();
   const session = useSession();
+  useLoginPermissions(canEnterConsole(session.data?.user),false);
   if (session.isPending) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', backgroundColor: t.bg }}>
-        <LoadingState />
+        <LoadingState layout="dashboard" />
       </View>
     );
   }
@@ -52,6 +54,7 @@ function Gate() {
   return (
     <Stack screenOptions={translucentHeader}>
       <Stack.Protected guard={allowed}>
+        <Stack.Screen name="account-link-return" options={{title:"소셜 계정 연결"}} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="applications/[id]" options={{ title: '신청 상세' }} />
@@ -63,6 +66,8 @@ function Gate() {
       </Stack.Protected>
       <Stack.Protected guard={!allowed}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="oauth-return" options={{ title: '소셜 로그인' }} />
+        <Stack.Screen name="oauth-link" options={{ title: '관리자 계정 연결' }} />
       </Stack.Protected>
     </Stack>
   );

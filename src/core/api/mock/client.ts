@@ -1,3 +1,5 @@
+import { memberActionLabels } from '@/domain/member-actions';
+import {freshPosition,distanceMeters,CLUB_RADIUS_METERS,type AttendancePosition} from '@/domain/check-in-location';
 import { settingsWriteSchema } from '@/domain/site-settings';
 /**
  * 개발용 mock adapter — 서버가 준비되기 전 UI 흐름을 검증하기 위한 구현이다.
@@ -58,6 +60,22 @@ import {
 } from './store';
 
 type DbUser = MockDb['users'][number];
+
+
+function manageableMember(db: MockDb, id: string) {
+  const actor = requirePermission(db, 'member.manage');
+  const target = findOr404(db.users,id);
+  if (id === actor.id || !canManageUser(actor,target)) throw new ApiError('FORBIDDEN','이 회원을 변경할 수 없습니다.');
+  if (target.status === 'withdrawn') throw new ApiError('CONFLICT','탈퇴한 회원입니다.');
+  return {actor,target};
+}
+function activityOptions(db: MockDb, id: string) {
+  const apps = db.applications.filter(a => a.userId === id);
+  return {
+    clubs: db.clubs.filter(c => c.status === 'active' && !db.memberships.some(m => m.clubId === c.id && m.userId === id)).map(c=>({id:c.id,title:c.name})),
+    programs: db.programs.filter(p => p.status === 'published' && !apps.some(a => a.programId===p.id && a.status==='approved') && (computeRecruitStatus(p,new Date())==='open' || apps.some(a => a.programId===p.id && a.status==='submitted'))).map(p=>({id:p.id,title:p.title})),
+  };
+}
 
 const DAY = 86_400_000;
 
@@ -182,9 +200,11 @@ function decideClubApplication(
   return a;
 }
 
+const mockQr = new Map<string,{id:string;position:AttendancePosition;until:number}>();
+function pruneQr(){for(const [key,item] of mockQr)if(item.until<=Date.now())mockQr.delete(key);}
 /** 마감 시간이 지난 출석 코드는 내려주지 않는다 */
 function withCheckIn(s: AttendanceSession): AttendanceSession {
-  return isCheckInOpen(s) ? s : { ...s, checkInCode: null, checkInClosesAt: null };
+  return isCheckInOpen(s) ? s : { ...s, qrTicket:null, checkInCode: null, checkInClosesAt: null };
 }
 
 function nextId(db: MockDb, prefix: string): string {
@@ -247,6 +267,7 @@ function audit(db: MockDb, actor: DbUser, e: Omit<AuditEvent, 'id' | 'at' | 'act
 
 /** 처리 결과를 신청자에게 알린다 (실서버에서는 서버가 같은 시점에 만든다) */
 function notify(db: MockDb, n: Pick<Notification, 'userId' | 'kind' | 'title' | 'body' | 'link'>): void {
+  if (db.mutedNotifications?.[n.userId]?.includes(n.kind)) return;
   db.notifications.unshift({ id: nextId(db, 'nt'), createdAt: new Date().toISOString(), readAt: null, ...n });
 }
 
@@ -265,8 +286,33 @@ function toSession(db: MockDb, u: DbUser): Session {
 
 let lastResetToken: { token: string; userId: string } | null = null;
 
+function signupPhoneState(db:MockDb) {
+  const p=db.pendingSignup;
+  if(!p?.phone || p.expiresAt<=Date.now()) throw new ApiError('VALIDATION','인증 요청이 만료되었습니다. 회원가입을 다시 진행해 주세요.');
+  return {phone:p.phone,verificationMode:'preview' as const,resendAt:new Date(p.sentAt+30000).toISOString(),expiresAt:new Date(p.sentAt+300000).toISOString()};
+}
 export const mockClient: ApiClient = {
   auth: {
+    startNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
+    finishNativeApple: async () => { throw new ApiError('NOT_CONFIGURED', 'Apple 로그인을 사용할 수 없습니다.'); },
+    adminProviders: async () => [],
+    startAdminSocial: async () => {
+      throw new ApiError('NOT_CONFIGURED', '사용할 수 없는 로그인 방법입니다.');
+    },
+    completeAdminSocial: async () => {
+      throw new ApiError('NOT_CONFIGURED', '사용할 수 없는 로그인 방법입니다.');
+    },
+    adminSocialLink: async () => {
+      throw new ApiError('VALIDATION', '관리자 소셜 로그인을 다시 시작해 주세요.');
+    },
+    linkAdminSocial: async () => {
+      throw new ApiError('NOT_CONFIGURED', '관리자 소셜 로그인을 다시 시작해 주세요.');
+    },
+    socialDraft: async () => {throw new ApiError('VALIDATION','소셜 로그인을 다시 시작해 주세요.');},
+    saveSocialProfile: async () => {throw new ApiError('NOT_CONFIGURED','소셜 로그인을 다시 시작해 주세요.');},
+    socialProviders: () => respond(() => []),
+    startSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),
+    completeSocial: () => respond(() => { throw new ApiError('NOT_CONFIGURED', '소셜 로그인을 사용할 수 없습니다.'); }),
     me: () => respond((db) => (currentUser(db) ? toSession(db, currentUser(db)!) : null)),
     login: (input) =>
       respond((db) => {
@@ -276,8 +322,8 @@ export const mockClient: ApiClient = {
         }
         if (u.status === 'suspended')
           throw new ApiError('FORBIDDEN', '이용이 제한된 계정입니다. 센터에 문의해 주세요.');
-        if (!u.emailVerified)
-          throw new ApiError('FORBIDDEN', '이메일 인증을 완료한 뒤 로그인할 수 있습니다.');
+        if (!u.emailVerified && !u.signupPhoneVerifiedAt)
+          throw new ApiError('FORBIDDEN', '가입 인증을 완료한 뒤 로그인할 수 있습니다.');
         writeSession(u.id);
         return toSession(db, u);
       }),
@@ -287,7 +333,18 @@ export const mockClient: ApiClient = {
       }),
     signup: (input) =>
       respond((db) => {
-        if (db.users.some((x) => x.email.toLowerCase() === input.email.toLowerCase())) {
+        const preview = () => {
+          db.pendingSignup={email:input.email.toLowerCase(),phone:input.phone,sentAt:Date.now(),attempts:0,expiresAt:Date.now()+900000};
+          return signupPhoneState(db);
+        };
+        const registered = db.users.find((x) => x.email.toLowerCase() === input.email.toLowerCase());
+        if (registered) {
+          if (
+            registered.status === 'active' &&
+            !registered.emailVerified && !registered.signupPhoneVerifiedAt &&
+            registered.password === input.password
+          )
+            return preview();
           throw new ApiError('CONFLICT', '이미 가입된 이메일입니다.', {
             reason: 'EMAIL_TAKEN',
             fieldErrors: { email: '이미 가입된 이메일입니다.' },
@@ -298,7 +355,7 @@ export const mockClient: ApiClient = {
           id: nextId(db, 'u'),
           email: input.email,
           name: input.name,
-          phone: null,
+          phone: input.phone || null,
           birthYear: input.birthYear,
           roles: ['member'],
           status: 'active',
@@ -317,8 +374,23 @@ export const mockClient: ApiClient = {
           createdAt: now,
           password: input.password,
         });
-        return { requiresEmailVerification: true };
+        return preview();
       }),
+    signupPhone:()=>respond(db=>signupPhoneState(db)),
+    resendPhone:(phone)=>respond(db=>{
+      const state=signupPhoneState(db),p=db.pendingSignup!;
+      if ((!phone || phone===state.phone) && Date.parse(state.resendAt)>Date.now()) throw new ApiError('RATE_LIMITED','30초 후 다시 요청할 수 있습니다.');
+      if(phone && !/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone))throw new ApiError('VALIDATION','휴대전화 번호를 확인해 주세요.');
+      p.phone=phone??state.phone;p.sentAt=Date.now();p.expiresAt=Date.now()+900000;p.attempts=0;return signupPhoneState(db);
+    }),
+    confirmPhone:code=>respond(db=>{
+      const state=signupPhoneState(db),p=db.pendingSignup!;
+      if(Date.parse(state.expiresAt)<=Date.now()||p.attempts>=5)throw new ApiError('VALIDATION','새 코드를 요청해 주세요.');
+      if(code!=='284600'){p.attempts++;throw new ApiError('VALIDATION','인증 코드가 일치하지 않습니다.');}
+      const user=db.users.find(u=>u.email.toLowerCase()===p.email && u.status==='active'&&!u.emailVerified&&!u.signupPhoneVerifiedAt);
+      if(!user)throw new ApiError('VALIDATION','가입 정보를 확인해 주세요.');
+      user.signupPhoneVerifiedAt=new Date().toISOString();user.phone=p.phone;delete db.pendingSignup;return {signedIn:false};
+    }),
     resendVerification: () => respond(() => undefined),
     requestPasswordReset: (email) =>
       respond((db) => {
@@ -342,6 +414,40 @@ export const mockClient: ApiClient = {
   },
 
   me: {
+    socialAccounts: () => respond((db) => {
+      const u = requireUser(db);
+      return { linked: u.providers, available: [], hasPassword: !!u.password };
+    }),
+    unlinkSocial: (provider) => respond((db) => {
+      const u = requireUser(db);
+      if (u.providers.includes(provider) && !u.password && u.providers.length === 1) throw new ApiError('CONFLICT', '마지막 로그인 수단입니다.');
+      u.providers = u.providers.filter((p) => p !== provider);
+      return { linked: u.providers, available: [], hasPassword: !!u.password };
+    }),
+    loginDevices: () => respond((db) => {
+      requireUser(db);
+      const expiresAt = readSession()!.expiresAt;
+      return [{ id: 'current', label: '현재 기기', current: true, expiresAt, createdAt: new Date(Date.parse(expiresAt) - 3600000).toISOString() }];
+    }),
+    revokeDevice: () => respond(() => { throw new ApiError('NOT_FOUND', '로그인 기기를 찾을 수 없습니다.'); }),
+    notificationPreferences: () => respond((db) => ({ muted: db.mutedNotifications?.[requireUser(db).id] ?? [] })),
+    setNotificationPreference: ({ kind, enabled }) => respond((db) => {
+      const id = requireUser(db).id;
+      const prefs = db.mutedNotifications ??= {};
+      const muted = new Set(prefs[id] ?? []);
+      if (enabled) muted.delete(kind);
+      else muted.add(kind);
+      prefs[id] = [...muted];
+      return { muted: prefs[id] };
+    }),
+    profilePhoto: () => respond((db) => ({ image: db.profilePhotos?.[requireUser(db).id] ?? null })),
+    setProfilePhoto: (image) => respond((db) => {
+      const id = requireUser(db).id;
+      const photos = db.profilePhotos ??= {};
+      if (image === null) delete photos[id];
+      else photos[id] = image;
+      return { image };
+    }),
     updateProfile: (input) =>
       respond((db) => {
         const u = requireUser(db);
@@ -488,6 +594,19 @@ export const mockClient: ApiClient = {
           .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
           .map((s) => toMyAttendance(s, u.id));
       }),
+    scanAttendance: (input) => respond(db=>{
+      const u=requireUser(db);pruneQr();
+      if(input.kind==='program'){
+        const program=db.attendance.find(s=>s.targetType==='program' && s.checkInCode===input.code && isCheckInOpen(s));
+        if(!program)throw new ApiError('VALIDATION','새 출석 QR을 스캔하거나 숫자를 직접 입력해 주세요.');
+        return checkIn(db,u.id,input.code);
+      }
+      const grant=mockQr.get(input.ticket);
+      const session=grant && db.attendance.find(s=>s.id===grant.id && s.qrTicket===input.ticket && isCheckInOpen(s));
+      if(!session?.checkInCode || !grant)throw new ApiError('VALIDATION','QR이 만료되었습니다.');
+      if(!freshPosition(input.position)||distanceMeters(grant.position,input.position)>CLUB_RADIUS_METERS)throw new ApiError('VALIDATION','QR 생성 위치 반경 100m 안에서 스캔해 주세요.');
+      return checkIn(db,u.id,session.checkInCode);
+    }),
     checkIn: (input) =>
       respond((db) => {
         const u = requireUser(db);
@@ -721,13 +840,21 @@ export const mockClient: ApiClient = {
         }
         return withCheckIn(s);
       }),
-    setCheckIn: (id, open) =>
+    setCheckIn: (id, open, position) =>
       respond((db) => {
         const s = findOr404(db.attendance, id);
         const actor = requireAttendanceManager(db, { type: s.targetType, id: s.targetId });
+        pruneQr();
+        if (open && position && !freshPosition(position))throw new ApiError('VALIDATION','현재 위치를 다시 확인해 주세요.');
+        if(s.qrTicket)mockQr.delete(s.qrTicket);
+        s.qrTicket=null;
         if (open) {
           s.checkInCode = issueCode(db);
           s.checkInClosesAt = new Date(Date.now() + CHECK_IN_MINUTES * 60_000).toISOString();
+          if(position && s.targetType==='club'){
+            const ticket=Array.from({length:16},()=>Math.floor(Math.random()*10)).join('');
+            mockQr.set(ticket,{id:s.id,position,until:Date.parse(s.checkInClosesAt)});s.qrTicket=ticket;
+          }
         } else {
           s.checkInCode = null;
           s.checkInClosesAt = null;
@@ -1012,6 +1139,8 @@ export const mockClient: ApiClient = {
 
   site: { settings: () => respond((db) => db.siteSettings ?? { version: 0, values: {} }) },
   admin: {
+    changeAppUpdate: () => respond(db=>{requirePermission(db,'site.manage');throw new ApiError('NOT_FOUND','요청한 업데이트가 없습니다.');}),
+    appUpdates: () => respond(db=>{ requirePermission(db,'site.manage'); return []; }),
     serverLogs: () =>
       respond((db) => {
         requirePermission(db, 'developer.access');
@@ -1320,6 +1449,56 @@ export const mockClient: ApiClient = {
     },
 
     members: {
+      activityOptions: (id) => respond(db => {
+        manageableMember(db,id);
+        return activityOptions(db,id);
+      }),
+      act: (id, command) => respond(db => {
+        const {actor,target} = manageableMember(db,id);
+        let resetUrl: string | undefined;
+        const now = new Date().toISOString();
+        if (target.status !== 'active' && ['reset-password','join-club','enroll'].includes(command.action)) throw new ApiError('CONFLICT','활성 회원만 사용할 수 있습니다.');
+        switch(command.action) {
+          case 'profile':
+            target.name=command.name;target.phone=command.phone;break;
+          case 'reset-password': {
+            const token='dev-'+nextId(db,'reset');
+            lastResetToken={token,userId:id};
+            resetUrl='/password/reset?token='+token;break;
+          }
+          case 'withdraw':
+            target.status='withdrawn';
+            if (db.profilePhotos) delete db.profilePhotos[id];
+            if (lastResetToken?.userId===id) lastResetToken=null;
+            break;
+          case 'sign-out':
+            if (readSession()?.userId===id) expireSession();
+            break;
+          case 'join-club': {
+            if (!activityOptions(db,id).clubs.some(c=>c.id===command.clubId)) throw new ApiError('CONFLICT','등록할 수 없는 동아리입니다.');
+            const club=findOr404(db.clubs,command.clubId);
+            const pending=db.clubApplications.find(a=>a.clubId===club.id && a.userId===id && a.status==='pending');
+            if(pending) {pending.status='approved';pending.reason=null;}
+            db.memberships.push({clubId:club.id,userId:id,role:'member',joinedAt:now});club.memberCount++;
+            notify(db,{userId:id,kind:'club_application',title:'동아리에 등록되었습니다',body:club.name,link:'/clubs/'+club.id});
+            break;
+          }
+          case 'enroll': {
+            if(!activityOptions(db,id).programs.some(p=>p.id===command.programId)) throw new ApiError('CONFLICT','참가할 수 없는 프로그램입니다.');
+            const p=findOr404(db.programs,command.programId);
+            let a=db.applications.find(x=>x.userId===id && x.programId===p.id && x.status==='submitted');
+            if(!a) {
+              if(!target.phone) throw new ApiError('VALIDATION','회원 연락처를 먼저 입력해 주세요.');
+              a={id:nextId(db,'a'),receiptNo:'DEV-'+String(db.seq).padStart(5,'0'),programId:p.id,programTitle:p.title,userId:id,applicantName:target.name,phone:target.phone,note:'',status:'approved',createdAt:now,history:[],cancellable:true};
+              db.applications.push(a);p.appliedCount++;
+            }
+            a.status='approved';a.history.push({at:now,status:'approved',actor:'staff',reason:null});
+            notify(db,{userId:id,kind:'application',title:'프로그램 참가가 확정되었습니다',body:p.title,link:'/my/applications/'+a.id});break;
+          }
+        }
+        audit(db,actor,{action:'user.'+command.action,targetType:'user',targetId:id,summary:memberActionLabels[command.action]});
+        return resetUrl ? {resetUrl} : {};
+      }),
       list: (q) =>
         respond((db) => {
           requirePermission(db, 'member.read');
@@ -1354,6 +1533,11 @@ export const mockClient: ApiClient = {
           const u = findOr404(db.users, id);
           if (!canManageUser(actor, u)) {
             throw new ApiError('FORBIDDEN', '개발자 계정은 개발자만 변경할 수 있습니다.');
+          }
+          if (u.status === 'withdrawn') throw new ApiError('CONFLICT', '이미 탈퇴한 회원입니다.');
+          if (patch.status === 'withdrawn') {
+            if (db.profilePhotos) delete db.profilePhotos[id];
+            if (lastResetToken?.userId === id) lastResetToken = null;
           }
           if (patch.roles) {
             if (patch.roles.length === 0) throw new ApiError('VALIDATION', '역할을 1개 이상 지정해 주세요.');

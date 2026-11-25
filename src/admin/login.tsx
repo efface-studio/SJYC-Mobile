@@ -1,3 +1,5 @@
+import { LoginOptions, useLoginPreferences } from '~/shared/login-preferences';
+import { AdminSocialButtons } from '~/admin-kit/social-login';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AuthReveal, LoginSubmit, useLoginMotion } from '~/shared/login-motion';
 import { Wordmark } from '~/shared/wordmark';
@@ -23,7 +25,8 @@ export default function Login() {
   const t = useTheme();
   const qc = useQueryClient();
   const logout = useLogout();
-  const [email, setEmail] = useState('');
+  const preferences = useLoginPreferences();
+  const [email, setEmail] = useState(preferences.initialEmail);
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
 
@@ -40,6 +43,7 @@ export default function Login() {
         return;
       }
       // 세션이 바뀌면 루트 게이트가 관리자 화면으로 전환한다
+      preferences.rememberEmail(session.user.email);
       motion.finish(() => qc.setQueryData(SESSION_KEY, session));
     },
     onError: (e) => {
@@ -110,6 +114,7 @@ export default function Login() {
               onSubmitEditing={submit}
               error={errors.password}
             />
+            <LoginOptions options={preferences} />
             {!!loginError && (
               <View accessibilityLiveRegion="polite">
                 <Txt color={t.tone.danger.fg}>{loginError}</Txt>
@@ -120,6 +125,7 @@ export default function Login() {
             </View>
           </View>
         </AuthReveal>
+        <AdminSocialButtons />
         {DEMO_DATA && (
           <View style={[styles.demo, { borderTopColor: t.line }]}>
             <Txt variant="captionStrong" color="textTertiary" style={{ paddingHorizontal: space.lg }}>

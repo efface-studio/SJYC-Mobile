@@ -1,5 +1,8 @@
+import { SOCIAL_ORDER, SocialMark, useSocialAccounts } from '~/user-kit/social-accounts';
+import { AppearanceRow } from '~/shared/appearance-row';
+import { openScreen } from '~/shared/navigation';
 import Constants from 'expo-constants';
-import { router, Stack, type Href } from 'expo-router';
+import { Stack, type Href } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { can, canManageAttendance, managesAnyClub, ROLE_LABEL, type Permission } from '@/domain/permissions';
 import type { User } from '@/domain/types';
@@ -107,6 +110,9 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     group: '설정',
     items: [
       {
+        title:'앱 업데이트',icon:{ios:'arrow.down.circle',android:'system_update'},href:'/more/app-updates',subtitle:'유저·관리자 앱 배포와 적용 현황',permission:'site.manage',
+      },
+      {
         title: '정책 문서',
         icon: { ios: 'doc.text', android: 'description' },
         subtitle: '약관 · 개인정보 처리방침 개정',
@@ -138,6 +144,7 @@ const GROUPS: { group: string; items: Menu[] }[] = [
 
 export default function More() {
   const user = useSession().data?.user;
+  const social = useSocialAccounts(user?.id);
   const logout = useLogout();
   const t = useTheme();
   const allowed = (m: Menu) =>
@@ -199,7 +206,7 @@ export default function More() {
                       leading={<Icon {...m.icon} size={19} color={t.textTertiary} />}
                       title={m.title}
                       subtitle={m.subtitle}
-                      onPress={() => router.push(m.href)}
+                      onPress={() => openScreen(m.href)}
                     />
                   )}
                 />
@@ -207,6 +214,30 @@ export default function More() {
             </View>
           ))
         )}
+        <Gutter style={styles.groupLabel}>
+          <Txt variant="captionStrong" color="textTertiary" accessibilityRole="header">
+            앱 설정
+          </Txt>
+        </Gutter>
+        <ListRow
+          title="연결된 소셜 계정"
+          onPress={() => openScreen('/more/account/social')}
+          trailing={
+            social.data && (
+              <View
+                accessibilityLabel={'연결된 계정 ' + social.data.linked.length + '개'}
+                style={{ flexDirection: 'row', gap: 4 }}
+              >
+                {SOCIAL_ORDER.map((p) => (
+                  <SocialMark key={p} provider={p} size={23} muted={!social.data.linked.includes(p)} />
+                ))}
+              </View>
+            )
+          }
+        />
+        <ListRow title="로그인 기기" onPress={() => openScreen('/more/account/devices')} />
+        <ListRow title="알림 설정" onPress={() => openScreen('/more/account/notifications')} />
+        <AppearanceRow />
         <Divider />
         <Gutter style={styles.footer}>
           <Button
