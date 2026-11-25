@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { readBanners } from '@/domain/mobile-banners';
+import { readBanners, visibleBanners } from '@/domain/mobile-banners';
+import { programPhoto } from '~/user-kit/program-photo';
 import { HomeBanner } from '~/user-kit/home-banner';
 import { router } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
@@ -8,7 +9,7 @@ import { api } from '@/api';
 import { CENTER, DESK_HOURS, hoursOn } from '@/config/center';
 import { Icon } from '~/shared/icon';
 import { NOTICE_CATEGORY_LABEL } from '@/domain/labels';
-import { formatDate } from '@/lib/format';
+import { formatDate, todayKst } from '@/lib/format';
 import {
   Badge,
   Divider,
@@ -73,6 +74,7 @@ export default function HomeScreen() {
     () => settings.data && readBanners(settings.data.values.mobileBanners),
     [settings.data],
   );
+  const published = visibleBanners(config?.items ?? [], todayKst());
   const clubs = useQuery({
     queryKey: ['clubs'],
     queryFn: () => api.clubs.list(),
@@ -129,9 +131,10 @@ export default function HomeScreen() {
       >
         {(data) => (
           <Rows>
-            {data.items.slice(0, 3).map((p) => (
-              <ProgramRow key={p.id} p={p} category={categoryName(p.categoryId)} />
-            ))}
+            {data.items.slice(0, 3).map((p) => {
+              const cover = published.find((b) => b.path === '/programs/' + p.id && b.image.startsWith('https://'));
+              return <ProgramRow key={p.id} p={p} category={categoryName(p.categoryId)} photo={cover?.image ?? programPhoto(p)} />;
+            })}
           </Rows>
         )}
       </QueryBoundary>

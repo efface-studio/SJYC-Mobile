@@ -5,29 +5,15 @@ import { visibleBanners, type BannerConfig } from '@/domain/mobile-banners';
 import type { Club, Program } from '@/domain/types';
 import { todayKst } from '@/lib/format';
 import { Tap, Txt } from '~/ds';
+import { programPhoto } from './program-photo';
 import { openInternal } from '~/user-kit';
 
 const photos = {
   program: require('../../assets/center/program-studio.webp'),
   club: require('../../assets/center/clubs-studio.webp'),
   space: require('../../assets/center/spaces/gym.webp'),
-  study: require('../../assets/center/banners/study.webp'),
-  basketball: require('../../assets/center/banners/basketball.webp'),
-  english: require('../../assets/center/banners/english.webp'),
-  council: require('../../assets/center/banners/council.webp'),
-  environment: require('../../assets/center/banners/environment.webp'),
   afterschool: require('../../assets/center/banners/afterschool.webp'),
 } as const;
-
-function programPhoto(p: Program): number {
-  const title = p.title;
-  if (/농구/.test(title)) return photos.basketball;
-  if (/영어|영회화/.test(title)) return photos.english;
-  if (/환경|플로깅/.test(title)) return photos.environment;
-  if (/자치|위원회|참여기구/.test(title)) return photos.council;
-  if (/학습|검정고시|공부/.test(title)) return photos.study;
-  return photos.program;
-}
 
 type Slide = { id: string; title: string; kind: string; path: string; source: number | ImageSource };
 
@@ -43,7 +29,7 @@ function slidesFor(config: BannerConfig, programs: Program[], clubs: Club[], tod
   for (const p of programs) {
     const path = '/programs/' + p.id;
     if (p.recruitStatus === 'open' && !paths.has(path))
-      items.push({ id: 'program-' + p.id, title: p.title, kind: '프로그램', path, source: programPhoto(p) });
+      items.push({ id: 'program-' + p.id, title: p.title, kind: '프로그램', path, source: programPhoto(p) ?? photos.program });
   }
   for (const c of clubs) {
     const path = '/clubs/' + c.id;
