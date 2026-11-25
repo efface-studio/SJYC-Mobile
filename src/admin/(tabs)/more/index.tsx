@@ -134,7 +134,7 @@ const GROUPS: { group: string; items: Menu[] }[] = [
       {
         title: '개발자 도구',
         icon: { ios: 'terminal', android: 'terminal' },
-        subtitle: '환경 · 권한 · API 요청 · 캐시 · 데모 데이터',
+        subtitle: '권한 관리 · 로그 · 세션 보안 · 운영 · 시스템',
         href: '/more/developer',
         permission: 'developer.access',
       },

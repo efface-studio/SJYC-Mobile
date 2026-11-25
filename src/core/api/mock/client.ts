@@ -1141,6 +1141,14 @@ export const mockClient: ApiClient = {
   admin: {
     changeAppUpdate: () => respond(db=>{requirePermission(db,'site.manage');throw new ApiError('NOT_FOUND','요청한 업데이트가 없습니다.');}),
     appUpdates: () => respond(db=>{ requirePermission(db,'site.manage'); return []; }),
+    developerView: () => respond((db) => {
+      requirePermission(db, 'developer.access');
+      throw new ApiError('NOT_CONFIGURED', '운영 콘솔은 서버 연결 모드에서 사용할 수 있습니다.');
+    }),
+    developerAction: () => respond((db) => {
+      requirePermission(db, 'developer.access');
+      throw new ApiError('NOT_CONFIGURED', '운영 콘솔은 서버 연결 모드에서 사용할 수 있습니다.');
+    }),
     serverLogs: () =>
       respond((db) => {
         requirePermission(db, 'developer.access');
