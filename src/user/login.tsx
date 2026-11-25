@@ -37,7 +37,9 @@ function SocialButton({ p }: { p: ProviderState }) {
   const cache = useQueryClient();
   const start = useMutation({
     mutationFn: async () => {
-      if (await beginSocial(p.provider, false) === 'native') {
+      const result = await beginSocial(p.provider,false);
+      if (result === 'profile') {router.replace('/oauth-profile'); return;}
+      if (result === 'native') {
         const session = await api.auth.me();
         if (!session) throw new Error('로그인 상태를 확인할 수 없습니다.');
         cache.setQueryData(SESSION_KEY, session);
@@ -55,14 +57,14 @@ function SocialButton({ p }: { p: ProviderState }) {
       onPress={() => { if (!start.isPending) start.mutate(); }}
     />;
   }
-  const unavailableLabel = p.provider === 'google' ? '준비 중' : '설정 필요';
+  const unavailableLabel = (p.provider === 'google' || p.provider === 'apple') ? '준비 중' : '설정 필요';
   return (
     <Tap
       rounded={radius.md}
       accessibilityLabel={`${p.label}로 계속하기${p.enabled ? '' : ', ' + unavailableLabel}`}
       disabled={!p.enabled || start.isPending}
       onPress={() => start.mutate()}
-      style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }, p.provider === 'google' && styles.unavailable]}
+      style={[styles.social, { backgroundColor: bg, borderColor: c.border ?? bg }, !p.enabled && styles.unavailable]}
     >
       <View style={styles.socialSide}>
         <Image

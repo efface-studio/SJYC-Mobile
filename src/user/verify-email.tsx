@@ -1,19 +1,18 @@
 import { useMutation } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { api, errorMessage } from '@/api';
-import { mockDev } from '@/api/mock/client';
 import { IS_MOCK } from '@/config/env';
-import { Button, Gutter, Screen, Txt, space } from '~/ds';
+import { Button, Gutter, Screen, TextField, Txt, space } from '~/ds';
 import { notify } from '~/shared/dialogs';
-import { Callout } from '~/user-kit';
 
 const RESEND_COOLDOWN_SEC = 60;
 
 /** 가입 직후 이메일 인증 안내 — 웹 /signup/verify 와 같은 기능 */
 export default function VerifyEmailScreen() {
-  const { email } = useLocalSearchParams<{ email?: string }>();
+  const { email, mode } = useLocalSearchParams<{ email?: string; mode?: string }>();
+  const [code, setCode] = useState('');
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
@@ -31,6 +30,54 @@ export default function VerifyEmailScreen() {
     onError: (e) => notify('보내지 못했습니다', errorMessage(e)),
   });
 
+  const verify = useMutation({mutationFn: () => api.auth.confirmPreviewCode(code)});
+  if ((mode === 'preview' || IS_MOCK) && email)
+    return (
+      <Screen>
+        <Gutter style={{ gap: space.lg, paddingTop: space.xxl }}>
+          <Txt variant="title1" accessibilityRole="header">
+            {verify.isSuccess ? '가입이 완료되었습니다' : '이메일 인증'}
+          </Txt>
+          {verify.isSuccess ? (
+            <Button label="로그인하기" onPress={() => router.replace('/login')} />
+          ) : (
+            <>
+              <Txt variant="body">{email}</Txt>
+              <TextField
+                label="인증 코드"
+                value={code}
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+                maxLength={6}
+                onChangeText={(text) => {
+                  setCode(text.replace(/\D/g, ''));
+                  verify.reset();
+                }}
+                hint="테스트 코드 284600을 입력해 주세요. 실제 메일은 발송되지 않습니다."
+                error={
+                  verify.isError
+                    ? verify.error instanceof Error
+                      ? verify.error.message
+                      : errorMessage(verify.error)
+                    : undefined
+                }
+              />
+              <Button
+                label="확인"
+                disabled={code.length !== 6}
+                loading={verify.isPending}
+                onPress={() => verify.mutate()}
+              />
+              <Button
+                variant="text"
+                label="회원가입으로 돌아가기"
+                onPress={() => router.replace('/signup')}
+              />
+            </>
+          )}
+        </Gutter>
+      </Screen>
+    );
   return (
     <Screen>
       <Gutter style={styles.hero}>
@@ -54,24 +101,6 @@ export default function VerifyEmailScreen() {
           onPress={() => resend.mutate()}
         />
       </Gutter>
-      {IS_MOCK && email && (
-        <Gutter style={{ paddingTop: space.xxl }}>
-          <View style={{ gap: space.sm }}>
-            <Callout tone="warning" title="개발용">
-              실제 메일은 발송되지 않습니다.
-            </Callout>
-            <Button
-              label="인증 링크를 누른 것으로 처리하기"
-              variant="text"
-              size="md"
-              onPress={() => {
-                mockDev.verifyEmail(email);
-                notify('인증 완료로 처리했습니다', '이제 로그인할 수 있습니다.');
-              }}
-            />
-          </View>
-        </Gutter>
-      )}
     </Screen>
   );
 }

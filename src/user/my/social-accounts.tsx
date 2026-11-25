@@ -72,7 +72,7 @@ export default function SocialAccountsScreen() {
               {SOCIAL_ORDER.map((p) => {
                 const linked = data.linked.includes(p);
                 const available = p !== 'google' && data.available.includes(p) && (p !== 'apple' || Platform.OS !== 'ios' || !!apple.data);
-                const last = linked && !data.hasPassword && !data.linked.some((other) => other !== p && other !== 'google');
+                const last = linked && !data.hasPassword && !data.linked.some((other) => other !== p && other !== 'google' && (other !== 'apple' || data.available.includes('apple')));
                 const label = linked ? '연결 해제' : available ? '연결하기' : '준비 중';
                 return (
                   <Gutter

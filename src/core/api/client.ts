@@ -1,3 +1,4 @@
+import type { SocialDraft, SocialDetails } from '@/domain/social-profile';
 import type { LoginDevice, SocialAccounts } from '@/domain/account-settings';
 import type { OAuthProvider } from '@/domain/types';
 import type { SettingsRecord, ServerLogSnapshot } from '../domain/site-settings';
@@ -99,15 +100,19 @@ export type Decision = 'approved' | 'rejected';
 export interface ApiClient {
   auth: {
     startNativeApple(link: boolean): Promise<{ state: string; nonce: string }>;
-    finishNativeApple(input: { state: string; identityToken: string }): Promise<{ signedIn: boolean }>;
+    finishNativeApple(input: { state: string; identityToken: string; name?:string }): Promise<{ signedIn: boolean; needsProfile?: boolean }>;
+    socialDraft(): Promise<SocialDraft>;
+    requestSocialCode(email: string): Promise<void>;
+    saveSocialProfile(input: SocialDetails): Promise<{signedIn: boolean}>;
     socialProviders(): Promise<OAuthProvider[]>;
     startSocial(provider: OAuthProvider, link: boolean): Promise<{ url: string; claim: string }>;
-    completeSocial(proof: { receipt: string; claim: string }): Promise<{ signedIn: boolean }>;
+    completeSocial(proof: { receipt: string; claim: string }): Promise<{ signedIn: boolean; needsProfile?: boolean }>;
     /** 세션이 없거나 만료면 null */
     me(): Promise<Session | null>;
     login(input: LoginInput): Promise<Session>;
     logout(): Promise<void>;
-    signup(input: SignupInput): Promise<{ requiresEmailVerification: boolean }>;
+    signup(input: SignupInput): Promise<{ requiresEmailVerification: boolean; verificationMode?: 'preview' }>;
+    confirmPreviewCode(code: string): Promise<void>;
     resendVerification(email: string): Promise<void>;
     requestPasswordReset(email: string): Promise<void>;
     resetPassword(token: string, password: string): Promise<void>;

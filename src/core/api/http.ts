@@ -95,6 +95,9 @@ export const httpClient: ApiClient = {
   auth: {
     startNativeApple: (link) => request('POST', (link ? '/me/social' : '/auth/social') + '/apple/native/start'),
     finishNativeApple: (input) => request('POST', '/auth/social/apple/native/complete', { body: input }),
+    socialDraft: () => request('GET', '/auth/social/onboarding'),
+    requestSocialCode: (email) => request('POST','/auth/social/onboarding/email',{body:{email}}),
+    saveSocialProfile: (input) => request('POST','/auth/social/onboarding',{body:input}),
     socialProviders: () => request('GET', '/auth/social/providers', { query: { platform: Platform.OS } }),
     startSocial: (provider, link) => request('POST', (link ? '/me/social/' : '/auth/social/') + provider + '/start'),
     completeSocial: (proof) => request('POST', '/auth/social/complete', { body: proof }),
@@ -109,6 +112,7 @@ export const httpClient: ApiClient = {
     login: (input) => request('POST', '/auth/login', { body: input }),
     logout: () => request('POST', '/auth/logout'),
     signup: (input) => request('POST', '/auth/signup', { body: input }),
+    confirmPreviewCode: (code) => request('POST', '/auth/email-verification/preview', {body: {code}}),
     resendVerification: (email) => request('POST', '/auth/email-verification/resend', { body: { email } }),
     requestPasswordReset: (email) => request('POST', '/auth/password-reset', { body: { email } }),
     resetPassword: (token, password) =>

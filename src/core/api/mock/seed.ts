@@ -46,6 +46,7 @@ export interface MockMembership {
 }
 
 export interface MockDb {
+  pendingSignup?: { email: string; expiresAt: number };
   mutedNotifications?: Record<string, Notification['kind'][]>;
   profilePhotos?: Record<string, string>;
   siteSettings?: SettingsRecord;
