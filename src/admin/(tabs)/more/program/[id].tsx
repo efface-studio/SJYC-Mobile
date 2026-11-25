@@ -32,7 +32,7 @@ export default function ProgramEdit() {
       ) : isNew ? (
         <Editor program={null} />
       ) : (
-        <QueryBoundary query={query}>{(p) => <Editor key={p.updatedAt} program={p} />}</QueryBoundary>
+        <QueryBoundary layout="form" query={query}>{(p) => <Editor key={p.updatedAt} program={p} />}</QueryBoundary>
       )}
     </>
   );

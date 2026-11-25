@@ -30,7 +30,7 @@ export default function MemberDetail() {
     <>
       <Stack.Screen options={{ title: '회원 정보' }} />
       {allowed('member.read') ? (
-        <QueryBoundary query={query}>
+        <QueryBoundary layout="account" query={query}>
           {(u) => <MemberView member={u} canManage={allowed('member.manage')} />}
         </QueryBoundary>
       ) : (

@@ -17,6 +17,7 @@ import {
   Gutter,
   Photo,
   ListRow,
+  LoadingState,
   Screen,
   SectionHeader,
   Tap,
@@ -110,7 +111,7 @@ export default function HomeScreen() {
       }
     >
       <Gutter>
-        <HomeBanner config={config} programs={programs.data?.items ?? []} clubs={clubs.data ?? []} />
+        {settings.isPending || (config?.automatic && !published.length && programs.isPending && clubs.isPending) ? <LoadingState layout="banner" /> : <HomeBanner config={config} programs={programs.data?.items ?? []} clubs={clubs.data ?? []} />}
         <View style={[styles.shortcutRow, stackedShortcuts && styles.shortcutColumn]}>
           {HOME_SHORTCUTS.map((item) => (
             <Tap
@@ -134,7 +135,7 @@ export default function HomeScreen() {
         onAction={() => router.navigate('/programs')}
       />
       <QueryBoundary
-        query={programs}
+        layout="program" query={programs}
         isEmpty={(d) => d.items.length === 0}
         empty={{ title: '지금 모집 중인 프로그램이 없습니다' }}
       >

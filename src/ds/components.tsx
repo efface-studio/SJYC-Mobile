@@ -1,3 +1,5 @@
+import { LoadingState, type LoadingLayout } from './loading';
+export { LoadingState } from './loading';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
@@ -486,47 +488,22 @@ export function EmptyState({
   );
 }
 
-export function LoadingState() {
-  const t = useTheme();
-  return (
-    <View
-      accessible
-      accessibilityRole="progressbar"
-      accessibilityLabel="불러오는 중"
-      accessibilityLiveRegion="polite"
-      style={styles.loadingRows}
-    >
-      {[0, 1, 2].map((row) => (
-        <View
-          key={row}
-          style={[styles.loadingRow, { borderBottomColor: t.line }]}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        >
-          <View
-            style={[styles.loadingTitle, { backgroundColor: t.line, width: row === 1 ? '53%' : '66%' }]}
-          />
-          <View style={[styles.loadingCaption, { backgroundColor: t.bgSubtle }]} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
 /** 쿼리의 로딩·오류·빈 상태를 일관되게 처리 (오류는 서버가 준 안전한 메시지만) */
 export function QueryBoundary<T>({
   query,
+  layout,
   isEmpty,
   empty,
   children,
 }: {
   query: UseQueryResult<T>;
+  layout?: LoadingLayout;
   isEmpty?: (data: T) => boolean;
   empty?: { title: string; description?: string };
   children: (data: T) => ReactNode;
 }) {
-  if (query.isPending) return <LoadingState />;
-  if (query.isError) {
+  if (query.isPending) return <LoadingState layout={layout} />;
+  if (query.data === undefined) {
     return (
       <EmptyState
         title="정보를 불러오지 못했습니다"
@@ -543,15 +520,6 @@ export function QueryBoundary<T>({
 }
 
 const styles = StyleSheet.create({
-  loadingRows: { paddingHorizontal: GUTTER },
-  loadingRow: {
-    height: 72,
-    justifyContent: 'center',
-    gap: space.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  loadingTitle: { height: 15, borderRadius: 4 },
-  loadingCaption: { width: '37%', height: 11, borderRadius: 4 },
   sticky: {
     paddingHorizontal: GUTTER,
     paddingTop: space.md,

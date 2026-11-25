@@ -30,7 +30,7 @@ export default function PolicyEdit() {
     <>
       <Stack.Screen options={{ title: doc ? `${POLICY_TITLE[doc.key]} 개정` : '정책 문서' }} />
       {allowed ? (
-        <QueryBoundary query={docs}>
+        <QueryBoundary layout="form" query={docs}>
           {() =>
             doc ? (
               <PolicyEditor key={`${doc.key}-${doc.updatedAt}`} doc={doc} />

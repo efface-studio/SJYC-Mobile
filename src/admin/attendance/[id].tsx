@@ -180,7 +180,7 @@ export default function AttendanceSessionScreen() {
   return (
     <>
       <Stack.Screen options={{ title: '출석부' }} />
-      <QueryBoundary query={query}>{(s) => <SessionView session={s} />}</QueryBoundary>
+      <QueryBoundary layout="detail" query={query}>{(s) => <SessionView session={s} />}</QueryBoundary>
     </>
   );
 }

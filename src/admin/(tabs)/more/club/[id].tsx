@@ -59,7 +59,7 @@ export default function ClubEdit() {
       ) : isNew ? (
         <ClubForm club={null} />
       ) : (
-        <QueryBoundary query={query}>{(c) => <ClubForm club={c} />}</QueryBoundary>
+        <QueryBoundary layout="form" query={query}>{(c) => <ClubForm club={c} />}</QueryBoundary>
       )}
     </>
   );

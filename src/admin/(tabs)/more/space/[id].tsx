@@ -33,7 +33,7 @@ export default function SpaceEdit() {
     <>
       <Stack.Screen options={{ title: '공간 설정' }} />
       {allowed ? (
-        <QueryBoundary query={spaces}>
+        <QueryBoundary layout="form" query={spaces}>
           {() => (found ? <SpaceForm space={found} /> : <ScreenMessage title="공간을 찾을 수 없습니다" />)}
         </QueryBoundary>
       ) : (
