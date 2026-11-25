@@ -73,7 +73,7 @@ function adminPalette(base: Palette, night: boolean): Palette {
     textTertiary: night ? '#ACACAC' : '#62646C',
     line: night ? '#363636' : '#E2E3E6',
     lineStrong: night ? '#808080' : '#8E8499',
-    tone: { ...base.tone, brand: { fg: action, bg: soft } },
+    tone: { ...base.tone, brand: { fg: night ? '#A783DC' : action, bg: night ? '#30263F' : soft } },
   };
 }
 const staffLight = adminPalette(light, false);

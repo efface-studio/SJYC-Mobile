@@ -297,17 +297,20 @@ export function SwitchRow({
   return (
     <View style={{ gap: 4 }}>
       <View style={styles.switchRow}>
-        <Txt variant="label" style={{ flex: 1 }}>{label}</Txt>
+        <View style={styles.switchCopy}>
+          <Txt variant="label">{label}</Txt>
+          {description && <Txt variant="caption" color="textTertiary">{description}</Txt>}
+        </View>
         <Switch
           disabled={disabled}
           value={value}
           onValueChange={onValueChange}
           accessibilityLabel={label}
-          trackColor={{ true: t.action, false: t.lineStrong }}
+          accessibilityHint={description}
+          trackColor={{ true: t.tone.brand.fg, false: t.lineStrong }}
           thumbColor={Platform.OS === 'android' ? t.bg : undefined}
         />
       </View>
-      {description && <Txt variant="caption" color="textTertiary">{description}</Txt>}
       {error && (
         <Txt variant="caption" color={t.tone.danger.fg}>
           {error}
@@ -347,4 +350,5 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 },
+  switchCopy: { flex: 1, minWidth: 0, gap: space.xs },
 });

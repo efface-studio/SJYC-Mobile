@@ -88,7 +88,7 @@ export default function SocialAccountsScreen() {
                       paddingVertical: 6,
                     }}
                   >
-                    <SocialMark provider={p} />
+                    <SocialMark provider={p} muted={admin && !linked} />
                     <View
                       style={{
                         flex: 1,

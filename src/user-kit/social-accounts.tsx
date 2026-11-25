@@ -25,16 +25,37 @@ export function SocialMark({
   provider,
   muted = false,
   size = 30,
+  plain = false,
 }: {
   provider: OAuthProvider;
   muted?: boolean;
   size?: number;
+  plain?: boolean;
 }) {
   const t = useTheme();
   const admin = useContext(ThemeAudience) === 'admin';
   if (admin) {
-    const tint = muted ? t.textTertiary : provider === 'google' ? undefined : provider === 'naver' ? colors.naver : t.text;
-    return <Image accessible={false} source={socialMarks[provider]} contentFit="contain" tintColor={tint} style={{ width: size, height: size }} />;
+    const color = { kakao: t.text, naver: colors.naver, google: undefined, apple: t.text };
+    const iconSize = plain ? size : Math.round(size * 0.58);
+    const icon = (
+      <Image
+        accessible={false}
+        source={socialMarks[provider]}
+        contentFit="contain"
+        tintColor={muted ? t.textTertiary : color[provider]}
+        style={{ width: iconSize, height: iconSize }}
+      />
+    );
+    if (plain) return icon;
+    return (
+      <View accessible={false} style={{
+        width: size, height: size, borderRadius: size / 2, borderWidth: 1,
+        borderColor: muted ? t.lineStrong : t.tone.brand.fg,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        {icon}
+      </View>
+    );
   }
   const tint = muted
     ? t.textTertiary

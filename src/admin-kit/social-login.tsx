@@ -57,7 +57,7 @@ export function AdminSocialButtons() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <SocialMark provider={provider} size={26} />
+              <SocialMark provider={provider} size={26} plain />
             </View>
             <Txt variant="label">{label}로 로그인</Txt>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>

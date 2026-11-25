@@ -13,13 +13,19 @@ import { useTheme } from '~/ds';
  */
 export default function TabsLayout() {
   const t = useTheme();
+  const accent = t.tone.brand;
+  const label = { fontSize: 11, fontWeight: '600' } as const;
   const appearance = {
-    tintColor: t.action,
+    tintColor: accent.fg,
+    iconColor: { default: t.textSecondary, selected: accent.fg },
     minimizeBehavior: 'never',
     labelVisibilityMode: 'labeled',
-    labelStyle: { fontSize: 11, fontWeight: '600' },
+    labelStyle: {
+      default: { ...label, color: t.textSecondary },
+      selected: { ...label, color: accent.fg },
+    },
     ...(Platform.OS === 'android'
-      ? { backgroundColor: t.card + 'EC', indicatorColor: t.brandSoft, rippleColor: t.pressed }
+      ? { backgroundColor: t.card + 'EC', indicatorColor: accent.bg, rippleColor: t.pressed }
       : Number.parseInt(String(Platform.Version), 10) < 26
         ? { blurEffect: 'systemThinMaterial' as const }
         : {}),
