@@ -1,4 +1,4 @@
-import { AppUpdates } from './app-updates';
+import { useStartupUpdates, useStoreUpdate } from './app-updates';
 import { useAppColorScheme } from '~/shared/appearance';
 import { restoreAppearance } from './appearance';
 import { LoginSessionGate } from './login-preferences';
@@ -12,7 +12,7 @@ import {
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { AppState, Platform, View } from "react-native";
+import { AppState, Modal, Platform, View } from "react-native";
 import { BrandSplash } from "./brand-splash";
 import { ApiError } from "@/api/errors";
 import { SESSION_KEY } from "@/features/auth/session";
@@ -46,6 +46,9 @@ export function AppProviders({
     setLaunching(false);
     onReady?.();
   }, [onReady]);
+  const { update, retry, skip } = useStartupUpdates();
+  const resumingUpdate = !launching && update !== null && update.phase !== 'checking';
+  useStoreUpdate(!launching && !update);
   const scheme = useAppColorScheme();
   const t = useTheme();
   const fontsReady = useAppFonts();
@@ -96,19 +99,23 @@ export function AppProviders({
           },
         }}
       >
-        {!launching && <AppUpdates />}
         <StatusBar style={scheme === "dark" ? "light" : "dark"} />
         <View style={{ flex: 1 }}>
           <View
             style={{ flex: 1 }}
-            accessibilityElementsHidden={launching}
+            accessibilityElementsHidden={launching || resumingUpdate}
             importantForAccessibility={
-              launching ? "no-hide-descendants" : "auto"
+              launching || resumingUpdate ? "no-hide-descendants" : "auto"
             }
           >
             <LoginSessionGate>{children}</LoginSessionGate>
           </View>
-          {launching && <BrandSplash onFinish={finish} />}
+          {launching && <BrandSplash onFinish={finish} update={update} retry={retry} skip={skip} />}
+          {resumingUpdate && (
+            <Modal visible animationType="none" presentationStyle="fullScreen" onRequestClose={() => {}}>
+              <BrandSplash update={update} retry={retry} skip={skip} />
+            </Modal>
+          )}
         </View>
         <OptionSheetHost />
       </ThemeProvider>

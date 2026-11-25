@@ -27,6 +27,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Test startup updates
+        run: node --test tests/ota-startup.test.mjs
+
       - name: Expo doctor
         run: npm run doctor
 
