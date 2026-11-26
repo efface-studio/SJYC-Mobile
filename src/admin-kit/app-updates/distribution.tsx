@@ -13,6 +13,13 @@ import {
 import { formatDateTime } from '@/lib/format';
 import { Button, DateField, FormSection, QueryBoundary, SelectField, SwitchRow, TextField, Txt } from '~/ds';
 import { confirm, notify } from '~/shared/dialogs';
+import { AdminRow, RowSection } from './row';
+
+const splashFields = [
+  ['percent', '퍼센트'],
+  ['bar', '진행 막대'],
+  ['notes', '업데이트 내용'],
+] as const;
 
 export function PublicationOptions({ editable }: { editable: boolean }) {
   const cache = useQueryClient(),
@@ -30,9 +37,15 @@ export function PublicationOptions({ editable }: { editable: boolean }) {
   });
   return (
     <QueryBoundary query={query}>
-      {(s) => (
+      {(s) => !editable ? (
+        <RowSection title="발행 설정" footer="발행 설정은 개발자 권한으로 변경할 수 있습니다.">
+          <AdminRow title="발행 방식" value={s.automatic ? '자동 발행' : '수동 발행'} />
+          {splashFields.map(([key, label]) => (
+            <AdminRow key={key} title={label} value={s.splash[key] ? '표시' : '숨김'} />
+          ))}
+        </RowSection>
+      ) : (
         <FormSection title="발행 설정">
-          {!editable && <Txt variant="caption" color="textSecondary">발행 설정은 개발자 권한으로 변경할 수 있습니다.</Txt>}
           <SwitchRow
             label="자동 발행"
             description={
@@ -41,22 +54,16 @@ export function PublicationOptions({ editable }: { editable: boolean }) {
                 : '새 릴리스는 대기하며 대상과 시각을 선택한 후 배포합니다.'
             }
             value={s.automatic}
-            disabled={!editable || save.isPending}
+            disabled={save.isPending}
             onValueChange={(automatic) => save.mutate({ automatic, version: s.version })}
           />
           <Txt variant="captionStrong">업데이트 스플래시 표시</Txt>
-          {(
-            [
-              ['percent', '퍼센트'],
-              ['bar', '진행 막대'],
-              ['notes', '업데이트 내용'],
-            ] as const
-          ).map(([k, label]) => (
+          {splashFields.map(([k, label]) => (
             <SwitchRow
               key={k}
               label={label}
               value={s.splash[k]}
-              disabled={!editable || save.isPending}
+              disabled={save.isPending}
               onValueChange={(v) => save.mutate({ version: s.version, splash: { ...s.splash, [k]: v } })}
             />
           ))}
