@@ -14,7 +14,7 @@ import { formatDateTime } from '@/lib/format';
 import { Button, DateField, FormSection, QueryBoundary, SelectField, SwitchRow, TextField, Txt } from '~/ds';
 import { confirm, notify } from '~/shared/dialogs';
 
-export function PublicationOptions() {
+export function PublicationOptions({ editable }: { editable: boolean }) {
   const cache = useQueryClient(),
     key = ['admin', 'publication-settings'];
   const query = useQuery({ queryKey: key, queryFn: api.admin.publicationSettings });
@@ -32,6 +32,7 @@ export function PublicationOptions() {
     <QueryBoundary query={query}>
       {(s) => (
         <FormSection title="발행 설정">
+          {!editable && <Txt variant="caption" color="textSecondary">발행 설정은 개발자 권한으로 변경할 수 있습니다.</Txt>}
           <SwitchRow
             label="자동 발행"
             description={
@@ -40,7 +41,7 @@ export function PublicationOptions() {
                 : '새 릴리스는 대기하며 대상과 시각을 선택한 후 배포합니다.'
             }
             value={s.automatic}
-            disabled={save.isPending}
+            disabled={!editable || save.isPending}
             onValueChange={(automatic) => save.mutate({ automatic, version: s.version })}
           />
           <Txt variant="captionStrong">업데이트 스플래시 표시</Txt>
@@ -55,7 +56,7 @@ export function PublicationOptions() {
               key={k}
               label={label}
               value={s.splash[k]}
-              disabled={save.isPending}
+              disabled={!editable || save.isPending}
               onValueChange={(v) => save.mutate({ version: s.version, splash: { ...s.splash, [k]: v } })}
             />
           ))}
