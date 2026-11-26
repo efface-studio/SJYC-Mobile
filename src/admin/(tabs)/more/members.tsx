@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
@@ -14,7 +15,7 @@ const SORTS = sortOptions('이름순', '최근 가입순', '오래된 가입순'
 export default function Members() {
   const allowed = useCan()('member.read');
   const [status, setStatus, statusOpts] = useStatusParam(USER_STATUS, '');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [sort, setSort] = useState<Sort>('newest');
   const filters = { q: q || undefined, status: status || undefined, sort };
   const paged = usePaged(

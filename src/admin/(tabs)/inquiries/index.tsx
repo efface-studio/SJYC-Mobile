@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
@@ -13,7 +15,7 @@ const SORTS = sortOptions();
 export default function Inquiries() {
   const allowed = useCan()('inquiry.answer');
   const [status, setStatus, statusOpts] = useStatusParam(INQUIRY_STATUS, 'open');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [sort, setSort] = useState<Sort>('newest');
   const filters = { q: q || undefined, status: status || undefined, sort };
   const paged = usePaged(
@@ -34,7 +36,11 @@ export default function Inquiries() {
   return (
     <>
       <Stack.Screen
-        options={{ title: '문의', headerSearchBarOptions: searchBar('제목 또는 작성자', setQ) }}
+        options={{
+          title: '문의',
+          headerTransparent: Platform.OS !== 'ios',
+          headerSearchBarOptions: { hideWhenScrolling: false, placement: 'stacked', ...searchBar('제목 또는 작성자', setQ) },
+        }}
       />
       <PagedList
         paged={paged}

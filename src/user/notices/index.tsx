@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -19,7 +20,7 @@ const CATEGORY_OPTIONS: { value: NoticeCategory | ''; label: string }[] = [
 ];
 
 export default function NoticesScreen() {
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [category, setCategory] = useState<NoticeCategory | ''>('');
   const query = { q: q || undefined, category: category || undefined, pageSize: 50 };
   const notices = useQuery({ queryKey: ['notices', query], queryFn: () => api.notices.list(query) });

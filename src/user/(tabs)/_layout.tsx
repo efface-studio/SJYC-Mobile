@@ -60,7 +60,7 @@ function TabNavigator() {
         screenOptions={{
           headerShown: false,
           tabBarHideOnKeyboard: true,
-          tabBarActiveTintColor: t.action,
+          tabBarActiveTintColor: t.actionText,
           tabBarInactiveTintColor: t.textSecondary,
           tabBarStyle: { backgroundColor: t.card, borderTopColor: t.line },
           tabBarLabelStyle: { fontFamily: FONT.semibold, fontSize: 11 },
@@ -85,7 +85,7 @@ function TabNavigator() {
   return (
     <NativeTabs
       tintColor={t.action}
-      labelStyle={{ fontFamily: FONT.semibold, fontSize: 11 }}
+      labelStyle={{ default: { fontFamily: FONT.semibold, fontSize: 11 }, selected: { fontFamily: FONT.semibold, fontSize: 11, color: t.actionText } }}
       labelVisibilityMode="labeled"
       minimizeBehavior="never"
     >

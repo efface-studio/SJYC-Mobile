@@ -103,7 +103,7 @@ export function CodeInput({
               style={{
                 flex: 1,
                 minWidth: 0,
-                height: 54,
+                height: 108,
                 borderRadius: 9,
                 borderWidth: focus && i === Math.min(code.length, length - 1) ? 2 : 1,
                 borderColor:

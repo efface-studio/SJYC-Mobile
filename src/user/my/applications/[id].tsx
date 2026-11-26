@@ -1,3 +1,4 @@
+import { ApplicationEditor } from '~/shared/application-content';
 import { openScreen } from '~/shared/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
@@ -123,6 +124,7 @@ export default function MyApplicationScreen() {
               <InfoRow label="신청자" value={a.applicantName} />
               <InfoRow label="연락처" value={a.phone} />
               <InfoRow label="요청 사항" value={a.note || '없음'} />
+              <ApplicationEditor kind="program" id={id} value={a.note} revision={a.contentEdits?.length ?? 0} />
             </Gutter>
             <SectionHeader title="처리 이력" />
             <History items={a.history} />

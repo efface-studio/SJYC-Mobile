@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import { DEMO_DATA } from '@/config/env';
 import { RECRUIT_STATUS } from '@/domain/labels';
+import { recruitmentGauge } from '~/user-kit/recruitment-gauge';
 import { remainingSeats } from '@/domain/program';
 import type { Program } from '@/domain/types';
 import { useSession } from '@/features/auth/session';
@@ -70,19 +71,20 @@ function ApplyFooter({ program }: { program: Program }) {
 
 function SeatsBar({ p }: { p: Program }) {
   const t = useTheme();
-  const ratio = p.capacity > 0 ? Math.min(1, p.appliedCount / p.capacity) : 0;
+  const gauge = recruitmentGauge(p.appliedCount, p.capacity);
+  if (!gauge) return <Txt variant="caption" color="textSecondary">신청 {p.appliedCount}명</Txt>;
   return (
     <View style={{ gap: 6, marginTop: space.sm }}>
       <View style={styles.seatsText}>
         <Txt variant="captionStrong" color="textSecondary">
-          신청 {p.appliedCount}명 / 정원 {p.capacity}명
+          신청 {p.appliedCount}명 / 정원 {p.capacity}명 · {gauge.percent}%
         </Txt>
-        <Txt variant="captionStrong" color={remainingSeats(p) > 0 ? 'action' : 'textTertiary'}>
+        <Txt variant="captionStrong" color="textSecondary">
           잔여 {remainingSeats(p)}석
         </Txt>
       </View>
-      <View style={[styles.track, { backgroundColor: t.bgSubtle }]}>
-        <View style={[styles.fill, { width: `${ratio * 100}%`, backgroundColor: t.brand }]} />
+      <View accessible accessibilityRole="progressbar" accessibilityLabel="모집률" accessibilityValue={{ min: 0, max: 100, now: gauge.percent }} style={[styles.track, { backgroundColor: t.bgSubtle }]}>
+        <View style={[styles.fill, { width: `${gauge.percent}%`, backgroundColor: t.tone[gauge.tone].fg }]} />
       </View>
     </View>
   );
@@ -149,7 +151,7 @@ export default function ProgramDetailScreen() {
 
 const styles = StyleSheet.create({
   statusLine: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  seatsText: { flexDirection: 'row', justifyContent: 'space-between' },
+  seatsText: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, justifyContent: 'space-between' },
   track: { height: 6, borderRadius: radius.sm, overflow: 'hidden' },
   fill: { height: 6, borderRadius: radius.sm },
 });

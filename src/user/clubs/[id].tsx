@@ -230,6 +230,9 @@ function ClubDetail({ club: c }: { club: Club }) {
         </Gutter>
       )}
 
+      {myApps.data?.filter((a) => a.clubId === c.id).map((a) => (
+        <Gutter key={a.id}><Button variant="text" size="md" label={`${formatDate(a.createdAt)} 가입 신청 내역`} onPress={() => openScreen(`/my/club-applications/${a.id}`)} /></Gutter>
+      ))}
       {membership ? (
         <MemberSections clubId={c.id} />
       ) : pending ? (

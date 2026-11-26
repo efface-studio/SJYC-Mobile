@@ -1,3 +1,4 @@
+import { ContentHistory } from '~/shared/application-content';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
@@ -83,11 +84,12 @@ function ApplicationView({ a }: { a: ProgramApplication }) {
         <InfoRow label="연락처" value={a.phone} />
         <InfoRow label="신청 일시" value={formatDateTime(a.createdAt)} />
       </Gutter>
-      {a.note ? (
+      {a.note || a.contentEdits?.length ? (
         <>
           <SectionHeader title="요청 사항" />
           <Gutter>
-            <TextBlock>{a.note}</TextBlock>
+            <TextBlock>{a.note || '내용 없음'}</TextBlock>
+            <ContentHistory edits={a.contentEdits} />
           </Gutter>
         </>
       ) : null}

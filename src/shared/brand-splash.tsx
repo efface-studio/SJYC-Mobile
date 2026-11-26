@@ -1,3 +1,4 @@
+import type { SplashOptions } from '@/domain/app-update';
 import { useAppColorScheme } from '~/shared/appearance';
 import * as SplashScreen from 'expo-splash-screen';
 import type { UpdateSplashState } from './ota-startup';
@@ -13,13 +14,14 @@ const userSymbol = require('../../assets/brand/symbol.png');
 const adminSymbol = require('../../assets/brand/symbol-admin.png');
 
 type SplashProps = {
+  splash: SplashOptions;
   update: UpdateSplashState | null;
   onFinish?: () => void;
   retry: () => void;
   skip: () => void;
 };
 
-export function BrandSplash({ onFinish, update, retry, skip }: SplashProps) {
+export function BrandSplash({ onFinish, update, retry, skip, splash }: SplashProps) {
   const t = useTheme();
   const symbol = useContext(ThemeAudience) === 'admin' ? adminSymbol : userSymbol;
   const dark = useAppColorScheme() === 'dark';
@@ -114,17 +116,17 @@ export function BrandSplash({ onFinish, update, retry, skip }: SplashProps) {
             </>
           ) : (
             <View accessible accessibilityRole="progressbar" accessibilityLabel="앱 업데이트"
-              accessibilityValue={{ min: 0, max: 100, now: update.percent }}>
+              accessibilityValue={splash.percent ? { min: 0, max: 100, now: update.percent } : undefined}>
               <View style={styles.status}>
                 <Text style={[styles.label, { color: t.text }]}>{update.phase === 'applying' ? '업데이트 적용 중' : '업데이트 다운로드 중'}</Text>
-                <Text style={[styles.percent, { color: t.tone.brand.fg }]}>{update.percent}%</Text>
+                {splash.percent && <Text style={[styles.percent, { color: t.tone.brand.fg }]}>{update.percent}%</Text>}
               </View>
-              <View style={[styles.track, { backgroundColor: t.line }]}>
-                <View style={[styles.fill, { backgroundColor: t.tone.brand.fg, width: `${update.percent}%` }]} />
-              </View>
+              {splash.bar && <View style={[styles.track, { backgroundColor: t.line }]}>
+                <View style={[styles.fill, { backgroundColor: t.tone.brand.fill, width: `${update.percent}%` }]} />
+              </View>}
             </View>
           )}
-          {'notes' in update && !!update.notes && <Text style={[styles.notes, { color: t.textSecondary }]}>{update.notes}</Text>}
+          {splash.notes && 'notes' in update && !!update.notes && <Text style={[styles.notes, { color: t.textSecondary }]}>{update.notes}</Text>}
         </View>
       )}
     </Animated.View>

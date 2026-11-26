@@ -9,19 +9,25 @@ import { useDecision } from '~/admin-kit/decision';
 import { Button, Gutter, InfoRow, QueryBoundary, Screen, SectionHeader, StickyFooter } from '~/ds';
 
 /** ponytail: 예약 단건 조회 API 가 없어 목록에서 찾는다 — admin.spaces.reservation(id) 가 생기면 교체 */
-async function findReservation(id: string) {
-  const page = await api.admin.spaces.reservations({ pageSize: 200 });
-  const found = page.items.find((r) => r.id === id);
+async function findReservation(id: string, spaceId?: string, date?: string) {
+  let page = 1;
+  let found: SpaceReservation | undefined;
+  do {
+    const result = await api.admin.spaces.reservations({ page, pageSize: 50, spaceId, date });
+    found = result.items.find(r => r.id === id);
+    if (found || !result.items.length || result.page * result.pageSize >= result.total) break;
+    page += 1;
+  } while (true);
   if (!found) throw new ApiError('NOT_FOUND', DEFAULT_MESSAGE.NOT_FOUND);
   return found;
 }
 
 export default function ReservationDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, spaceId, date } = useLocalSearchParams<{ id: string; spaceId?: string; date?: string }>();
   const allowed = useCan()('space.manage');
   const query = useQuery({
     queryKey: ['admin', 'reservation', id],
-    queryFn: () => findReservation(id),
+    queryFn: () => findReservation(id, spaceId, date),
     enabled: allowed,
   });
 

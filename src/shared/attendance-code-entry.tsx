@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Keyboard, View } from 'react-native';
 import { api, errorMessage } from '@/api';
-import { Button, FormSection, Txt, useTheme } from '~/ds';
+import { Button, FormSection, Txt, space, useTheme } from '~/ds';
 import { CodeInput, useReducedMotion } from './code-input';
 
 export function AttendanceCodeEntry({ successActions }: { successActions?: ReactNode }) {
@@ -63,7 +63,7 @@ export function AttendanceCodeEntry({ successActions }: { successActions?: React
         reduce={reduce}
         disabled={check.isPending || check.isSuccess}
       />
-      <View accessibilityLiveRegion="polite">
+      <View accessibilityLiveRegion="polite" style={{ paddingBottom: space.lg }}>
         <Txt variant="caption" color={check.isError ? theme.tone.danger.fg : 'textSecondary'}>
           {check.isError ? errorMessage(check.error) : check.isSuccess
             ? `${check.data.targetName} · ${check.data.title} 출석했습니다.`

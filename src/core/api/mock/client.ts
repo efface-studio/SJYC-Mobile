@@ -1,3 +1,5 @@
+import {loginSurface} from '../login-surface';
+import {contactPatch,audienceLabels} from '@/domain/login-contact';
 import { memberActionLabels } from '@/domain/member-actions';
 import {freshPosition,distanceMeters,CLUB_RADIUS_METERS,type AttendancePosition} from '@/domain/check-in-location';
 import { settingsWriteSchema } from '@/domain/site-settings';
@@ -7,11 +9,13 @@ import { settingsWriteSchema } from '@/domain/site-settings';
  * 브라우저 안에서만 동작하므로 보안 경계가 아니다. 실제 운영에는 http adapter 를 쓴다.
  */
 import { memberStats } from '@/domain/attendance';
-import { assignableRoles, can, canManageClub, canManageUser, type Permission } from '@/domain/permissions';
+import { assignableRoles, can, canEnterConsole, canManageClub, canManageUser, type Permission } from '@/domain/permissions';
 import { computeRecruitStatus } from '@/domain/program';
 import {
   attendanceSessionSchema,
   clubIntroSchema,
+  programNoteEditSchema,
+  clubMotivationEditSchema,
   clubPostSchema,
   managerEmailSchema,
   parseValues,
@@ -322,7 +326,11 @@ export const mockClient: ApiClient = {
         }
         if (u.status === 'suspended')
           throw new ApiError('FORBIDDEN', '이용이 제한된 계정입니다. 센터에 문의해 주세요.');
-        if (!u.emailVerified && !u.signupPhoneVerifiedAt)
+        const audience = loginSurface();
+        if (audience==='admin' && !canEnterConsole(publicUser(db,u))) throw new ApiError('FORBIDDEN','관리자 앱을 이용할 권한이 없습니다.');
+        const rule=db.loginContact?.[audience].rule;
+        if(rule && ((!rule.allowUnverifiedEmail && !u.emailVerified) || (!rule.allowUnverifiedPhone && !(u.phone && u.signupPhoneVerifiedAt)))) throw new ApiError('FORBIDDEN','로그인에 필요한 연락처 인증을 완료해 주세요.');
+        if (!rule && !u.emailVerified && !u.signupPhoneVerifiedAt)
           throw new ApiError('FORBIDDEN', '가입 인증을 완료한 뒤 로그인할 수 있습니다.');
         writeSession(u.id);
         return toSession(db, u);
@@ -489,6 +497,38 @@ export const mockClient: ApiClient = {
         const a = findOr404(db.applications, id);
         if (a.userId !== u.id) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
         return withCancellable(db, a);
+      }),
+    editApplication: (id, input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const a = findOr404(db.applications, id);
+        if (a.userId !== u.id) throw new ApiError('NOT_FOUND', '신청을 찾을 수 없습니다.');
+        const parsed = programNoteEditSchema.safeParse(input);
+        if (!parsed.success) throw new ApiError('VALIDATION', parsed.error.issues[0]?.message ?? '입력값을 확인해 주세요.');
+        const { value, revision } = parsed.data;
+        if (a.note !== value) {
+          const edits = a.contentEdits ?? [];
+          if (edits.length !== revision) throw new ApiError('CONFLICT', '신청 내용이 변경되었습니다. 다시 확인해 주세요.');
+          a.contentEdits = [...edits, { previous: a.note, next: value, at: new Date().toISOString() }];
+          a.note = value;
+        }
+        return withCancellable(db, a);
+      }),
+    editClubApplication: (id, input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const a = findOr404(db.clubApplications, id);
+        if (a.userId !== u.id) throw new ApiError('NOT_FOUND', '신청을 찾을 수 없습니다.');
+        const parsed = clubMotivationEditSchema.safeParse(input);
+        if (!parsed.success) throw new ApiError('VALIDATION', parsed.error.issues[0]?.message ?? '입력값을 확인해 주세요.');
+        const { value, revision } = parsed.data;
+        if (a.motivation !== value) {
+          const edits = a.contentEdits ?? [];
+          if (edits.length !== revision) throw new ApiError('CONFLICT', '신청 내용이 변경되었습니다. 다시 확인해 주세요.');
+          a.contentEdits = [...edits, { previous: a.motivation, next: value, at: new Date().toISOString() }];
+          a.motivation = value;
+        }
+        return a;
       }),
     cancelApplication: (id) =>
       respond((db) => {
@@ -1139,7 +1179,23 @@ export const mockClient: ApiClient = {
 
   site: { settings: () => respond((db) => db.siteSettings ?? { version: 0, values: {} }) },
   admin: {
+    loginContact: () => respond(db=>{
+      requirePermission(db,'site.manage');
+      return db.loginContact ?? {user:{version:0,rule:null},admin:{version:0,rule:null}};
+    }),
+    setLoginContact: input => respond(db=>{
+      const actor=requirePermission(db,'site.manage');
+      const {audience,version,...rule}=contactPatch.parse(input);
+      const settings=db.loginContact ?? {user:{version:0,rule:null},admin:{version:0,rule:null}};
+      if(settings[audience].version!==version)throw new ApiError('CONFLICT','다른 관리자가 변경했습니다.');
+      db.loginContact={...settings,[audience]:{rule,version:version+1}};
+      audit(db,actor,{action:'auth.contact-policy.update',targetType:'site_settings',targetId:audience,summary:audienceLabels[audience]+' 미인증 로그인 정책 변경'});
+      return db.loginContact;
+    }),
     changeAppUpdate: () => respond(db=>{requirePermission(db,'site.manage');throw new ApiError('NOT_FOUND','요청한 업데이트가 없습니다.');}),
+    publicationSettings:()=>respond(db=>{requirePermission(db,'site.manage');return {version:0,automatic:true,splash:{percent:true,bar:true,notes:true}};}),
+    configurePublication:()=>respond(db=>{requirePermission(db,'developer.access');throw new ApiError('NOT_CONFIGURED','서버 연결이 필요합니다.');}),
+    changeWave:()=>respond(db=>{requirePermission(db,'site.manage');throw new ApiError('NOT_FOUND','업데이트를 찾을 수 없습니다.');}),
     appUpdates: () => respond(db=>{ requirePermission(db,'site.manage'); return []; }),
     developerView: () => respond((db) => {
       requirePermission(db, 'developer.view');
@@ -1618,6 +1674,7 @@ export const mockClient: ApiClient = {
         respond((db) => {
           requirePermission(db, 'club.manage');
           const list = db.clubApplications
+            .filter((a) => !q.clubId || a.clubId === q.clubId)
             .filter((a) => !q.status || a.status === q.status)
             .filter((a) => matches(`${a.applicantName} ${a.clubName}`, q.q));
           return paginate(

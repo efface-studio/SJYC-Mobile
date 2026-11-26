@@ -1,3 +1,4 @@
+import { ContentHistory } from '~/shared/application-content';
 import { openScreen } from '~/shared/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
@@ -140,18 +141,21 @@ export function ApplicationsSection({ clubId }: { clubId: string }) {
             items={list}
             rowKey={(a) => a.id}
             render={(a) => (
-              <ListRow
-                meta={`신청 ${formatDateTime(a.createdAt)}${a.reason ? ` · 사유: ${a.reason}` : ''}`}
-                title={a.applicantName}
-                subtitle={a.motivation}
-                trailing={
-                  <Badge
-                    text={CLUB_APPLICATION_STATUS[a.status].text}
-                    tone={CLUB_APPLICATION_STATUS[a.status].tone}
-                  />
-                }
-                onPress={a.status === 'pending' ? () => void handle(a) : undefined}
-              />
+              <>
+                <ListRow
+                  meta={`신청 ${formatDateTime(a.createdAt)}${a.reason ? ` · 사유: ${a.reason}` : ''}`}
+                  title={a.applicantName}
+                  subtitle={a.motivation}
+                  trailing={
+                    <Badge
+                      text={CLUB_APPLICATION_STATUS[a.status].text}
+                      tone={CLUB_APPLICATION_STATUS[a.status].tone}
+                    />
+                  }
+                  onPress={a.status === 'pending' ? () => void handle(a) : undefined}
+                />
+                {a.contentEdits?.length ? <Gutter><ContentHistory edits={a.contentEdits} /></Gutter> : null}
+              </>
             )}
           />
         )

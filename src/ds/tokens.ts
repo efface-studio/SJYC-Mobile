@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 import type { Tone } from '@/domain/labels';
 
 export const CENTER_RED = '#E41D25';
+const USER_ACTION = '#B51E28';
 
 const light = {
   bg: '#FFFEFC',
@@ -13,7 +14,8 @@ const light = {
   textTertiary: '#685F59',
   line: '#E8E1DA',
   lineStrong: '#91857A',
-  action: '#B51E28',
+  action: USER_ACTION,
+  actionText: USER_ACTION,
   onAction: '#FFFFFF',
   brand: CENTER_RED,
   brandSoft: '#FFF3C6',
@@ -21,12 +23,12 @@ const light = {
   overlay: 'rgba(0,0,0,0.4)',
   tone: {
     neutral: { fg: '#514944', bg: '#F5F5F5' },
-    brand: { fg: '#B51E28', bg: '#FFF3C6' },
+    brand: { fg: USER_ACTION, fill: USER_ACTION, bg: '#FFF3C6' },
     success: { fg: '#1D6B2F', bg: '#EAF6EC' },
     danger: { fg: '#B42318', bg: '#FDECEB' },
     warning: { fg: '#7A4D00', bg: '#FFF6DD' },
     info: { fg: '#1F5FA8', bg: '#EAF2FB' },
-  } satisfies Record<Tone, { fg: string; bg: string }>,
+  } satisfies Record<Tone, { fg: string; bg: string; fill?: string }>,
 };
 
 type Palette = typeof light;
@@ -40,15 +42,16 @@ const dark: Palette = {
   textTertiary: '#A6A6A6',
   line: '#333333',
   lineStrong: '#555555',
-  action: '#FF9E97',
-  onAction: '#242120',
+  action: USER_ACTION,
+  actionText: '#F2F2F2',
+  onAction: light.onAction,
   brand: CENTER_RED,
   brandSoft: '#4A2426',
   pressed: 'rgba(255,255,255,0.08)',
   overlay: 'rgba(0,0,0,0.6)',
   tone: {
     neutral: { fg: '#C8C8C8', bg: '#2A2A2A' },
-    brand: { fg: '#FF9E97', bg: '#4A2426' },
+    brand: { fg: '#F2F2F2', fill: USER_ACTION, bg: '#4A2426' },
     success: { fg: '#8FD49C', bg: '#16301C' },
     danger: { fg: '#F2B8B5', bg: '#3B1715' },
     warning: { fg: '#F5C46B', bg: '#382A0E' },
@@ -62,6 +65,7 @@ function adminPalette(base: Palette, night: boolean): Palette {
   return {
     ...base,
     action,
+    actionText: action,
     onAction: night ? '#161616' : base.onAction,
     brand: action,
     brandSoft: soft,
@@ -73,7 +77,7 @@ function adminPalette(base: Palette, night: boolean): Palette {
     textTertiary: night ? '#ACACAC' : '#62646C',
     line: night ? '#363636' : '#E2E3E6',
     lineStrong: night ? '#808080' : '#8E8499',
-    tone: { ...base.tone, brand: { fg: night ? '#A783DC' : action, bg: night ? '#30263F' : soft } },
+    tone: { ...base.tone, brand: { fg: night ? '#A783DC' : action, fill: night ? '#A783DC' : action, bg: night ? '#30263F' : soft } },
   };
 }
 const staffLight = adminPalette(light, false);

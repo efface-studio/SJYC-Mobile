@@ -1,5 +1,5 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { Stack } from 'expo-router';
-import { useState } from 'react';
 import { api } from '@/api';
 import { formatDateTime } from '@/lib/format';
 import { NoPermission, PagedList, searchBar, useCan } from '~/admin-kit/components';
@@ -8,7 +8,7 @@ import { ListRow } from '~/ds';
 
 export default function Audit() {
   const allowed = useCan()('audit.read');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const paged = usePaged(
     ['admin', 'audit', q],
     (pageSize) => api.admin.audit.list({ q: q || undefined, pageSize }),
