@@ -101,6 +101,9 @@ const GROUPS: { group: string; items: Menu[] }[] = [
     group: '설정',
     items: [
       {
+        title:'로그인 정책',icon:{ios:'lock.shield',android:'security'},href:'/more/login-contact',subtitle:'앱별 이메일·휴대전화 인증 기준',permission:'site.manage',
+      },
+      {
         title:'앱 업데이트',icon:{ios:'arrow.down.circle',android:'system_update'},href:'/more/app-updates',subtitle:'유저·관리자 앱 배포와 적용 현황',permission:'site.manage',
       },
       {
