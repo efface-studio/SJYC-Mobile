@@ -70,7 +70,7 @@ export default function NotificationsScreen() {
                 accessibilityLabel="모두 읽음"
                 style={styles.headerAction}
               >
-                <Txt variant="label" color={t.action}>
+                <Txt variant="label" color="action">
                   모두 읽음
                 </Txt>
               </Tap>

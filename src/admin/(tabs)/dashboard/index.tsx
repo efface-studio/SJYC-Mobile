@@ -11,6 +11,7 @@ import { useSession } from '@/features/auth/session';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { Rows, StatusBadge, useCan } from '~/admin-kit/components';
 import { dashboardQuery } from '~/admin-kit/queries';
+import { SearchButton } from '~/shared/app-search';
 import { wordmarkHeader } from '~/shared/wordmark';
 import {
   Divider,
@@ -129,6 +130,7 @@ export default function Dashboard() {
         options={{
           title: '업무 요약',
           ...wordmarkHeader,
+          headerRight: () => <SearchButton />,
         }}
       />
       <Screen onRefresh={() => query.refetch()}>

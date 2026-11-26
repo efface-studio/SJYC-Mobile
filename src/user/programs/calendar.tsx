@@ -133,7 +133,7 @@ export default function ProgramCalendarScreen() {
                 >
                   <Txt
                     variant={isToday || active ? 'captionStrong' : 'caption'}
-                    color={active ? t.bg : !inMonth ? t.lineStrong : isToday ? t.action : t.text}
+                    color={active ? t.bg : !inMonth ? t.lineStrong : isToday ? t.actionText : t.text}
                   >
                     {Number(date.slice(8))}
                   </Txt>

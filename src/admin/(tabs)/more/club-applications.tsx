@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { ContentHistory } from '~/shared/application-content';
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -17,7 +18,7 @@ const SORTS = sortOptions('동아리명순');
 export default function ClubApplications() {
   const allowed = useCan()('club.manage');
   const [status, setStatus, statusOpts] = useStatusParam(CLUB_APPLICATION_STATUS, 'pending');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [sort, setSort] = useState<Sort>('newest');
   const [clubId, setClubId] = useState('');
   const clubs = useQuery({

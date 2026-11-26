@@ -71,14 +71,14 @@ export function NoPermission() {
 
 type SearchEvent = NativeSyntheticEvent<TextInputFocusEventData>;
 
-/** 네이티브 검색 바(내비게이션 헤더) 옵션: 검색 버튼으로 조회, 지우거나 취소하면 전체 목록 */
+/** 네이티브 검색 바(내비게이션 헤더) 옵션: 입력하면서 조회, 지우거나 취소하면 전체 목록 */
 export function searchBar(placeholder: string, onSearch: (q: string) => void) {
   return {
     placeholder,
     autoCapitalize: 'none' as const,
     onSearchButtonPress: (e: SearchEvent) => onSearch(e.nativeEvent.text.trim()),
     onChangeText: (e: SearchEvent) => {
-      if (e.nativeEvent.text === '') onSearch('');
+      onSearch(e.nativeEvent.text);
     },
     onCancelButtonPress: () => onSearch(''),
   };

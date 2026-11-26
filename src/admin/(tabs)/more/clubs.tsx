@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -31,7 +32,7 @@ export default function Clubs() {
     queryFn: () => api.admin.clubs.list(),
     enabled: allowed,
   });
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [state, setState] = useState<'' | Club['status']>('');
   const filter = (list: Club[]) =>
     list.filter((c) => (!state || c.status === state) && (!q || c.name.includes(q) || c.field.includes(q)));

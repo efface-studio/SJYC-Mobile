@@ -57,6 +57,11 @@ function Gate() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="account-link-return" options={{ title: '소셜 계정 연결' }} />
+        <Stack.Screen name="search/index" options={{ title: '통합검색', headerTransparent: false, headerLargeTitle: false }} />
+        <Stack.Screen name="search/notice/[id]" />
+        <Stack.Screen name="search/program/[id]" />
+        <Stack.Screen name="search/member/[id]" />
+        <Stack.Screen name="search/club/[id]" />
         <Stack.Screen name="applications/[id]" options={{ title: '신청 상세' }} />
         <Stack.Screen name="reservations/[id]" options={{ title: '예약 상세' }} />
         <Stack.Screen name="inquiries/[id]" options={{ title: '문의 상세' }} />

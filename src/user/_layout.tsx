@@ -55,6 +55,7 @@ function UserNavigator({ready}:{ready:boolean}) {
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="search" options={{ title: '통합검색', headerTransparent: false, headerLargeTitle: false }} />
         <Stack.Screen name="programs/[id]" options={{ title: '프로그램' }} />
         <Stack.Screen name="programs/calendar" options={{ title: '프로그램 캘린더' }} />
         <Stack.Screen name="my/settings" options={{ title: '설정' }} />

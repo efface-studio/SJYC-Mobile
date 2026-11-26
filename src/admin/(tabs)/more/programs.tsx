@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
@@ -23,7 +24,7 @@ const open = (id: string) => openScreen({ pathname: '/more/program/[id]', params
 export default function Programs() {
   const allowed = useCan()('program.write');
   const [status, setStatus, statusOpts] = useStatusParam(PUBLISH_STATUS, '');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [sort, setSort] = useState<Sort>('newest');
   const filters = { q: q || undefined, status: status || undefined, sort };
   const paged = usePaged(

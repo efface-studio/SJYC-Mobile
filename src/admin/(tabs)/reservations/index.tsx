@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -29,7 +31,7 @@ export default function Reservations() {
   ];
   const [spaceId, setSpaceId] = useState('');
   const [date, setDate] = useState<string | null>(null);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [sort, setSort] = useState<Sort>('newest');
   const filters = {
     q: q || undefined,
@@ -56,7 +58,11 @@ export default function Reservations() {
   return (
     <>
       <Stack.Screen
-        options={{ title: '공간 예약', headerSearchBarOptions: { hideWhenScrolling: false, placement: 'stacked', ...searchBar('신청자, 공간, 이용 목적', setQ) } }}
+        options={{
+          title: '공간 예약',
+          headerTransparent: Platform.OS !== 'ios',
+          headerSearchBarOptions: { hideWhenScrolling: false, placement: 'stacked', ...searchBar('신청자, 공간, 이용 목적', setQ) },
+        }}
       />
       <PagedList
         paged={paged}

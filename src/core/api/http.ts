@@ -1,3 +1,4 @@
+import {loginSurface} from './login-surface';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '@/config/env';
 import type { ApiClient } from './client';
@@ -37,6 +38,8 @@ function readCookie(name: string): string | null {
   const hit = document.cookie.split('; ').find((c) => c.startsWith(`${name}=`));
   return hit ? decodeURIComponent(hit.slice(name.length + 1)) : null;
 }
+
+
 
 function buildUrl(path: string, query?: Query): string {
   const params = new URLSearchParams();
@@ -107,13 +110,13 @@ export const httpClient: ApiClient = {
     completeSocial: (proof) => request('POST', '/auth/social/complete', { body: proof }),
     async me() {
       try {
-        return await request('GET', '/auth/session');
+        return await request('GET', '/auth/session',{query:{audience:loginSurface()}});
       } catch (e) {
-        if (e instanceof ApiError && e.code === 'UNAUTHENTICATED') return null;
+        if (e instanceof ApiError && (e.code === 'UNAUTHENTICATED' || e.code==='FORBIDDEN')) return null;
         throw e;
       }
     },
-    login: (input) => request('POST', '/auth/login', { body: input }),
+    login: (input) => request('POST', '/auth/login', { body: {...input,audience:loginSurface()} }),
     logout: () => request('POST', '/auth/logout'),
     signup: (input) => request('POST', '/auth/signup', { body: input }),
     signupPhone: () => request('GET','/auth/phone-verification'),
@@ -217,8 +220,13 @@ export const httpClient: ApiClient = {
   },
   site: { settings: () => request('GET', '/site/settings') },
   admin: {
+    loginContact:()=>request('GET','/admin/login-contact'),
+    setLoginContact:(body)=>request('PUT','/admin/login-contact',{body}),
     updateSettings: (input) => request('PUT', '/admin/site-settings', { body: input }),
     changeAppUpdate:(id,input)=>request('POST','/admin/app-updates/'+encodeURIComponent(id)+'/control',{body:input}),
+    publicationSettings: () => request('GET','/admin/app-updates/settings'),
+    configurePublication: input => request('POST','/admin/app-updates/settings',{body:input}),
+    changeWave:(id,input)=>request('POST','/admin/app-updates/'+enc(id)+'/waves',{body:input}),
     appUpdates: () => request('GET', '/admin/app-updates'),
     developerView: (location) => request('GET', '/admin/developer/view', { query: { ...location } }),
     developerAction: (input) => request('POST', '/admin/developer/actions', { body: input }),

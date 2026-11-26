@@ -58,7 +58,8 @@ export function Txt({
   accessibilityRole?: 'header' | 'text';
 }) {
   const t = useTheme();
-  const resolved = color in t ? (t[color as keyof Theme] as string) : color;
+  const key = color === 'action' ? 'actionText' : color;
+  const resolved = key in t ? (t[key as keyof Theme] as string) : color;
   return (
     <Text
       numberOfLines={numberOfLines}

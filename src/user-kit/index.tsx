@@ -402,7 +402,7 @@ export function ModalGuard({ dirty, fallback }: { dirty: boolean; fallback: Href
         gestureEnabled: !dirty,
         headerLeft: () => (
           <Tap onPress={() => void cancel()} accessibilityLabel="취소" style={styles.headerCancel}>
-            <Txt variant="body" color={t.action}>
+            <Txt variant="body" color="action">
               취소
             </Txt>
           </Tap>

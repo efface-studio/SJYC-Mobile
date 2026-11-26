@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
@@ -22,7 +23,7 @@ export function NoticeList({ editorPath }: { editorPath: '/dashboard/notice/[id]
   const open = (id: string) => openScreen({ pathname: editorPath, params: { id } });
   const allowed = useCan()('notice.write');
   const [status, setStatus, statusOpts] = useStatusParam(PUBLISH_STATUS, '');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [sort, setSort] = useState<Sort>('newest');
   const filters = { q: q || undefined, status: status || undefined, sort };
   const paged = usePaged(
