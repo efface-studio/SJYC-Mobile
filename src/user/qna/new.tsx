@@ -89,6 +89,7 @@ export default function NewInquiryScreen() {
             value={title}
             onChangeText={setTitle}
             maxLength={100}
+            showCount
             placeholder="제목을 입력해 주세요"
             error={errors.title}
           />
@@ -99,7 +100,7 @@ export default function NewInquiryScreen() {
             multiline
             maxLength={3000}
             placeholder="문의 내용을 자세히 적어 주세요"
-            hint={`${body.length}/3000`}
+            showCount
             error={errors.body}
           />
           <SwitchRow

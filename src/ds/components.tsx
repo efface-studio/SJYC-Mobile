@@ -3,6 +3,7 @@ export { LoadingState } from './loading';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
+import { useTabScroll } from './use-tab-scroll';
 import { ScrollBackdrop } from './scroll-backdrop';
 import { type ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import {
@@ -20,7 +21,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { errorMessage } from '@/api/errors';
 import type { Tone } from '@/domain/labels';
 import { Icon } from '~/shared/icon';
@@ -54,8 +55,9 @@ export function Screen({
   const keyboardOverlap = useKeyboardOverlap(footer != null);
   const headerHeight = useContext(HeaderHeightContext) ?? 0;
   const topInset = Platform.OS === 'android' ? headerHeight : 0;
+  const tabScroll = useTabScroll(headerHeight);
   const scroll = (
-    <ScrollView
+    <ScrollView ref={tabScroll} scrollToOverflowEnabled={Platform.OS === 'ios'}
       // iOS 큰 제목은 화면의 첫 하위 뷰가 ScrollView 여야 스크롤에 맞춰 접힌다 — 감싸는 View 를 두지 않는다
       style={{ flex: 1, backgroundColor: bg }}
       contentInsetAdjustmentBehavior="automatic"
@@ -169,7 +171,9 @@ export function StickyFooter({ children }: { children: ReactNode }) {
   const overTabBar = useContext(OverTabBarContext);
   const bottom = keyboard
     ? space.md
-    : Math.max(insets.bottom, space.lg) + (overTabBar ? TAB_BAR_HEIGHT + space.sm : 0);
+    : overTabBar
+      ? Math.max(insets.bottom, (initialWindowMetrics?.insets.bottom ?? 0) + TAB_BAR_HEIGHT) + space.xs
+      : Math.max(insets.bottom, space.lg);
   return (
     <View pointerEvents="box-none" style={[styles.sticky, {paddingBottom:bottom}]}>
       <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
@@ -188,13 +192,15 @@ export function SectionHeader({
   title,
   action,
   onAction,
+  compact = false,
 }: {
   title: string;
   action?: string;
+  compact?: boolean;
   onAction?: () => void;
 }) {
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, compact && { marginTop: space.sm }]}>
       <Txt variant="title2" accessibilityRole="header">
         {title}
       </Txt>

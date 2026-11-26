@@ -159,7 +159,7 @@ export default function Applications() {
           const row = {
             meta: `${a.programTitle} · ${a.receiptNo ?? '접수 번호 미발급'}`,
             title: a.applicantName,
-            subtitle: formatDateTime(a.createdAt),
+            subtitle: formatDateTime(a.createdAt) + (a.contentEdits?.length ? ' · 요청 사항 (수정됨)' : ''),
             trailing: <StatusBadge {...APPLICATION_STATUS[a.status]} />,
           };
           if (!selecting) {

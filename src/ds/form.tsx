@@ -22,19 +22,22 @@ function FieldShell({
   error,
   hint,
   children,
+  counter,
 }: {
   label?: string;
   error?: string;
   hint?: string;
   children: React.ReactNode;
+  counter?: string;
 }) {
   const t = useTheme();
   return (
     <View style={{ gap: 6 }}>
       {label && (
-        <Txt variant="captionStrong" color="textSecondary">
-          {label}
-        </Txt>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+          <Txt variant="captionStrong" color="textSecondary">{label}</Txt>
+          {counter && <Txt variant="caption" color="textSecondary">{counter}</Txt>}
+        </View>
       )}
       {children}
       {error ? (
@@ -62,6 +65,7 @@ export function TextField({
   keyboardType,
   secureTextEntry,
   maxLength,
+  showCount,
   autoComplete,
   autoCapitalize = 'none',
   autoCorrect,
@@ -81,6 +85,7 @@ export function TextField({
   keyboardType?: KeyboardTypeOptions;
   secureTextEntry?: boolean;
   maxLength?: number;
+  showCount?: boolean;
   autoComplete?: TextInputProps['autoComplete'];
   autoCapitalize?: TextInputProps['autoCapitalize'];
   autoCorrect?: boolean;
@@ -146,7 +151,7 @@ export function TextField({
     </View>
   ) : input;
   return (
-    <FieldShell label={label} error={error} hint={hint}>
+    <FieldShell label={label} error={error} hint={hint} counter={showCount && maxLength ? `${value.length} / ${maxLength}자` : undefined}>
       {trailing ? (
         <View
           style={{

@@ -56,7 +56,7 @@ export default function Reservations() {
   return (
     <>
       <Stack.Screen
-        options={{ title: '공간 예약', headerSearchBarOptions: searchBar('신청자, 공간, 이용 목적', setQ) }}
+        options={{ title: '공간 예약', headerSearchBarOptions: { hideWhenScrolling: false, placement: 'stacked', ...searchBar('신청자, 공간, 이용 목적', setQ) } }}
       />
       <PagedList
         paged={paged}

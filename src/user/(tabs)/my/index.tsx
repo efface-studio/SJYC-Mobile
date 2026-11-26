@@ -272,6 +272,7 @@ export default function MyScreen() {
       {segment === 'applications' && (
         <>
           <SectionHeader
+            compact
             title="프로그램 신청 내역"
             action="프로그램 찾기"
             onAction={() => router.navigate('/programs')}
@@ -321,6 +322,7 @@ export default function MyScreen() {
       {segment === 'reservations' && (
         <>
           <SectionHeader
+            compact
             title="공간 예약 내역"
             action="공간 예약하기"
             onAction={() => router.navigate('/spaces')}
@@ -347,6 +349,7 @@ export default function MyScreen() {
       {segment === 'clubs' && (
         <>
           <SectionHeader
+            compact
             title="내 동아리"
             action="동아리 둘러보기"
             onAction={() => openScreen('/clubs/recruitment')}
@@ -379,7 +382,7 @@ export default function MyScreen() {
                       title={a.clubName}
                       subtitle={a.reason ? `사유: ${a.reason}` : `${formatDate(a.createdAt)} 신청`}
                       trailing={<Badge text={s.text} tone={s.tone} />}
-                      onPress={() => openScreen(`/clubs/${a.clubId}`)}
+                      onPress={() => openScreen(`/my/club-applications/${a.id}`)}
                     />
                   );
                 })}

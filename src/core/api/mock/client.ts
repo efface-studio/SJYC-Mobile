@@ -12,6 +12,8 @@ import { computeRecruitStatus } from '@/domain/program';
 import {
   attendanceSessionSchema,
   clubIntroSchema,
+  programNoteEditSchema,
+  clubMotivationEditSchema,
   clubPostSchema,
   managerEmailSchema,
   parseValues,
@@ -489,6 +491,38 @@ export const mockClient: ApiClient = {
         const a = findOr404(db.applications, id);
         if (a.userId !== u.id) throw new ApiError('NOT_FOUND', '요청한 정보를 찾을 수 없습니다.');
         return withCancellable(db, a);
+      }),
+    editApplication: (id, input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const a = findOr404(db.applications, id);
+        if (a.userId !== u.id) throw new ApiError('NOT_FOUND', '신청을 찾을 수 없습니다.');
+        const parsed = programNoteEditSchema.safeParse(input);
+        if (!parsed.success) throw new ApiError('VALIDATION', parsed.error.issues[0]?.message ?? '입력값을 확인해 주세요.');
+        const { value, revision } = parsed.data;
+        if (a.note !== value) {
+          const edits = a.contentEdits ?? [];
+          if (edits.length !== revision) throw new ApiError('CONFLICT', '신청 내용이 변경되었습니다. 다시 확인해 주세요.');
+          a.contentEdits = [...edits, { previous: a.note, next: value, at: new Date().toISOString() }];
+          a.note = value;
+        }
+        return withCancellable(db, a);
+      }),
+    editClubApplication: (id, input) =>
+      respond((db) => {
+        const u = requireUser(db);
+        const a = findOr404(db.clubApplications, id);
+        if (a.userId !== u.id) throw new ApiError('NOT_FOUND', '신청을 찾을 수 없습니다.');
+        const parsed = clubMotivationEditSchema.safeParse(input);
+        if (!parsed.success) throw new ApiError('VALIDATION', parsed.error.issues[0]?.message ?? '입력값을 확인해 주세요.');
+        const { value, revision } = parsed.data;
+        if (a.motivation !== value) {
+          const edits = a.contentEdits ?? [];
+          if (edits.length !== revision) throw new ApiError('CONFLICT', '신청 내용이 변경되었습니다. 다시 확인해 주세요.');
+          a.contentEdits = [...edits, { previous: a.motivation, next: value, at: new Date().toISOString() }];
+          a.motivation = value;
+        }
+        return a;
       }),
     cancelApplication: (id) =>
       respond((db) => {
@@ -1618,6 +1652,7 @@ export const mockClient: ApiClient = {
         respond((db) => {
           requirePermission(db, 'club.manage');
           const list = db.clubApplications
+            .filter((a) => !q.clubId || a.clubId === q.clubId)
             .filter((a) => !q.status || a.status === q.status)
             .filter((a) => matches(`${a.applicantName} ${a.clubName}`, q.q));
           return paginate(

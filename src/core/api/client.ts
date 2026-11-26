@@ -1,3 +1,4 @@
+import type { ApplicationEditInput } from '@/domain/types';
 import type { DevLocation, DevView, DevCommand } from '@/domain/developer-console';
 import type { MemberCommand, MemberActivityOptions } from '@/domain/member-actions';
 import type { AppUpdate } from '@/domain/app-update';
@@ -144,6 +145,8 @@ export interface ApiClient {
     withdraw(): Promise<void>;
     applications(): Promise<ProgramApplication[]>;
     application(id: string): Promise<ProgramApplication>;
+    editApplication(id: string, input: ApplicationEditInput): Promise<ProgramApplication>;
+    editClubApplication(id: string, input: ApplicationEditInput): Promise<ClubApplication>;
     cancelApplication(id: string): Promise<ProgramApplication>;
     clubs(): Promise<MyClub[]>;
     clubApplications(): Promise<ClubApplication[]>;
@@ -279,7 +282,7 @@ export interface ApiClient {
       create(input: ClubFormInput): Promise<Club>;
       update(id: string, input: ClubFormInput): Promise<Club>;
       applications(
-        query: AdminListQuery & { status?: ClubApplicationStatus | '' },
+        query: AdminListQuery & { status?: ClubApplicationStatus | ''; clubId?: string },
       ): Promise<Page<ClubApplication>>;
       decideApplication(id: string, decision: Decision, reason: string | null): Promise<ClubApplication>;
       /** 동아리별 담당자 — club.manage */
