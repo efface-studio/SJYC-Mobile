@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { Stack } from 'expo-router';
@@ -35,7 +36,11 @@ export default function Inquiries() {
   return (
     <>
       <Stack.Screen
-        options={{ title: '문의', headerSearchBarOptions: { hideWhenScrolling: false, placement: 'stacked', ...searchBar('제목 또는 작성자', setQ) } }}
+        options={{
+          title: '문의',
+          headerTransparent: Platform.OS !== 'ios',
+          headerSearchBarOptions: { hideWhenScrolling: false, placement: 'stacked', ...searchBar('제목 또는 작성자', setQ) },
+        }}
       />
       <PagedList
         paged={paged}

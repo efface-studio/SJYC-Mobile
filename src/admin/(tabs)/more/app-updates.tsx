@@ -124,7 +124,7 @@ export default function UpdatesScreen() {
       <Stack.Screen options={{ title: '앱 업데이트' }} />
       <View style={styles.body}>
         {segment}
-        {developer && <PublicationOptions />}
+        <PublicationOptions editable={developer} />
         <RowSection title="이 기기" footer="같은 런타임(네이티브 코드가 같은 빌드)끼리만 업데이트를 받아요.">
           <AdminRow title="런타임" value={short(Updates?.runtimeVersion)} />
           <AdminRow
