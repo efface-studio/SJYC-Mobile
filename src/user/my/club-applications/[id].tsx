@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { api } from '@/api';
 import { CLUB_APPLICATION_STATUS } from '@/domain/labels';
 import { formatDateTime } from '@/lib/format';
@@ -15,7 +15,6 @@ export default function MyClubApplication() {
   });
   return (
     <>
-      <Stack.Screen options={{ title: '동아리 가입 신청' }} />
       <QueryScreen query={query}>
         {(items) => {
           const a = items.find((item) => item.id === id);
