@@ -46,6 +46,26 @@ function ActionForm({ form, done }: { form: DevForm; done: () => void }) {
     <FormSection>
       {form.fields?.map((f) => {
         const v = values[f.key] ?? '';
+        if (f.key === 'maintenance')
+          return (
+            <SwitchRow
+              key={f.key}
+              label={f.label}
+              value={v === 'true'}
+              onValueChange={(on) => set(f.key, String(on))}
+            />
+          );
+        if (f.key === 'message')
+          return (
+            <TextField
+              key={f.key}
+              label={f.label}
+              multiline
+              maxLength={160}
+              value={v}
+              onChangeText={(s) => set(f.key, s)}
+            />
+          );
         if (f.multiple && f.options)
           return (
             <View key={f.key}>
@@ -208,27 +228,35 @@ export default function DeveloperDetail() {
         <QueryBoundary layout="settings" query={query}>
           {(view) => (
             <>
-              <DevGroups writable={writable} section={section} item={item} view={view} go={go} filter={roleList ? draft : ''} />
-              {writable && view.forms?.map((f) => (
-                <ActionForm
-                  key={[item, f.command, f.version].join('/')}
-                  form={f}
-                  done={() => {
-                    if (f.command === 'revoke' && session.data?.user.id === f.id) {
-                      logout.mutate();
-                      return;
-                    }
-                    if (
-                      f.command === 'delete-role' ||
-                      f.command === 'revoke' ||
-                      (f.command === 'save-role' && !f.id)
-                    )
-                      router.back();
-                    void cache.invalidateQueries({ queryKey: ['admin', 'dev-console'] });
-                    notify('적용했습니다');
-                  }}
-                />
-              ))}
+              <DevGroups
+                writable={writable}
+                section={section}
+                item={item}
+                view={view}
+                go={go}
+                filter={roleList ? draft : ''}
+              />
+              {writable &&
+                view.forms?.map((f) => (
+                  <ActionForm
+                    key={[item, f.command, f.version].join('/')}
+                    form={f}
+                    done={() => {
+                      if (f.command === 'revoke' && session.data?.user.id === f.id) {
+                        logout.mutate();
+                        return;
+                      }
+                      if (
+                        f.command === 'delete-role' ||
+                        f.command === 'revoke' ||
+                        (f.command === 'save-role' && !f.id)
+                      )
+                        router.back();
+                      void cache.invalidateQueries({ queryKey: ['admin', 'dev-console'] });
+                      notify('적용했습니다');
+                    }}
+                  />
+                ))}
               {(page > 0 || view.hasMore) && (
                 <Gutter>
                   <Button

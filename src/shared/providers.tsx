@@ -46,7 +46,7 @@ export function AppProviders({
     setLaunching(false);
     onReady?.();
   }, [onReady]);
-  const { update, retry, skip } = useStartupUpdates();
+  const { update, retry, skip, splash } = useStartupUpdates();
   const resumingUpdate = !launching && update !== null && update.phase !== 'checking';
   useStoreUpdate(!launching && !update);
   const scheme = useAppColorScheme();
@@ -110,10 +110,10 @@ export function AppProviders({
           >
             <LoginSessionGate>{children}</LoginSessionGate>
           </View>
-          {launching && <BrandSplash onFinish={finish} update={update} retry={retry} skip={skip} />}
+          {launching && <BrandSplash splash={splash} onFinish={finish} update={update} retry={retry} skip={skip} />}
           {resumingUpdate && (
             <Modal visible animationType="none" presentationStyle="fullScreen" onRequestClose={() => {}}>
-              <BrandSplash update={update} retry={retry} skip={skip} />
+              <BrandSplash splash={splash} update={update} retry={retry} skip={skip} />
             </Modal>
           )}
         </View>

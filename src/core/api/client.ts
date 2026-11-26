@@ -1,7 +1,7 @@
 import type { ApplicationEditInput } from '@/domain/types';
 import type { DevLocation, DevView, DevCommand } from '@/domain/developer-console';
 import type { MemberCommand, MemberActivityOptions } from '@/domain/member-actions';
-import type { AppUpdate } from '@/domain/app-update';
+import type { AppUpdate, WaveAction, PublicationSettings } from '@/domain/app-update';
 import type { AttendancePosition, AttendanceScan } from '@/domain/check-in-location';
 import type { SignupPhoneState } from '@/domain/signup-phone';
 import type { SocialDraft, SocialDetails } from '@/domain/social-profile';
@@ -245,6 +245,9 @@ export interface ApiClient {
   admin: {
     updateSettings(input: SettingsRecord): Promise<SettingsRecord>;
     changeAppUpdate(id:string,input:import('@/domain/app-update').UpdateControl):Promise<{ok:boolean}>;
+    publicationSettings(): Promise<PublicationSettings>;
+    configurePublication(input:Partial<Pick<PublicationSettings,'automatic'|'splash'>>&{version:number}): Promise<PublicationSettings>;
+    changeWave(id:string,input:WaveAction): Promise<{ok:boolean}>;
     appUpdates(): Promise<AppUpdate[]>;
     developerView(location: DevLocation): Promise<DevView>;
     developerAction(input: DevCommand): Promise<void>;

@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLogout, useSession } from '@/features/auth/session';
 import { api, errorMessage } from '@/api';
 import type { DevLocation, DevRow, DevSection, DevView } from '@/domain/developer-console';
-import { Badge, Divider, SwitchRow, Tap, Txt, useTheme } from '~/ds';
+import { Badge, Button, Divider, SwitchRow, TextField, Tap, Txt, useTheme } from '~/ds';
 import { Icon } from '~/shared/icon';
 import { confirm, notify } from '~/shared/dialogs';
 
@@ -17,6 +18,7 @@ export function DevHeading({ title }: { title: string }) {
   );
 }
 export function ControlRows({ go }: { go: Go }) {
+  const [draft, setDraft] = useState<string | null>(null);
   const userId = useSession().data?.user.id;
   const cache = useQueryClient(),
     query = useQuery({
@@ -27,6 +29,7 @@ export function ControlRows({ go }: { go: Go }) {
   const controls = useMutation({
     mutationFn: (values: Record<string, string>) =>
       api.admin.developerAction({ command: 'save-controls', version: form?.version, values }),
+    onSuccess: () => setDraft(null),
     onSettled: () => cache.invalidateQueries({ queryKey: ['admin', 'dev-console', 'operations'] }),
     onError: (e) => notify('설정을 저장하지 못했습니다', errorMessage(e)),
   });
@@ -57,10 +60,27 @@ export function ControlRows({ go }: { go: Go }) {
           onValueChange={(on) => void save('유지보수 모드 변경', { ...values, maintenance: String(on) })}
         />
       </View>
+      <View style={styles.inset}>
+        <TextField
+          label="점검 안내"
+          multiline
+          value={draft ?? values.message ?? ''}
+          maxLength={160}
+          onChangeText={setDraft}
+        />
+        {draft !== null && draft !== values.message && (
+          <Button
+            label="점검 안내 저장"
+            size="md"
+            disabled={controls.isPending || !draft.trim()}
+            onPress={() => void save('점검 안내 저장', { ...values, message: draft.trim() })}
+          />
+        )}
+      </View>
       <ListItem
         row={{
-          title: '메시지·대상 편집',
-          detail: values.message,
+          title: '점검 대상 설정',
+          detail: '점검 중 접수를 중단할 기능 선택',
           next: { section: 'operations', item: 'settings' },
         }}
         go={go}

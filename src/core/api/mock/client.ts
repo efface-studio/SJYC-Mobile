@@ -1174,6 +1174,9 @@ export const mockClient: ApiClient = {
   site: { settings: () => respond((db) => db.siteSettings ?? { version: 0, values: {} }) },
   admin: {
     changeAppUpdate: () => respond(db=>{requirePermission(db,'site.manage');throw new ApiError('NOT_FOUND','요청한 업데이트가 없습니다.');}),
+    publicationSettings:()=>respond(db=>{requirePermission(db,'site.manage');return {version:0,automatic:true,splash:{percent:true,bar:true,notes:true}};}),
+    configurePublication:()=>respond(db=>{requirePermission(db,'developer.access');throw new ApiError('NOT_CONFIGURED','서버 연결이 필요합니다.');}),
+    changeWave:()=>respond(db=>{requirePermission(db,'site.manage');throw new ApiError('NOT_FOUND','업데이트를 찾을 수 없습니다.');}),
     appUpdates: () => respond(db=>{ requirePermission(db,'site.manage'); return []; }),
     developerView: () => respond((db) => {
       requirePermission(db, 'developer.view');

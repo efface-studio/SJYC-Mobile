@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
@@ -13,7 +14,7 @@ const SORTS = sortOptions();
 export default function Inquiries() {
   const allowed = useCan()('inquiry.answer');
   const [status, setStatus, statusOpts] = useStatusParam(INQUIRY_STATUS, 'open');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [sort, setSort] = useState<Sort>('newest');
   const filters = { q: q || undefined, status: status || undefined, sort };
   const paged = usePaged(

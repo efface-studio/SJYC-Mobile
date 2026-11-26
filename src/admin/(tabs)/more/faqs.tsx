@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -37,7 +38,7 @@ const CATEGORIES: { value: '' | InquiryCategory; label: string }[] = [
 export default function Faqs() {
   const allowed = useCan()('inquiry.answer');
   const faqs = useQuery({ ...faqsQuery, enabled: allowed });
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [visibility, setVisibility] = useState<Visibility>('');
   const [category, setCategory] = useState<'' | InquiryCategory>('');
   const filter = (list: Faq[]) =>

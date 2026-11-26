@@ -219,6 +219,9 @@ export const httpClient: ApiClient = {
   admin: {
     updateSettings: (input) => request('PUT', '/admin/site-settings', { body: input }),
     changeAppUpdate:(id,input)=>request('POST','/admin/app-updates/'+encodeURIComponent(id)+'/control',{body:input}),
+    publicationSettings: () => request('GET','/admin/app-updates/settings'),
+    configurePublication: input => request('POST','/admin/app-updates/settings',{body:input}),
+    changeWave:(id,input)=>request('POST','/admin/app-updates/'+enc(id)+'/waves',{body:input}),
     appUpdates: () => request('GET', '/admin/app-updates'),
     developerView: (location) => request('GET', '/admin/developer/view', { query: { ...location } }),
     developerAction: (input) => request('POST', '/admin/developer/actions', { body: input }),
