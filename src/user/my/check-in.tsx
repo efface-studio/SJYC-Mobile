@@ -5,13 +5,34 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useIsFocused } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Linking, StyleSheet, View } from 'react-native';
+import { AppState, Linking, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { api, errorMessage } from '@/api';
 import { useSession } from '@/features/auth/session';
 import { Button, Chips, FormSection, Gutter, Screen, Txt } from '~/ds';
 import { closeModal, ModalGuard } from '~/user-kit';
 
+function ScanGuide({ previewHeight }: { previewHeight: number }) {
+  return (
+    <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+      <View style={styles.shade} />
+      <View style={styles.guideRow}>
+        <View style={styles.shade} />
+        <View style={[styles.target, { maxWidth: Math.min(300, previewHeight - 48) }]}>
+          <View style={[styles.corner, styles.topLeft]} />
+          <View style={[styles.corner, styles.topRight]} />
+          <View style={[styles.corner, styles.bottomLeft]} />
+          <View style={[styles.corner, styles.bottomRight]} />
+        </View>
+        <View style={styles.shade} />
+      </View>
+      <View style={styles.shade} />
+    </View>
+  );
+}
+
 export default function CheckInScreen() {
+  const { height } = useWindowDimensions();
+  const previewHeight = Math.min(500, Math.round(height * 0.54));
   const session = useSession();
   const client = useQueryClient();
   const focused = useIsFocused();
@@ -91,9 +112,9 @@ export default function CheckInScreen() {
                 </>
               } />
             ) : (
-              <FormSection title="출석 QR을 비춰 주세요">
+              <FormSection title="QR 코드를 네모 안에 맞춰 주세요">
                 {permission?.granted && !unavailable ? (
-                  <View style={styles.preview}>
+                  <View style={[styles.preview, { height: previewHeight }]}>
                     {focused && active && !error && !check.isPending && (
                       <CameraView
                         style={StyleSheet.absoluteFill}
@@ -110,6 +131,8 @@ export default function CheckInScreen() {
                         }}
                       />
                     )}
+                    {!error && !check.isPending && <ScanGuide previewHeight={previewHeight} />}
+                    {check.isPending && <View style={styles.checking}><Txt color="#FFFFFF">출석 확인 중…</Txt></View>}
                   </View>
                 ) : (
                   <>
@@ -149,10 +172,20 @@ export default function CheckInScreen() {
 
 const styles = StyleSheet.create({
   preview: {
-    aspectRatio: 1.3,
     width: '100%',
     overflow: 'hidden',
     borderRadius: 12,
     backgroundColor: '#191919',
+    maxWidth: 680,
+    alignSelf: 'center',
   },
+  shade: { flex: 1, backgroundColor: 'rgba(0,0,0,0.46)' },
+  guideRow: { flexDirection: 'row' },
+  target: { width: '74%', aspectRatio: 1 },
+  corner: { position: 'absolute', width: 34, height: 34, borderColor: '#FFFFFF' },
+  topLeft: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 12 },
+  topRight: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 12 },
+  bottomLeft: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 12 },
+  bottomRight: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 12 },
+  checking: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
