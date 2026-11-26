@@ -1,3 +1,4 @@
+import type { ContactSettings, ContactPatch } from '@/domain/login-contact';
 import type { ApplicationEditInput } from '@/domain/types';
 import type { DevLocation, DevView, DevCommand } from '@/domain/developer-console';
 import type { MemberCommand, MemberActivityOptions } from '@/domain/member-actions';
@@ -243,6 +244,8 @@ export interface ApiClient {
   };
   site: { settings(): Promise<SettingsRecord> };
   admin: {
+    loginContact():Promise<ContactSettings>;
+    setLoginContact(input:ContactPatch):Promise<ContactSettings>;
     updateSettings(input: SettingsRecord): Promise<SettingsRecord>;
     changeAppUpdate(id:string,input:import('@/domain/app-update').UpdateControl):Promise<{ok:boolean}>;
     publicationSettings(): Promise<PublicationSettings>;
