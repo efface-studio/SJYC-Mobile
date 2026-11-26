@@ -120,7 +120,7 @@ export function BrandSplash({ onFinish, update, retry, skip }: SplashProps) {
                 <Text style={[styles.percent, { color: t.tone.brand.fg }]}>{update.percent}%</Text>
               </View>
               <View style={[styles.track, { backgroundColor: t.line }]}>
-                <View style={[styles.fill, { backgroundColor: t.tone.brand.fg, width: `${update.percent}%` }]} />
+                <View style={[styles.fill, { backgroundColor: t.tone.brand.fill, width: `${update.percent}%` }]} />
               </View>
             </View>
           )}

@@ -320,7 +320,7 @@ export function SwitchRow({
           onValueChange={onValueChange}
           accessibilityLabel={label}
           accessibilityHint={description}
-          trackColor={{ true: t.tone.brand.fg, false: t.lineStrong }}
+          trackColor={{ true: t.tone.brand.fill, false: t.lineStrong }}
           thumbColor={Platform.OS === 'android' ? t.bg : undefined}
         />
       </View>
