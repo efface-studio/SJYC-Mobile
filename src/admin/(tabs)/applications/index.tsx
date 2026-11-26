@@ -3,7 +3,7 @@ import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import { APPLICATION_STATUS } from '@/domain/labels';
 import type { ProgramApplication } from '@/domain/types';
@@ -90,6 +90,7 @@ export default function Applications() {
       <Stack.Screen
         options={{
           title: '프로그램 신청',
+          headerTransparent: Platform.OS !== 'ios',
           headerSearchBarOptions: searchBar('신청자, 프로그램, 접수 번호', setQ),
           headerRight: () => (
             <HeaderButton
