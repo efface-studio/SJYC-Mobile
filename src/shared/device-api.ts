@@ -1,4 +1,5 @@
 // 공유 API의 세션 복원 경로만 네이티브 기기의 로그인 유지 선택에 맞춘다.
+import {loginSurface} from '@/api/login-surface';
 import { Platform } from 'react-native';
 import { api as base, ApiError, DEFAULT_MESSAGE, type ApiClient } from '@/api/index';
 import { API_BASE_URL, IS_MOCK } from '@/config/env';
@@ -14,14 +15,14 @@ function remembersLogin() {
 async function rememberedSession(): Promise<Session | null> {
   let response: Response;
   try {
-    response = await fetch(API_BASE_URL + '/auth/session/remember', {
+    response = await fetch(API_BASE_URL + '/auth/session/remember?audience='+loginSurface(), {
       method: 'POST', credentials: 'include', headers: { Accept: 'application/json' },
     });
   } catch {
     throw new ApiError('NETWORK', DEFAULT_MESSAGE.NETWORK);
   }
   const result = await response.json().catch(() => null);
-  if (response.status === 401 && result?.error?.code === 'UNAUTHENTICATED') return null;
+  if (response.status===401 || response.status===403) return null;
   if (!response.ok || result?.success !== true || !result.data?.user?.id || !Number.isFinite(Date.parse(result.data.expiresAt))) {
     throw new ApiError('SERVER', DEFAULT_MESSAGE.SERVER);
   }

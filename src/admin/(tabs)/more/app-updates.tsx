@@ -1,3 +1,4 @@
+import { PublicationOptions, WaveManager } from '~/admin-kit/app-updates/distribution';
 import type { AppUpdate as OtaUpdateDto } from '@/domain/app-update';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { requireOptionalNativeModule } from 'expo';
@@ -51,7 +52,10 @@ function status(u: OtaUpdateDto, live: boolean): { label: string; tone: StatusTo
 
 export default function UpdatesScreen() {
   const t = useTheme();
-  const allowed = useCan()('site.manage');
+  const can = useCan(),
+    allowed = can('site.manage'),
+    developer = can('developer.access');
+  const [selected, select] = useState('');
   const [platform, setPlatform] = useState<OtaPlatform>(Platform.OS === 'android' ? 'android' : 'ios');
   const list = useQuery({
     queryKey: ['admin', 'app-updates'],
@@ -120,6 +124,7 @@ export default function UpdatesScreen() {
       <Stack.Screen options={{ title: '앱 업데이트' }} />
       <View style={styles.body}>
         {segment}
+        <PublicationOptions editable={developer} />
         <RowSection title="이 기기" footer="같은 런타임(네이티브 코드가 같은 빌드)끼리만 업데이트를 받아요.">
           <AdminRow title="런타임" value={short(Updates?.runtimeVersion)} />
           <AdminRow
@@ -141,27 +146,46 @@ export default function UpdatesScreen() {
                   const s = status(u, u.live);
                   const actionable = u.live && u.kind === 'UPDATE';
                   return (
-                    <AdminRow
-                      key={u.id}
-                      title={u.message || (u.kind === 'ROLLBACK' ? '스토어 버전으로 되돌림' : '(메모 없음)')}
-                      detail={`${u.flavor === 'admin' ? '관리자앱' : '유저앱'} · 런타임 ${short(u.runtime)} · ${u.channel} · 자산 ${u.assetCount}개`}
-                      meta={dt(u.createdAt) + ' · 확인 ' + u.seen + '대 · 적용 ' + u.running + '대'}
-                      value={u.kind === 'UPDATE' ? `${u.rolloutPercent}%` : undefined}
-                      status={
-                        s && (
-                          <Txt variant="label" color={s.tone === 'warning' ? t.tone.warning.fg : s.tone}>
-                            {s.label}
-                          </Txt>
-                        )
-                      }
-                      dimmed={u.status === 'ROLLED_BACK'}
-                      disabled={change.isPending}
-                      reserveChevron
-                      accessibilityLabel={[u.message, s?.label, `${u.rolloutPercent}%`, dt(u.createdAt)]
-                        .filter(Boolean)
-                        .join(', ')}
-                      onPress={actionable ? () => open(u) : undefined}
-                    />
+                    <View key={u.id}>
+                      <AdminRow
+                        title={
+                          u.message || (u.kind === 'ROLLBACK' ? '스토어 버전으로 되돌림' : '(메모 없음)')
+                        }
+                        detail={`${u.flavor === 'admin' ? '관리자앱' : '유저앱'} · 런타임 ${short(u.runtime)} · ${u.channel} · 자산 ${u.assetCount}개`}
+                        meta={dt(u.createdAt) + ' · 확인 ' + u.seen + '대 · 적용 ' + u.running + '대'}
+                        value={
+                          u.manual
+                            ? u.waves?.length
+                              ? '차수 보기'
+                              : '발행 대기'
+                            : u.kind === 'UPDATE'
+                              ? `${u.rolloutPercent}%`
+                              : undefined
+                        }
+                        status={
+                          !u.manual &&
+                          s && (
+                            <Txt variant="label" color={s.tone === 'warning' ? t.tone.warning.fg : s.tone}>
+                              {s.label}
+                            </Txt>
+                          )
+                        }
+                        dimmed={u.status === 'ROLLED_BACK'}
+                        disabled={change.isPending}
+                        reserveChevron
+                        accessibilityLabel={[u.message, s?.label, `${u.rolloutPercent}%`, dt(u.createdAt)]
+                          .filter(Boolean)
+                          .join(', ')}
+                        onPress={
+                          u.manual
+                            ? () => select(selected === u.id ? '' : u.id)
+                            : actionable
+                              ? () => open(u)
+                              : undefined
+                        }
+                      />
+                      {u.manual && selected === u.id && <WaveManager release={u} refresh={list.refetch} />}
+                    </View>
                   );
                 })}
             </RowSection>

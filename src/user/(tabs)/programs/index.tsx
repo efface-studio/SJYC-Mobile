@@ -1,3 +1,4 @@
+import { useLiveSearch } from '~/shared/live-search';
 import { openScreen } from '~/shared/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -22,7 +23,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 
 export default function ProgramsScreen() {
   const t = useTheme();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useLiveSearch();
   const [status, setStatus] = useState<StatusFilter>('open');
   const [categoryId, setCategoryId] = useState('');
 
